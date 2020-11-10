@@ -1,0 +1,6 @@
+# Environment
+.vscode/
+.gitattributes
+
+# Build directories
+/target

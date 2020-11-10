@@ -81,3 +81,7 @@ See [session](/docs/sessions.md) docs.
 ### User-defined saved log parsing methods
 
 See [patterns](/docs/patterns.md) docs.
+
+## Acknowledgements
+
+This is the Rust edition of my [Python](https://github.com/ReagentX/Logria-py) proof-of-concept app.

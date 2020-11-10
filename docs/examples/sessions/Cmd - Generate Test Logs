@@ -1,0 +1,13 @@
+{
+    "commands": [
+        [
+            "/bin/python",
+            "/Users/me/.logria/sample_streams/generate_test_logs.py"
+        ],
+        [
+            "/bin/python",
+            "/Users/me/.logria/sample_streams/generate_test_logs_2.py"
+        ]
+    ],
+    "type": "command"
+}

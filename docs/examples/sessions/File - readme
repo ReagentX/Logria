@@ -1,0 +1,14 @@
+{
+    "commands": [
+        [
+            "Users",
+            "me",
+            "Documents",
+            "Code",
+            "Python",
+            "logria",
+            "README.md"
+        ]
+    ],
+    "type": "file"
+}

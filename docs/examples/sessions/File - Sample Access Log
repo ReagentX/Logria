@@ -1,0 +1,12 @@
+{
+    "commands": [
+        [
+            "Users",
+            "me",
+            "Logria",
+            "sample_streams",
+            "accesslog"
+        ]
+    ],
+    "type": "file"
+}

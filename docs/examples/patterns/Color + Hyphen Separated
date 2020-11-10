@@ -1,0 +1,13 @@
+{
+    "pattern": "- ",
+    "type": "split",
+    "name": "Color + Hyphen Separated",
+    "example": "\u001b[33m2020-02-04 19:06:52,852 \u001b[0m- \u001b[34m__main__.<module> \u001b[0m- \u001b[32mMainProcess \u001b[0m- \u001b[36mINFO \u001b[0m- I am a log! 91",
+    "analytics": {
+        "Date": "date",
+        "Caller": "count",
+        "Process": "count",
+        "Level": "count",
+        "Message": "average"
+    }
+}

@@ -1,0 +1,12 @@
+{
+    "pattern": " - ",
+    "type": "split",
+    "name": "Hyphen Separated",
+    "example": "2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message",
+    "analytics": {
+        "Date": "date",
+        "Caller": "count",
+        "Level": "count",
+        "Message": "sum"
+    }
+}

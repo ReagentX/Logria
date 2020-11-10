@@ -1,0 +1,33 @@
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1023.29 438.72">
+    <defs>
+        <style>
+            .cls-1 {
+                fill: #e63462;
+            }
+            
+            .cls-2 {
+                fill: #333745;
+            }
+        </style>
+    </defs>
+    <title>logria</title>
+    <g id="Letters">
+        <path id="A" class="cls-1" d="M1001,91.33v256H865v-162h90v-47H864v-47Zm-45,141H911v67h45Z" />
+        <g id="I">
+            <rect class="cls-1" x="769" y="90.33" width="44" height="255" />
+            <rect class="cls-1" x="769" y="0.33" width="44" height="46" />
+        </g>
+        <path id="R" class="cls-1" d="M583,348.47q0-128.57,0-257.14H722v92H677v-44H628.76V348.47S598.09,348.06,583,348.47Z" />
+        <path id="G" class="cls-1" d="M395.77,438.3V392.73H488.6v-46H395.81v-255H534.6V438.3ZM488.6,299.73v-160h-45v160Z" />
+        <path id="O" class="cls-1" d="M211.2,91.33H348V346.78H211.21Q211.21,219.06,211.2,91.33Zm44.8,47v160h45v-160Z" />
+        <path id="L" class="cls-1" d="M22.1,90.33H68v208h47v-44h46v92H22.11Q22.11,218.34,22.1,90.33Z" />
+    </g>
+    <g id="Bars">
+        <rect id="A-2" data-name="A" class="cls-2" x="1001" y="0.33" width="22" height="438" />
+        <rect id="I-2" data-name="I" class="cls-2" x="747" y="0.33" width="22" height="438" />
+        <rect id="R-2" data-name="R" class="cls-2" x="562" y="0.33" width="22" height="438" />
+        <rect id="G-2" data-name="G" class="cls-2" x="374" y="0.33" width="22" height="438" />
+        <rect id="O-2" data-name="O" class="cls-2" x="189" y="0.33" width="22" height="438" />
+        <rect id="L-2" data-name="L" class="cls-2" y="0.33" width="22" height="438" />
+    </g>
+</svg>

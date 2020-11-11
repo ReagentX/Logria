@@ -1,3 +1,5 @@
+pub mod strings;
+
 fn main() {
-    println!("Hello, world!");
+    println!("{} says: `Hello, world!`", strings::app::NAME);
 }

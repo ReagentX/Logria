@@ -15,24 +15,28 @@ fn app_root() -> String {
 
 fn patterns() -> String {
     let mut root = app_root();
-    root.push_str("/");
-    root.push_str("patterns");
+    root.push_str("/patterns");
     root
 }
 
 fn sessions() -> String {
     let mut root = app_root();
-    root.push_str("/");
-    root.push_str("sessions");
+    root.push_str("/sessions");
     root
 }
 
 fn history() -> String {
     let mut root = app_root();
-    root.push_str("/");
-    root.push_str("history");
+    root.push_str("/history");
     root
 }
+
+fn history_tape() -> String {
+    let mut root = app_root();
+    root.push_str("/history/tape");
+    root
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -51,8 +55,7 @@ mod tests {
     fn test_patterns() {
         let t = directories::patterns();
         let mut root = home_dir().expect("").to_str().expect("").to_string();
-        root.push_str("/.logria");
-        root.push_str("/patterns");
+        root.push_str("/.logria/patterns");
         assert_eq!(t, root)
     }
 
@@ -60,8 +63,7 @@ mod tests {
     fn test_sessions() {
         let t = directories::sessions();
         let mut root = home_dir().expect("").to_str().expect("").to_string();
-        root.push_str("/.logria");
-        root.push_str("/sessions");
+        root.push_str("/.logria/sessions");
         assert_eq!(t, root)
     }
 
@@ -69,8 +71,15 @@ mod tests {
     fn test_history() {
         let t = directories::history();
         let mut root = home_dir().expect("").to_str().expect("").to_string();
-        root.push_str("/.logria");
-        root.push_str("/history");
+        root.push_str("/.logria/history");
+        assert_eq!(t, root)
+    }
+
+    #[test]
+    fn test_history_tape() {
+        let t = directories::history_tape();
+        let mut root = home_dir().expect("").to_str().expect("").to_string();
+        root.push_str("/.logria/history/tape");
         assert_eq!(t, root)
     }
 }

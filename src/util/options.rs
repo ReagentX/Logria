@@ -1,7 +1,7 @@
 use clap::{crate_version, App, Arg, ArgMatches};
 
-use crate::strings::app::NAME;
-use crate::strings::cli::messages;
+use crate::constants::app::NAME;
+use crate::constants::cli::messages;
 
 pub fn from_command_line() -> ArgMatches {
     let matches = App::new(NAME)

@@ -12,6 +12,6 @@ fn main() {
     println!("exec stream? {:?}", exec);
 
     // Build ui
-    let app = cursive::default();
+    let app = cursive::crossterm().unwrap();
     ui::windows::interface::build(app);
 }

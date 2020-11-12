@@ -1,4 +1,4 @@
-use crate::strings::resolver::{get_env_var_or_default, get_home_dir};
+use crate::constants::resolver::{get_env_var_or_default, get_home_dir};
 
 // Paths
 fn home() -> String {
@@ -40,7 +40,7 @@ fn history_tape() -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::strings::directories;
+    use crate::constants::directories;
     use dirs::home_dir;
 
     #[test]

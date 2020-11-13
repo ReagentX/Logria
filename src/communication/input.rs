@@ -1,47 +1,72 @@
 pub mod stream {
+    use std::sync::mpsc::{channel, Receiver};
+    use std::io::{BufRead, BufReader};
+    use std::sync::{Arc, Mutex};
+    use std::{thread, time};
+    use std::error::Error;
+    use std::path::Path;
+    use std::fs::File;
+
+    use crate::constants::cli::poll_rate::FASTEST;
+
+    #[derive(Debug)]
     pub struct InputStream {
-        poll_rate: f64,
-        stdout: &'static str,  // change to mpsc
-        stderr: &'static str,  // change to mpsc
-        process: &'static str, // some sort of thread we can start
-        proccess_name: String,
+        pub poll_rate: Arc<Mutex<u64>>,
+        pub stdout: Receiver<&'static str>,
+        pub stderr: Receiver<String>,
+        pub proccess_name: String,
+        pub process: Result<std::thread::JoinHandle<()>, std::io::Error>,
     }
 
     pub trait Communicate {
-        fn start(&self);
-        fn run(&self);
-        fn exit(&self);
+        fn new(poll_rate: Option<u64>, name: String, command: String) -> FileInput;
     }
 
+    #[derive(Debug)]
     pub struct FileInput {
         pub stream: InputStream,
     }
 
-    impl FileInput {
-        pub fn new(poll_rate: Option<f64>, name: String) -> FileInput {
+    impl Communicate for FileInput {
+        fn new(poll_rate: Option<u64>, name: String, command: String) -> FileInput {
+            // Setup multiprocessing queues
+            let (err_tx, err_rx) = channel();
+            let (out_tx, out_rx) = channel();
+            out_tx.send("").unwrap(); // Same as above
+
+            // Start process
+            let poll_rate = Arc::new(Mutex::new(poll_rate.unwrap_or(FASTEST)));
+            let internal_poll_rate = Arc::clone(&poll_rate);
+            let process = thread::Builder::new()
+                .name(name.to_string())
+                .spawn(move || {
+                    let num = internal_poll_rate.lock().unwrap();
+                    let path = Path::new(&command);
+
+                    // Try and open a handle to the file
+                    let file = match File::open(&path) {
+                        // The `description` method of `io::Error` returns a string that describes the error
+                        Err(why) => panic!("couldn't open {:?}: {}", path, Error::to_string(&why)),
+                        Ok(file) => file,
+                    };
+
+                    // Create a buffer and read from it
+                    let reader = BufReader::new(file);
+                    for line in reader.lines() {
+                        err_tx.send(line.unwrap().to_string()).unwrap();
+                        println!("wiener {:?}", num);
+                    }
+                });
+
             FileInput {
                 stream: InputStream {
-                    poll_rate: poll_rate.unwrap_or(0.0001),
-                    stdout: "",  // change to mpsc
-                    stderr: "",  // change to mpsc
-                    process: "", // some sort of thread we can start
+                    poll_rate: poll_rate,
+                    stdout: out_rx,
+                    stderr: err_rx,
                     proccess_name: name,
+                    process: process,
                 },
             }
-        }
-    }
-
-    impl Communicate for FileInput {
-        fn start(&self) {
-            println!("Started {}!", self.stream.proccess_name);
-        }
-
-        fn run(&self) {
-            println!("Running {}!", self.stream.poll_rate);
-        }
-
-        fn exit(&self) {
-            println!("Exited!")
         }
     }
 }

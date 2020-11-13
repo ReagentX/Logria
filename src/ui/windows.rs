@@ -30,6 +30,7 @@ pub mod interface {
     use super::command_line;
     use super::output_window;
 
+    /// Default theme that respects the user's terminal color scheme.
     fn terminal_theme() -> Theme {
         let mut theme = Theme::default();
         theme.borders = BorderStyle::None;

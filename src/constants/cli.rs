@@ -1,9 +1,9 @@
 pub mod poll_rate {
     // Numerical limits
     // Fast enough for smooth typing, 1000Hz
-    pub const FASTEST: f64 = 0.0001;
+    pub const FASTEST: u64 = 1;
     // Poll ten times per second, 10Hz
-    pub const SLOWEST: f64 = 0.1;
+    pub const SLOWEST: u64 = 100;
 }
 
 pub mod patterns {

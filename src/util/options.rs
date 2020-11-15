@@ -14,10 +14,10 @@ pub fn from_command_line() -> ArgMatches {
                 .about(messages::HISTORY_HELP),
         )
         .arg(
-            Arg::new("smart-speed")
+            Arg::new("smart-poll-rate")
                 .short('n')
-                .long("no-smart-speed")
-                .about(messages::SMART_SPEED_HELP),
+                .long("no-smart-poll-rate")
+                .about(messages::SMART_POLL_RATE_HELP),
         )
         .arg(
             Arg::new("exec")

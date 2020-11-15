@@ -34,6 +34,7 @@ pub mod stream {
             let process = thread::Builder::new()
                 .name(name.to_string())
                 .spawn(move || {
+                    // Remove, as file input should be immediately buffered...
                     let num = internal_poll_rate.lock().unwrap();
                     let path = Path::new(&command);
 
@@ -48,7 +49,6 @@ pub mod stream {
                     let reader = BufReader::new(file);
                     for line in reader.lines() {
                         err_tx.send(line.unwrap().to_string()).unwrap();
-                        println!("wiener {:?}", num);
                     }
                 });
 

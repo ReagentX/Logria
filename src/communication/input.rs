@@ -2,7 +2,7 @@ pub mod stream {
     use std::sync::mpsc::{channel, Receiver};
     use std::io::{BufRead, BufReader};
     use std::sync::{Arc, Mutex};
-    use std::{thread, time};
+    use std::thread;
     use std::error::Error;
     use std::path::Path;
     use std::fs::File;
@@ -18,17 +18,11 @@ pub mod stream {
         pub process: Result<std::thread::JoinHandle<()>, std::io::Error>,
     }
 
-    pub trait Communicate {
-        fn new(poll_rate: Option<u64>, name: String, command: String) -> FileInput;
-    }
-
     #[derive(Debug)]
-    pub struct FileInput {
-        pub stream: InputStream,
-    }
+    pub struct FileInput {}
 
-    impl Communicate for FileInput {
-        fn new(poll_rate: Option<u64>, name: String, command: String) -> FileInput {
+    impl FileInput {
+        pub fn new(poll_rate: Option<u64>, name: String, command: String) -> InputStream {
             // Setup multiprocessing queues
             let (err_tx, err_rx) = channel();
             let (out_tx, out_rx) = channel();
@@ -58,14 +52,12 @@ pub mod stream {
                     }
                 });
 
-            FileInput {
-                stream: InputStream {
-                    poll_rate: poll_rate,
-                    stdout: out_rx,
-                    stderr: err_rx,
-                    proccess_name: name,
-                    process: process,
-                },
+            InputStream {
+                poll_rate: poll_rate,
+                stdout: out_rx,
+                stderr: err_rx,
+                proccess_name: name,
+                process: process,
             }
         }
     }

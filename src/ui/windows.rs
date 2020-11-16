@@ -1,6 +1,6 @@
 mod command_line {
     use cursive::view::SizeConstraint::{AtMost, Full};
-    use cursive::views::{TextArea, ResizedView};
+    use cursive::views::{ResizedView, TextArea};
 
     pub fn build() -> ResizedView<TextArea> {
         let view = ResizedView::new(Full, AtMost(1), TextArea::new());
@@ -23,12 +23,14 @@ mod output_window {
 }
 
 pub mod interface {
-    use cursive::theme::{Color, PaletteColor, Theme, BorderStyle};
+    use cursive::event::EventTrigger;
+    use cursive::theme::{BorderStyle, Color, PaletteColor, Theme};
     use cursive::views::{LinearLayout, TextContent};
     use cursive::Cursive;
 
     use super::command_line;
     use super::output_window;
+    use crate::communication::reader::main::MainWindow;
 
     /// Default theme that respects the user's terminal color scheme.
     fn terminal_theme() -> Theme {
@@ -49,23 +51,36 @@ pub mod interface {
         return theme;
     }
 
-    pub fn build(mut app: Cursive) {
+    fn custom_event_trigger() -> EventTrigger {
+        EventTrigger::from_fn_and_tag(|e| true, "logria")
+    }
+
+    pub fn build(window: &mut MainWindow) {
         // Text content, used to send content to the output window
         let content = TextContent::new("I am Logria, and\nI\nAm\nALIVE!");
 
         // Set Theme
-        app.set_theme(terminal_theme());
-
-        // UI Elements
-        let output_window = output_window::build(content, app.screen_size());
+        window.logria.set_theme(terminal_theme());
+        // Create UI Elements
+        let output_window = output_window::build(content, window.logria.screen_size());
         let command_line = command_line::build();
-        // We can quit by pressing `q`
         let layout = LinearLayout::vertical()
             .child(output_window)
             .child(command_line);
-        app.add_global_callback('q', Cursive::quit);
-        app.add_layer(layout);
+
+        // We can quit by pressing `q`
+        window.logria.add_global_callback('q', Cursive::quit);
+        window
+            .logria
+            .set_on_post_event(custom_event_trigger(), |_| {
+                // streams.iter().map(|s| {println!("{:?}", s)});
+                // Cannot reference logria as an app here, need to find a way to get the stream into this part of the app
+                println!("{:?}", true)
+            });
+        window.logria.add_layer(layout);
+        window.logria.set_autorefresh(true);
         // Run the event loop
-        app.run();
+        window.logria.run();
+        println!("{:?}", window.logria.active_screen())
     }
 }

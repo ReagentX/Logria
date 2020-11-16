@@ -2,10 +2,10 @@ pub mod stream {
     use std::sync::mpsc::{channel, Receiver};
     use std::io::{BufRead, BufReader};
     use std::sync::{Arc, Mutex};
-    use std::thread;
     use std::error::Error;
     use std::path::Path;
     use std::fs::File;
+    use std::thread;
 
     use crate::constants::cli::poll_rate::FASTEST;
 

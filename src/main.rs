@@ -1,17 +1,29 @@
-mod util;
+#![allow(dead_code)] // REMOVE!!!
+
+mod communication;
+mod constants;
 mod ui;
-mod strings;
+mod util;
+use std::sync::Arc;
 
 fn main() {
     let options = util::options::from_command_line();
     let cache = options.is_present("cache");
-    let smart_speed = options.is_present("smart-speed");
+    let smart_poll_rate = options.is_present("smart-poll-rate");
     let exec = options.value_of("exec");
-    println!("history disabled? {:?}", cache);
-    println!("smart speed disabled? {:?}", smart_speed);
-    println!("exec stream? {:?}", exec);
 
     // Build ui
-    let app = cursive::crossterm().unwrap();
-    ui::windows::interface::build(app);
+    // loop {
+    //     let poll_rate = Arc::clone(&input.poll_rate);
+    //     *poll_rate.lock().unwrap() += 100;
+    //     println!("{:?}", poll_rate);
+    //     println!("got data: {:?}", input.stderr.recv().unwrap());
+    // }
+
+    let mut app = communication::reader::main::MainWindow::new(
+        cache,
+        smart_poll_rate,
+        vec![exec.unwrap_or("Cargo.toml").to_string()],
+    );
+    app.start();
 }

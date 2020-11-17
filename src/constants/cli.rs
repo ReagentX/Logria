@@ -60,7 +60,7 @@ pub mod messages {
     pub const APP_DESCRIPTION: &str = "A powerful CLI tool that puts log analytics at your fingertips.";
     pub const EXEC_HELP: &str = "Command to listen to, ex: logria -e \"tail -f log.txt\"";
     pub const HISTORY_HELP: &str = "Disable command history disk cache";
-    pub const SMART_SPEED_HELP: &str = "Disable variable speed polling based on message receive rate";
+    pub const SMART_POLL_RATE_HELP: &str = "Disable variable speed polling based on message receive rate";
     pub const PIPE_INPUT_ERROR: &str = "Piping is not supported as Logria cannot both
     listen to stdin as well as get user input from
     your tty. Process substitution is also not

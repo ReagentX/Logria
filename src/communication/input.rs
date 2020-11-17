@@ -2,10 +2,10 @@ pub mod stream {
     use std::sync::mpsc::{channel, Receiver};
     use std::io::{BufRead, BufReader};
     use std::sync::{Arc, Mutex};
-    use std::{thread, time};
     use std::error::Error;
     use std::path::Path;
     use std::fs::File;
+    use std::thread;
 
     use crate::constants::cli::poll_rate::FASTEST;
 
@@ -18,17 +18,11 @@ pub mod stream {
         pub process: Result<std::thread::JoinHandle<()>, std::io::Error>,
     }
 
-    pub trait Communicate {
-        fn new(poll_rate: Option<u64>, name: String, command: String) -> FileInput;
-    }
-
     #[derive(Debug)]
-    pub struct FileInput {
-        pub stream: InputStream,
-    }
+    pub struct FileInput {}
 
-    impl Communicate for FileInput {
-        fn new(poll_rate: Option<u64>, name: String, command: String) -> FileInput {
+    impl FileInput {
+        pub fn new(poll_rate: Option<u64>, name: String, command: String) -> InputStream {
             // Setup multiprocessing queues
             let (err_tx, err_rx) = channel();
             let (out_tx, out_rx) = channel();
@@ -40,6 +34,7 @@ pub mod stream {
             let process = thread::Builder::new()
                 .name(name.to_string())
                 .spawn(move || {
+                    // Remove, as file input should be immediately buffered...
                     let num = internal_poll_rate.lock().unwrap();
                     let path = Path::new(&command);
 
@@ -54,18 +49,15 @@ pub mod stream {
                     let reader = BufReader::new(file);
                     for line in reader.lines() {
                         err_tx.send(line.unwrap().to_string()).unwrap();
-                        println!("wiener {:?}", num);
                     }
                 });
 
-            FileInput {
-                stream: InputStream {
-                    poll_rate: poll_rate,
-                    stdout: out_rx,
-                    stderr: err_rx,
-                    proccess_name: name,
-                    process: process,
-                },
+            InputStream {
+                poll_rate: poll_rate,
+                stdout: out_rx,
+                stderr: err_rx,
+                proccess_name: name,
+                process: process,
             }
         }
     }

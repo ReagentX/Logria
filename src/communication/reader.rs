@@ -1,5 +1,6 @@
 pub mod main {
-    use cursive::views::{ResizedView, TextView, ViewRef};
+    use cursive::event::Event;
+    use cursive::views::TextContent;
     use std::path::Path;
 
     use crate::communication::input::stream::{FileInput, InputStream};
@@ -47,6 +48,7 @@ pub mod main {
     pub struct MainWindow {
         pub logria: cursive::Cursive,
         pub config: LogiraConfig,
+        pub output: Option<TextContent>,
     }
 
     impl MainWindow {
@@ -71,6 +73,7 @@ pub mod main {
             let streams = MainWindow::build_streams(commands);
             MainWindow {
                 logria: cursive::crossterm().unwrap(),
+                output: None,
                 config: LogiraConfig {
                     poll_rate: FASTEST,
                     smart_poll_rate: smart_poll_rate,
@@ -104,33 +107,37 @@ pub mod main {
         }
 
         pub fn start(&mut self) {
-            println!("\nbefore build");
-            build(self);
-            println!("after build");
+            // Build the UI, get reference to the text body content
+            self.output = Some(build(self));
+
+            // Set interal state
             let screen_resolution = self.logria.screen_size();
             self.config.height = screen_resolution.y;
             self.config.width = screen_resolution.x;
             self.config.last_row = self.config.height - 2;
-            println!("after config");
-            println!("{:?}", self.logria.is_running());
+
+            // Start the main event loop
+            self.main();
         }
 
-        pub fn text_callback(&mut self) {
-            // let mut command_line: ViewRef<ResizedView<TextView>> =
-            //     self.logria.find_name("0").unwrap();
-            let output_window: ViewRef<ResizedView<TextView>> =
-                self.logria.find_name("1").expect("Fuck!");
-            println!("after find name");
-            let content_ref = output_window.into_owner();
-            println!("after windows");
-            content_ref.map(|p| {
-                let v = &mut p.borrow_mut();
-                let c = v.get_inner_mut();
-                c.set_content("We got some new content!");
-                println!("After set content");
-                ""
-            });
-            println!("After map");
+        fn main(&mut self) {
+            // Main app loop
+            loop {
+                self.update_body("I got new content!!\nRust is fun!\nI think");
+                // Logic goes here...
+                // Need to figure out how to get/fire events between cursive and here.
+                self.logria.on_event(Event::Char('q'));
+                // I think events are not working because the text input field is always active
+
+                self.logria.step();
+            }
+        }
+
+        pub fn update_body(&mut self, content: &str) {
+            match &self.output {
+                Some(o) => o.set_content(content),
+                None => panic!("There is no output window!"),
+            };
         }
     }
 }

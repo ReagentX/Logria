@@ -51,36 +51,29 @@ pub mod interface {
         return theme;
     }
 
-    fn custom_event_trigger() -> EventTrigger {
-        EventTrigger::from_fn_and_tag(|e| true, "logria")
-    }
-
-    pub fn build(window: &mut MainWindow) {
+    pub fn build(window: &mut MainWindow) -> TextContent {
         // Text content, used to send content to the output window
         let content = TextContent::new("I am Logria, and\nI\nAm\nALIVE!");
 
         // Set Theme
         window.logria.set_theme(terminal_theme());
+
         // Create UI Elements
-        let output_window = output_window::build(content, window.logria.screen_size());
         let command_line = command_line::build();
+        let output_window = output_window::build(content.clone(), window.logria.screen_size());
         let layout = LinearLayout::vertical()
             .child(output_window)
             .child(command_line);
 
         // We can quit by pressing `q`
         window.logria.add_global_callback('q', Cursive::quit);
-        window
-            .logria
-            .set_on_post_event(custom_event_trigger(), |_| {
-                // streams.iter().map(|s| {println!("{:?}", s)});
-                // Cannot reference logria as an app here, need to find a way to get the stream into this part of the app
-                println!("{:?}", true)
-            });
+        window.logria.add_global_callback('v', |x| { println!("got event"); });
+
+        // Add the vertical layout to the screen
         window.logria.add_layer(layout);
-        window.logria.set_autorefresh(true);
-        // Run the event loop
-        window.logria.run();
-        println!("{:?}", window.logria.active_screen())
+
+        // Step the event loop to render the above changes
+        window.logria.step();
+        content
     }
 }

@@ -1,11 +1,8 @@
 pub mod main {
-    use cursive::event::Event;
-    use cursive::views::TextContent;
     use std::path::Path;
 
     use crate::communication::input::stream::{FileInput, InputStream};
     use crate::constants::cli::poll_rate::FASTEST;
-    use crate::ui::windows::interface::build;
 
     pub struct LogiraConfig {
         pub poll_rate: u64,    // The rate at which we check for new messages
@@ -23,7 +20,7 @@ pub mod main {
         stdout_messages: Vec<String>,
 
         // Regex settings
-        // func_handle:
+        // func_handle: // Reference to current regex test func
         regex_pattern: Option<String>, // Current regex pattern
         matched_rows: Vec<usize>,      // List of index of matches when regex filtering is active
         last_index_regexed: usize,     // The last index the filtering function saw
@@ -46,9 +43,10 @@ pub mod main {
     }
 
     pub struct MainWindow {
-        pub logria: cursive::Cursive,
+        pub logria: i32, // fix
         pub config: LogiraConfig,
-        pub output: Option<TextContent>,
+        output: Option<i32>, // fix
+        input: Option<i32>, // fix
     }
 
     impl MainWindow {
@@ -72,8 +70,9 @@ pub mod main {
             // Build streams here
             let streams = MainWindow::build_streams(commands);
             MainWindow {
-                logria: cursive::crossterm().unwrap(),
+                logria: 0, // fix
                 output: None,
+                input: None,
                 config: LogiraConfig {
                     poll_rate: FASTEST,
                     smart_poll_rate: smart_poll_rate,
@@ -107,15 +106,7 @@ pub mod main {
         }
 
         pub fn start(&mut self) {
-            // Build the UI, get reference to the text body content
-            self.output = Some(build(self));
-
-            // Set interal state
-            let screen_resolution = self.logria.screen_size();
-            self.config.height = screen_resolution.y;
-            self.config.width = screen_resolution.x;
-            self.config.last_row = self.config.height - 2;
-
+            // Build the UI, get reference to the text body content, etc
             // Start the main event loop
             self.main();
         }
@@ -123,21 +114,11 @@ pub mod main {
         fn main(&mut self) {
             // Main app loop
             loop {
-                self.update_body("I got new content!!\nRust is fun!\nI think");
+                break;
                 // Logic goes here...
-                // Need to figure out how to get/fire events between cursive and here.
-                self.logria.on_event(Event::Char('q'));
+                // Need to figure out how to get/fire events between rs-tui and here.
                 // I think events are not working because the text input field is always active
-
-                self.logria.step();
             }
-        }
-
-        pub fn update_body(&mut self, content: &str) {
-            match &self.output {
-                Some(o) => o.set_content(content),
-                None => panic!("There is no output window!"),
-            };
         }
     }
 }

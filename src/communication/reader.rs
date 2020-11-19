@@ -6,6 +6,11 @@ pub mod main {
     use crate::communication::input::stream::{FileInput, InputStream};
     use crate::constants::cli::poll_rate::FASTEST;
     use crate::ui::interface::build::{command_line, exit_scr, init_scr, output_window};
+    use crate::communication::handlers::handler::HanderMethods;
+    use crate::communication::handlers::normal::NormalHandler;
+    use crate::communication::handlers::command::CommandHandler;
+    use crate::communication::handlers::regex::RegexHandler;
+    use crate::communication::handlers::multiple_choice::MultipleChoiceHandler;
 
     #[derive(Debug)]
     pub struct LogiraConfig {
@@ -152,7 +157,7 @@ pub mod main {
             wrefresh(self.input());
         }
 
-        fn write_to_command_line(&self, content: &str) {
+        pub fn write_to_command_line(&self, content: &str) {
             // Remove what used to be in the command line
             self.reset_command_line();
 
@@ -191,6 +196,10 @@ pub mod main {
 
         fn main(&mut self) {
             // Main app loop
+            let normal_handler = NormalHandler::new();
+            let command_handler = CommandHandler::new();
+            let regex_handler = RegexHandler::new();
+            let mc_handler = MultipleChoiceHandler::new(); // Possibly different path for building options
 
             // enum for input mode: {normal, command, regex, choice}
             // if input mode is command or regex, draw/remove the character to the command line
@@ -199,10 +208,10 @@ pub mod main {
                 match ncurses::getch() {
                     -1 => self.write_to_command_line("no input"), // possibly sleep
                     input => match self.input_type {
-                        InputType::Normal => self.write_to_command_line("normal"),
-                        InputType::Command => self.write_to_command_line("command"),
-                        InputType::Regex => self.write_to_command_line("regex"),
-                        InputType::MultipleChoice => self.write_to_command_line("mc"),
+                        InputType::Normal => normal_handler.recieve_input(&self, input),
+                        InputType::Command => command_handler.recieve_input(&self, input),
+                        InputType::Regex => regex_handler.recieve_input(&self, input),
+                        InputType::MultipleChoice => mc_handler.recieve_input(&self, input),
                     },
                 }
                 use std::{thread, time};

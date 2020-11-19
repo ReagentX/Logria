@@ -1,5 +1,7 @@
 pub mod build {
-    use ncurses::{initscr, endwin, noecho, cbreak, nocbreak, start_color, use_default_colors, echo, keypad};
+    use ncurses::{initscr, endwin, noecho, cbreak, nocbreak, start_color, use_default_colors, echo, keypad, newwin, mvwvline, mvwhline, mvwaddch};
+
+    use crate::communication::reader::main::LogiraConfig;
 
     pub fn init_scr() -> ncurses::WINDOW {
         // Initialize curses
@@ -34,8 +36,30 @@ pub mod build {
         endwin();
     }
 
-}
+    fn rectangle(stdscr: ncurses::WINDOW, uly: i32, ulx: i32, lry: i32, lrx: i32) {
+        mvwvline(stdscr, uly+1, ulx, ncurses::ACS_VLINE(), lry - uly - 1);
+        mvwhline(stdscr, uly, ulx+1, ncurses::ACS_HLINE(), lrx - ulx - 1);
+        mvwhline(stdscr, lry, ulx+1, ncurses::ACS_HLINE(), lrx - ulx - 1);
+        mvwvline(stdscr, uly+1, lrx, ncurses::ACS_VLINE(), lry - uly - 1);
+        mvwaddch(stdscr, uly, ulx, ncurses::ACS_ULCORNER());
+        mvwaddch(stdscr, uly, lrx, ncurses::ACS_URCORNER());
+        mvwaddch(stdscr, lry, lrx, ncurses::ACS_LRCORNER());
+        mvwaddch(stdscr, lry, ulx, ncurses::ACS_LLCORNER());
+    }
 
-pub mod textbox {
+    pub fn command_line(stdscr: ncurses::WINDOW, config: &LogiraConfig) -> ncurses::WINDOW {
+        // 1 line, screen width, start 2 from the bottom, 1 char from the side
+        let window = newwin(1, config.width, config.height - 2, 1);
+        
+        // Do not block the event loop waiting for input
+        ncurses::nodelay(window, true);
+
+        // Draw rectangle around the command line
+        // upper left:  (height - 2, 0), 2 chars up on left edge
+        // lower right: (height, width), bottom right corner of screen
+        rectangle(stdscr, config.height - 3, 0, config.height - 1, config.width - 2);
+        ncurses::refresh();
+        window
+    }
 
 }

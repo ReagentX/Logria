@@ -1,19 +1,25 @@
 pub mod main {
-    use ncurses::{getmaxyx, newwin};
+    use ncurses::{curs_set, getmaxyx, mvaddstr, wrefresh, CURSOR_VISIBILITY};
     use std::path::Path;
 
     use crate::communication::input::input_type::InputType;
     use crate::communication::input::stream::{FileInput, InputStream};
     use crate::constants::cli::poll_rate::FASTEST;
-    use crate::ui::interface::build::{command_line, exit_scr, init_scr};
+    use crate::ui::interface::build::{command_line, exit_scr, init_scr, output_window};
+    use crate::communication::handlers::handler::HanderMethods;
+    use crate::communication::handlers::normal::NormalHandler;
+    use crate::communication::handlers::command::CommandHandler;
+    use crate::communication::handlers::regex::RegexHandler;
+    use crate::communication::handlers::multiple_choice::MultipleChoiceHandler;
 
     #[derive(Debug)]
     pub struct LogiraConfig {
         pub poll_rate: u64,    // The rate at which we check for new messages
-        smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
-        first_run: bool,       // Whether this is a first run or not
         pub height: i32,       // Window height
         pub width: i32,        // Window width
+        pub last_row: i32,     // The last row we can render, aka number of lines visible in the tty
+        smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
+        first_run: bool,       // Whether this is a first run or not
         loop_time: f64,        // How long a loop of the main app takes
         messages: Option<&'static Vec<String>>, // Default to watching stderr
         previous_messages: Option<&'static Vec<String>>, // Pointer to the previous non-parsed message list, which is continuously updated
@@ -38,8 +44,7 @@ pub mod main {
         insert_mode: bool,              // Default to insert mode (like vim) off
         current_status: String,         // Current status, aka what is in the command line
         highlight_match: bool,          // Determines whether we highlight the match to the user
-        last_row: i32, // The last row we can render, aka number of lines visible in the tty
-        stick_to_bottom: bool, // Whether we should follow the stream
+        stick_to_bottom: bool,          // Whether we should follow the stream
         stick_to_top: bool, // Whether we should stick to the top and not render new lines
         manually_controlled_line: bool, // Whether manual scroll is active
         current_end: usize, // Current last row we have rendered
@@ -111,6 +116,10 @@ pub mod main {
             }
         }
 
+        fn redraw(&self) {
+            wrefresh(self.output());
+        }
+
         fn screen(&self) -> ncurses::WINDOW {
             match self.stdscr {
                 Some(scr) => scr,
@@ -127,7 +136,7 @@ pub mod main {
             }
         }
 
-        fn intput(&self) -> ncurses::WINDOW {
+        fn input(&self) -> ncurses::WINDOW {
             match self.input {
                 Some(scr) => scr,
                 None => panic!(
@@ -136,9 +145,37 @@ pub mod main {
             }
         }
 
+        fn reset_command_line(&self) {
+            // Leave padding for surrounding rectangle, we cannot use deleteln because it destroys the rectangle
+            let clear = " ".repeat((self.config.width - 3) as usize);
+            mvaddstr(self.config.height - 2, 1, &clear);
+
+            // If the cursor was visible, hide it
+            curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
+
+            // Refresh the view
+            wrefresh(self.input());
+        }
+
+        pub fn write_to_command_line(&self, content: &str) {
+            // Remove what used to be in the command line
+            self.reset_command_line();
+
+            // Add the string to the front of the command line
+            // TODO: Possibly validate length?
+            mvaddstr(self.config.height - 2, 1, content);
+
+            // If the cursor was visible, hide it
+            curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
+
+            // Refresh the view
+            wrefresh(self.input());
+        }
+
         pub fn start(&mut self) {
             // Build the UI, get reference to the text body content, etc
             self.stdscr = Some(init_scr());
+            ncurses::nodelay(self.screen(), true);
 
             // This is unsafe
             getmaxyx(
@@ -147,10 +184,11 @@ pub mod main {
                 &mut self.config.width,
             );
             self.config.last_row = self.config.height - 3;
-            // Build output window
-            self.output = Some(newwin(self.config.last_row, self.config.width - 1, 0, 0));
 
-            // Build command line...
+            // Build output window
+            self.output = Some(output_window(&self.config));
+
+            // Build command line
             self.input = Some(command_line(self.screen(), &self.config));
             // Start the main event loop
             self.main();
@@ -158,20 +196,27 @@ pub mod main {
 
         fn main(&mut self) {
             // Main app loop
+            let normal_handler = NormalHandler::new();
+            let command_handler = CommandHandler::new();
+            let regex_handler = RegexHandler::new();
+            let mc_handler = MultipleChoiceHandler::new(); // Possibly different path for building options
 
             // enum for input mode: {normal, command, regex, choice}
             // if input mode is command or regex, draw/remove the character to the command line
             // Otherwise, show status
             loop {
                 match ncurses::getch() {
-                    -1 => continue, // possibly sleep
+                    -1 => self.write_to_command_line("no input"), // possibly sleep
                     input => match self.input_type {
-                        InputType::Normal => println!("normal {}", input),
-                        InputType::Command => println!("command {}", input),
-                        InputType::Regex => println!("regex {}", input),
-                        InputType::MultipleChoice => println!("mc {}", input),
-                    }
+                        InputType::Normal => normal_handler.recieve_input(&self, input),
+                        InputType::Command => command_handler.recieve_input(&self, input),
+                        InputType::Regex => regex_handler.recieve_input(&self, input),
+                        InputType::MultipleChoice => mc_handler.recieve_input(&self, input),
+                    },
                 }
+                use std::{thread, time};
+                let sleep = time::Duration::from_millis(500);
+                thread::sleep(sleep);
             }
         }
     }

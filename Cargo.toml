@@ -9,5 +9,4 @@ edition = "2018"
 [dependencies]
 clap = "3.0.0-beta.2"
 dirs = "3.0.1"
-crossterm = "0.18"
-tui = { version = "0.13", default-features = false, features = ['crossterm'] }
+ncurses = "5.99.0"

@@ -49,15 +49,21 @@ pub mod build {
 
     pub fn command_line(stdscr: ncurses::WINDOW, config: &LogiraConfig) -> ncurses::WINDOW {
         // 1 line, screen width, start 2 from the bottom, 1 char from the side
-        let window = newwin(1, config.width, config.height - 2, 1);
-        
-        // Do not block the event loop waiting for input
-        ncurses::nodelay(window, true);
+        let window = newwin(config.last_row, config.width - 1, 0, 0);
 
         // Draw rectangle around the command line
         // upper left:  (height - 2, 0), 2 chars up on left edge
         // lower right: (height, width), bottom right corner of screen
         rectangle(stdscr, config.height - 3, 0, config.height - 1, config.width - 2);
+
+        ncurses::refresh();
+        window
+    }
+
+    pub fn output_window(config: &LogiraConfig) -> ncurses::WINDOW {
+        // 1 line, screen width, start 2 from the bottom, 1 char from the side
+        let window = newwin(1, config.width, config.height - 2, 1);
+
         ncurses::refresh();
         window
     }

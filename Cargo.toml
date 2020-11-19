@@ -9,8 +9,4 @@ edition = "2018"
 [dependencies]
 clap = "3.0.0-beta.2"
 dirs = "3.0.1"
-
-[dependencies.cursive]
-version = "0.15"
-default-features = false
-features = ["crossterm-backend"]
+ncurses = "5.99.0"

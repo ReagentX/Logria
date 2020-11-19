@@ -62,3 +62,12 @@ pub mod stream {
         }
     }
 }
+
+pub mod input_type {
+    pub enum InputType {
+        Normal,
+        Command,
+        Regex,
+        MultipleChoice,
+    }
+}

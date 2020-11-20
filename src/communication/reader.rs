@@ -1,5 +1,5 @@
 pub mod main {
-    use ncurses::{curs_set, getmaxyx, mvaddstr, wrefresh, CURSOR_VISIBILITY};
+    use ncurses::{curs_set, getmaxyx, mvaddstr, wrefresh, CURSOR_VISIBILITY, mv, addstr};
     use std::path::Path;
 
     use crate::communication::input::input_type::InputType;
@@ -42,7 +42,7 @@ pub mod main {
         analytics_enabled: bool,        // Whetehr we are calcualting stats or not
         last_index_processed: usize,    // The last index the parsing function saw
         insert_mode: bool,              // Default to insert mode (like vim) off
-        current_status: String,         // Current status, aka what is in the command line
+        current_status: &'static str,         // Current status, aka what is in the command line
         highlight_match: bool,          // Determines whether we highlight the match to the user
         stick_to_bottom: bool,          // Whether we should follow the stream
         stick_to_top: bool, // Whether we should stick to the top and not render new lines
@@ -88,8 +88,8 @@ pub mod main {
                     poll_rate: FASTEST,
                     smart_poll_rate: smart_poll_rate,
                     first_run: true,
-                    height: 0, // fix
-                    width: 0,  // fix
+                    height: 0,
+                    width: 0,
                     loop_time: 0.0,
                     messages: None,
                     previous_messages: None,
@@ -104,7 +104,7 @@ pub mod main {
                     analytics_enabled: false,
                     last_index_processed: 0,
                     insert_mode: false,
-                    current_status: String::from(""), // fix
+                    current_status: "", // fix
                     highlight_match: false,
                     last_row: 0,
                     stick_to_bottom: true,
@@ -127,7 +127,7 @@ pub mod main {
             }
         }
 
-        fn output(&self) -> ncurses::WINDOW {
+        pub fn output(&self) -> ncurses::WINDOW {
             match self.output {
                 Some(scr) => scr,
                 None => panic!(
@@ -145,10 +145,15 @@ pub mod main {
             }
         }
 
+        pub fn go_to_cli(&self) {
+            mv(self.config.height - 2, 1);
+        }
+
         fn reset_command_line(&self) {
             // Leave padding for surrounding rectangle, we cannot use deleteln because it destroys the rectangle
-            let clear = " ".repeat((self.config.width - 3) as usize);
-            mvaddstr(self.config.height - 2, 1, &clear);
+            let clear = " ".repeat((self.config.width - 3) as usize); // TODO: Store this string as a class attribute, recalc on resize
+            self.go_to_cli();
+            addstr(&clear);
 
             // If the cursor was visible, hide it
             curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
@@ -163,7 +168,8 @@ pub mod main {
 
             // Add the string to the front of the command line
             // TODO: Possibly validate length?
-            mvaddstr(self.config.height - 2, 1, content);
+            self.go_to_cli();
+            addstr(content);
 
             // If the cursor was visible, hide it
             curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
@@ -176,6 +182,9 @@ pub mod main {
             // Build the UI, get reference to the text body content, etc
             self.stdscr = Some(init_scr());
             ncurses::nodelay(self.screen(), true);
+
+            // Hide the cursor
+            curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
 
             // Set dimensions
             getmaxyx(
@@ -196,10 +205,14 @@ pub mod main {
 
         fn main(&mut self) {
             // Main app loop
-            let normal_handler = NormalHandler::new();
-            let command_handler = CommandHandler::new();
-            let regex_handler = RegexHandler::new();
-            let mc_handler = MultipleChoiceHandler::new(); // Possibly different path for building options
+            let mut normal_handler = NormalHandler::new();
+            let mut command_handler = CommandHandler::new();
+            let mut regex_handler = RegexHandler::new();
+            let mut mc_handler = MultipleChoiceHandler::new(); // Possibly different path for building options
+            
+            // temp
+            use crate::communication::handlers::user_input::UserInputHandler;
+            let mut input_handler = UserInputHandler::new(); // input_handler.gather() to get contents
 
             // enum for input mode: {normal, command, regex, choice}
             // if input mode is command or regex, draw/remove the character to the command line

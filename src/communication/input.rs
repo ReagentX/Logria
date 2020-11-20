@@ -68,6 +68,7 @@ pub mod input_type {
         Normal,
         Command,
         Regex,
+        Parser,
         MultipleChoice,
     }
 }

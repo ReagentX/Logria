@@ -120,7 +120,7 @@ pub mod main {
             wrefresh(self.output());
         }
 
-        fn screen(&self) -> ncurses::WINDOW {
+        pub fn screen(&self) -> ncurses::WINDOW {
             match self.stdscr {
                 Some(scr) => scr,
                 None => panic!("Attempted to get screen before screen has been initialized!"),
@@ -177,7 +177,7 @@ pub mod main {
             self.stdscr = Some(init_scr());
             ncurses::nodelay(self.screen(), true);
 
-            // This is unsafe
+            // Set dimensions
             getmaxyx(
                 self.screen(),
                 &mut self.config.height,

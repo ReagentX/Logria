@@ -48,7 +48,7 @@ pub mod main {
         stick_to_top: bool, // Whether we should stick to the top and not render new lines
         manually_controlled_line: bool, // Whether manual scroll is active
         current_end: usize, // Current last row we have rendered
-        stream: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
+        streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
     }
 
     pub struct MainWindow {
@@ -111,7 +111,7 @@ pub mod main {
                     stick_to_top: false,
                     manually_controlled_line: false,
                     current_end: 0,
-                    stream: streams,
+                    streams: streams,
                 },
             }
         }
@@ -218,6 +218,13 @@ pub mod main {
             // if input mode is command or regex, draw/remove the character to the command line
             // Otherwise, show status
             loop {
+                // Update streams here
+                for stream in &self.config.streams {
+                    // Read from streams until there is no more input
+                    // May break if logs come in too fast
+                    stream.stderr.recv().unwrap();
+                    stream.stdout.recv().unwrap();
+                }
                 match ncurses::getch() {
                     -1 => self.write_to_command_line("no input"), // possibly sleep
                     input => match self.input_type {

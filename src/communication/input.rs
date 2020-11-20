@@ -12,7 +12,7 @@ pub mod stream {
     #[derive(Debug)]
     pub struct InputStream {
         pub poll_rate: Arc<Mutex<u64>>,
-        pub stdout: Receiver<&'static str>,
+        pub stdout: Receiver<String>,
         pub stderr: Receiver<String>,
         pub proccess_name: String,
         pub process: Result<std::thread::JoinHandle<()>, std::io::Error>,
@@ -24,9 +24,9 @@ pub mod stream {
     impl FileInput {
         pub fn new(poll_rate: Option<u64>, name: String, command: String) -> InputStream {
             // Setup multiprocessing queues
-            let (err_tx, err_rx) = channel();
+            let (_, err_rx) = channel();
             let (out_tx, out_rx) = channel();
-            out_tx.send("").unwrap(); // Same as above
+            out_tx.send(String::from("No stderr for File Input!")).unwrap(); // Otherwise typing breaks
 
             // Start process
             let poll_rate = Arc::new(Mutex::new(poll_rate.unwrap_or(FASTEST)));
@@ -48,7 +48,7 @@ pub mod stream {
                     // Create a buffer and read from it
                     let reader = BufReader::new(file);
                     for line in reader.lines() {
-                        err_tx.send(line.unwrap().to_string()).unwrap();
+                        out_tx.send(line.unwrap().to_string()).unwrap();
                     }
                 });
 

@@ -100,7 +100,7 @@ pub mod main {
                     exit_val: 0,
                     stderr_messages: vec![], // fix
                     stdout_messages: vec![], // fix
-                    stream_type: StreamType::StdOut,
+                    stream_type: StreamType::StdErr,
                     regex_pattern: None,
                     matched_rows: vec![],
                     last_index_regexed: 0,
@@ -417,8 +417,8 @@ pub mod main {
             logria.config.stick_to_bottom = true;
 
             let (start, end) = logria.determine_render_position();
-            assert_eq!(start, 91);
-            assert_eq!(end, 99);
+            assert_eq!(start, 92);
+            assert_eq!(end, 100);
         }
 
         #[test]

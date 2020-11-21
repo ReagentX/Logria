@@ -24,5 +24,5 @@ fn main() {
         cache,
         smart_poll_rate,
     );
-    app.start(vec![exec.unwrap_or("Cargo.toml").to_string()]);
+    app.start(vec![exec.unwrap_or("README.md").to_string()]);
 }

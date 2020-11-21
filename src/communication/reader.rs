@@ -3,7 +3,7 @@ pub mod main {
     use std::path::Path;
     use std::time::Instant;
 
-    use ncurses::{addstr, curs_set, getmaxyx, mv, wrefresh, CURSOR_VISIBILITY, mvwaddstr};
+    use ncurses::{addstr, curs_set, getmaxyx, mv, mvwaddstr, mvwaddch, wrefresh, CURSOR_VISIBILITY};
 
     use crate::communication::handlers::command::CommandHandler;
     use crate::communication::handlers::handler::HanderMethods;
@@ -15,6 +15,8 @@ pub mod main {
     use crate::communication::input::stream::{FileInput, InputStream};
     use crate::communication::input::stream_type::StreamType;
     use crate::constants::cli::poll_rate::FASTEST;
+    use crate::constants::cli::cli_chars;
+    use crate::util::sanitizers::length::LengthFinder;
     use crate::ui::interface::build::{command_line, exit_scr, init_scr, output_window};
 
     #[derive(Debug)]
@@ -33,35 +35,36 @@ pub mod main {
         // Message buffers
         stderr_messages: Vec<String>,
         stdout_messages: Vec<String>,
-        stream_type: StreamType,
+        pub stream_type: StreamType,
 
         // Regex settings
         regex_pattern: Option<String>, // Current regex pattern
-        matched_rows: Vec<usize>,      // List of index of matches when regex filtering is active
-        last_index_regexed: usize,     // The last index the filtering function saw
+        pub matched_rows: Vec<usize>,  // List of index of matches when regex filtering is active
+        pub last_index_regexed: usize,     // The last index the filtering function saw
 
         // Parser settings
         // parser: ???  // Reference to the current parser
-        parser_index: usize,            // Index for the parser to look at
-        parsed_messages: Vec<String>,   // List of parsed messages
-        analytics_enabled: bool,        // Whetehr we are calcualting stats or not
-        last_index_processed: usize,    // The last index the parsing function saw
-        insert_mode: bool,              // Default to insert mode (like vim) off
-        current_status: String,         // Current status, aka what is in the command line
-        highlight_match: bool,          // Determines whether we highlight the match to the user
-        stick_to_bottom: bool,          // Whether we should follow the stream
-        stick_to_top: bool, // Whether we should stick to the top and not render new lines
-        manually_controlled_line: bool, // Whether manual scroll is active
-        current_end: usize, // Current last row we have rendered
+        parser_index: usize,                // Index for the parser to look at
+        parsed_messages: Vec<String>,       // List of parsed messages
+        analytics_enabled: bool,            // Whetehr we are calcualting stats or not
+        last_index_processed: usize,        // The last index the parsing function saw
+        insert_mode: bool,                  // Default to insert mode (like vim) off
+        current_status: String,             // Current status, aka what is in the command line
+        highlight_match: bool,              // Determines whether we highlight the match to the user
+        pub stick_to_bottom: bool,          // Whether we should follow the stream
+        pub stick_to_top: bool, // Whether we should stick to the top and not render new lines
+        pub manually_controlled_line: bool, // Whether manual scroll is active
+        pub current_end: usize, // Current last row we have rendered
         streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
     }
 
     pub struct MainWindow {
         pub config: LogiraConfig,
-        input_type: InputType,
+        pub input_type: InputType,
         stdscr: Option<ncurses::WINDOW>,
-        output: Option<ncurses::WINDOW>, // fix
-        input: Option<ncurses::WINDOW>,  // fix
+        output: Option<ncurses::WINDOW>,
+        input: Option<ncurses::WINDOW>,
+        length_finder: LengthFinder,
     }
 
     impl MainWindow {
@@ -88,6 +91,7 @@ pub mod main {
                 input_type: InputType::Normal,
                 output: None,
                 input: None,
+                length_finder: LengthFinder::new(),
                 config: LogiraConfig {
                     poll_rate: FASTEST,
                     smart_poll_rate: smart_poll_rate,
@@ -129,7 +133,7 @@ pub mod main {
             if self.config.stick_to_top {
                 let mut current_index: usize = 0;
                 loop {
-                    let next_message: &str = match self.input_type {
+                    let message: &str = match self.input_type {
                         InputType::Normal | InputType::MultipleChoice | InputType::Command => {
                             &self.messages()[current_index]
                         }
@@ -141,11 +145,23 @@ pub mod main {
 
                     // Determine if we can fit the next message
                     // TODO: Fix Cast here
-                    rows += (next_message.len() + (self.config.width as usize - 1))
-                        / self.config.width as usize;
+                    let message_length = self.length_finder.get_real_length(message);
+                    rows += max(
+                        1,
+                        (message_length + (self.config.width as usize - 1))
+                            / self.config.width as usize,
+                    );
+
+                    // TODO: broken insertion for blank lines!
+                    if message_length == 0 {
+                        rows = match rows.checked_add(1) {
+                            Some(value) => value,
+                            None => break,
+                        };
+                    }
 
                     // If we can fit, increment the last row number
-                    if rows < self.config.last_row as usize
+                    if rows <= self.config.last_row as usize
                         && current_index < message_pointer_length - 1
                     {
                         current_index += 1;
@@ -155,6 +171,7 @@ pub mod main {
                     // If the above if doesn't hit, we are done
                     break;
                 }
+                self.config.current_end = current_index; // Save this row so we know where we are
                 return (0, current_index);
             } else if self.config.stick_to_bottom {
                 end = message_pointer_length;
@@ -188,6 +205,7 @@ pub mod main {
 
         fn render_text_in_output(&mut self) {
             let mut current_row = self.config.last_row as usize;
+            let width = self.config.width as usize;
 
             // Determine the start and end position of the render
             let (start, end) = self.determine_render_position();
@@ -198,10 +216,15 @@ pub mod main {
                 return;
             }
 
+            // Lock in the previous render state
+            self.config.previous_render = (max(0, start), end);
+            self.reset_output();
+
             // Implement the rest of the rendering algorithm
             // Main issue is determining which vec we are reading the data from and adjusting as a result
+            // panic!("{:?}, {:?}", start, end);
             for index in (start..end).rev() {
-                let next_message: &str = match self.input_type {
+                let message: &str = match self.input_type {
                     InputType::Normal | InputType::MultipleChoice | InputType::Command => {
                         &self.messages()[index]
                     }
@@ -210,14 +233,23 @@ pub mod main {
                     }
                 };
 
-                // TODO: handle color codes
-                current_row -= (next_message.len() + (self.config.width as usize - 1))
-                    / self.config.width as usize;
-                if current_row <= 0 {
-                    break;
+                let message_length = self.length_finder.get_real_length(message);
+                current_row =
+                    match current_row.checked_sub(max(1, (message_length + (width - 1)) / width)) {
+                        Some(value) => value,
+                        None => break,
+                    };
+
+                // TODO: broken insertion for blank lines!
+                if message.len() == 0 {
+                    current_row = match current_row.checked_sub(1) {
+                        Some(value) => value,
+                        None => break,
+                    };
                 }
 
-                mvwaddstr(self.screen(), current_row as i32, 0, next_message);
+                // TODO: handle color codes
+                mvwaddstr(self.screen(), current_row as i32, 0, message);
             }
         }
 
@@ -250,7 +282,7 @@ pub mod main {
             }
         }
 
-        fn messages(&self) -> &Vec<String> {
+        pub fn messages(&self) -> &Vec<String> {
             match self.config.stream_type {
                 StreamType::StdErr => &self.config.stderr_messages,
                 StreamType::StdOut => &self.config.stdout_messages,
@@ -261,7 +293,17 @@ pub mod main {
             mv(self.config.height - 2, 1);
         }
 
-        fn reset_command_line(&self) {
+        /// Overwrites the output window with empty space
+        /// TODO: faster?
+        fn reset_output(&self) {
+            let clear = " ".repeat((self.config.width) as usize); // TODO: Store this string as a class attribute, recalc on resize
+
+            for row in 0..self.config.last_row {
+                mvwaddstr(self.screen(), row as i32, 0, &clear);
+            }
+        }
+
+        pub fn reset_command_line(&self) {
             // Leave padding for surrounding rectangle, we cannot use deleteln because it destroys the rectangle
             let clear = " ".repeat((self.config.width - 3) as usize); // TODO: Store this string as a class attribute, recalc on resize
             self.go_to_cli();
@@ -290,6 +332,29 @@ pub mod main {
             wrefresh(self.input());
         }
 
+        /// Set the first col of the command line depending on mode
+        pub fn set_cli_cursor(&self, content: Option<u32>) {
+            self.go_to_cli();
+            let first_char = match self.input_type {
+                InputType::Normal => ncurses::ACS_VLINE(),
+                InputType::MultipleChoice => content.unwrap_or(cli_chars::mc_char),
+                InputType::Command => content.unwrap_or(cli_chars::command_char),
+                InputType::Regex => content.unwrap_or(cli_chars::regex_char),
+                InputType::Parser => content.unwrap_or(cli_chars::parser_char),
+            };
+            mvwaddch(self.screen(), self.config.last_row + 1, 0, first_char);
+        }
+
+        /// Set dimensions
+        fn update_dimensions(&mut self) {
+            getmaxyx(
+                self.screen(),
+                &mut self.config.height,
+                &mut self.config.width,
+            );
+            self.config.last_row = self.config.height - 3;
+        }
+
         pub fn start(&mut self, commands: Vec<String>) {
             // Build the app
             self.config.streams = self.build_streams(commands);
@@ -301,13 +366,8 @@ pub mod main {
             // Hide the cursor
             curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
 
-            // Set dimensions
-            getmaxyx(
-                self.screen(),
-                &mut self.config.height,
-                &mut self.config.width,
-            );
-            self.config.last_row = self.config.height - 3;
+            // Set UI Size
+            self.update_dimensions();
 
             // Build output window
             self.output = Some(output_window(&self.config));
@@ -359,6 +419,14 @@ pub mod main {
             use crate::communication::handlers::user_input::UserInputHandler;
             let mut input_handler = UserInputHandler::new(); // input_handler.gather() to get contents
 
+            // Initial message collection
+            self.recieve_streams();
+
+            // Default is StdErr, swap based on number of messages
+            if self.config.stdout_messages.len() > self.config.stderr_messages.len() {
+                self.config.stream_type = StreamType::StdOut;
+            }
+
             // enum for input mode: {normal, command, regex, choice}
             // if input mode is command or regex, draw/remove the character to the command line
             // Otherwise, show status
@@ -370,18 +438,18 @@ pub mod main {
                 // println!("{} in {:?}", new_messages, t_1);
 
                 match ncurses::getch() {
-                    -1 => self.write_to_command_line("no input"), // possibly sleep
+                    -1 => (), // possibly sleep, cleanup, etc
                     input => match self.input_type {
-                        InputType::Normal => normal_handler.recieve_input(&self, input),
-                        InputType::Command => command_handler.recieve_input(&self, input),
-                        InputType::Regex => regex_handler.recieve_input(&self, input),
-                        InputType::Parser => parser_handler.recieve_input(&self, input),
-                        InputType::MultipleChoice => mc_handler.recieve_input(&self, input),
+                        InputType::Normal => normal_handler.recieve_input(self, input),
+                        InputType::Command => command_handler.recieve_input(self, input),
+                        InputType::Regex => regex_handler.recieve_input(self, input),
+                        InputType::Parser => parser_handler.recieve_input(self, input),
+                        InputType::MultipleChoice => mc_handler.recieve_input(self, input),
                     },
                 }
                 self.render_text_in_output();
                 use std::{thread, time};
-                let sleep = time::Duration::from_millis(self.config.poll_rate);
+                let sleep = time::Duration::from_millis(100);
                 thread::sleep(sleep);
             }
         }
@@ -432,7 +500,7 @@ pub mod main {
 
             let (start, end) = logria.determine_render_position();
             assert_eq!(start, 0);
-            assert_eq!(end, 6);
+            assert_eq!(end, 7);
         }
 
         #[test]

@@ -3,7 +3,7 @@ pub mod main {
     use std::path::Path;
     use std::time::Instant;
 
-    use ncurses::{addstr, curs_set, getmaxyx, mv, mvwaddstr, wrefresh, CURSOR_VISIBILITY};
+    use ncurses::{addstr, curs_set, getmaxyx, mv, mvwaddstr, mvwaddch, wrefresh, CURSOR_VISIBILITY};
 
     use crate::communication::handlers::command::CommandHandler;
     use crate::communication::handlers::handler::HanderMethods;
@@ -15,6 +15,7 @@ pub mod main {
     use crate::communication::input::stream::{FileInput, InputStream};
     use crate::communication::input::stream_type::StreamType;
     use crate::constants::cli::poll_rate::FASTEST;
+    use crate::constants::cli::cli_chars;
     use crate::util::sanitizers::length::LengthFinder;
     use crate::ui::interface::build::{command_line, exit_scr, init_scr, output_window};
 
@@ -39,7 +40,7 @@ pub mod main {
         // Regex settings
         regex_pattern: Option<String>, // Current regex pattern
         pub matched_rows: Vec<usize>,  // List of index of matches when regex filtering is active
-        last_index_regexed: usize,     // The last index the filtering function saw
+        pub last_index_regexed: usize,     // The last index the filtering function saw
 
         // Parser settings
         // parser: ???  // Reference to the current parser
@@ -302,7 +303,7 @@ pub mod main {
             }
         }
 
-        fn reset_command_line(&self) {
+        pub fn reset_command_line(&self) {
             // Leave padding for surrounding rectangle, we cannot use deleteln because it destroys the rectangle
             let clear = " ".repeat((self.config.width - 3) as usize); // TODO: Store this string as a class attribute, recalc on resize
             self.go_to_cli();
@@ -331,6 +332,29 @@ pub mod main {
             wrefresh(self.input());
         }
 
+        /// Set the first col of the command line depending on mode
+        pub fn set_cli_cursor(&self, content: Option<u32>) {
+            self.go_to_cli();
+            let first_char = match self.input_type {
+                InputType::Normal => ncurses::ACS_VLINE(),
+                InputType::MultipleChoice => content.unwrap_or(cli_chars::mc_char),
+                InputType::Command => content.unwrap_or(cli_chars::command_char),
+                InputType::Regex => content.unwrap_or(cli_chars::regex_char),
+                InputType::Parser => content.unwrap_or(cli_chars::parser_char),
+            };
+            mvwaddch(self.screen(), self.config.last_row + 1, 0, first_char);
+        }
+
+        /// Set dimensions
+        fn update_dimensions(&mut self) {
+            getmaxyx(
+                self.screen(),
+                &mut self.config.height,
+                &mut self.config.width,
+            );
+            self.config.last_row = self.config.height - 3;
+        }
+
         pub fn start(&mut self, commands: Vec<String>) {
             // Build the app
             self.config.streams = self.build_streams(commands);
@@ -342,13 +366,8 @@ pub mod main {
             // Hide the cursor
             curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
 
-            // Set dimensions
-            getmaxyx(
-                self.screen(),
-                &mut self.config.height,
-                &mut self.config.width,
-            );
-            self.config.last_row = self.config.height - 3;
+            // Set UI Size
+            self.update_dimensions();
 
             // Build output window
             self.output = Some(output_window(&self.config));
@@ -419,7 +438,7 @@ pub mod main {
                 // println!("{} in {:?}", new_messages, t_1);
 
                 match ncurses::getch() {
-                    -1 => self.write_to_command_line("no input"), // possibly sleep
+                    -1 => (), // possibly sleep, cleanup, etc
                     input => match self.input_type {
                         InputType::Normal => normal_handler.recieve_input(self, input),
                         InputType::Command => command_handler.recieve_input(self, input),
@@ -430,7 +449,7 @@ pub mod main {
                 }
                 self.render_text_in_output();
                 use std::{thread, time};
-                let sleep = time::Duration::from_millis(200);
+                let sleep = time::Duration::from_millis(100);
                 thread::sleep(sleep);
             }
         }

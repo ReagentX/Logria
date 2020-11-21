@@ -72,3 +72,11 @@ pub mod input_type {
         MultipleChoice,
     }
 }
+
+pub mod stream_type {
+    #[derive(Debug)]
+    pub enum StreamType {
+        StdErr,
+        StdOut
+    }
+}

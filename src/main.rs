@@ -23,7 +23,6 @@ fn main() {
     let mut app = communication::reader::main::MainWindow::new(
         cache,
         smart_poll_rate,
-        vec![exec.unwrap_or("Cargo.toml").to_string()],
     );
-    app.start();
+    app.start(vec![exec.unwrap_or("Cargo.toml").to_string()]);
 }

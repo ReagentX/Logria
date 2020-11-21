@@ -86,8 +86,19 @@ impl UserInputHandler {
         }
     }
 
+    /// Remove char 1 to the left of the cursor
+    fn backspace(&self, window: &MainWindow) {
+
+    }
+
+
+    /// Remove char 1 to the right of the cursor
+    fn delete(&self, window: &MainWindow) {
+
+    }
+
     /// Get the contents of the command line as a string
-    fn gather(&mut self, window: &MainWindow) -> String {
+    pub fn gather(&mut self, window: &MainWindow) -> String {
         let last_char = self.end_of_line(window);
         let mut out_s = String::from("");
         for position in 1..last_char {
@@ -98,12 +109,17 @@ impl UserInputHandler {
 
         // Reset the last written spot
         self.last_write = 0;
+        window.reset_command_line();
         out_s
     }
 
     fn do_command(&mut self, window: &MainWindow, command: u32) -> bool {
         self.end_of_line(window);
-        self.insert_char(&window, command);
+        match command {
+            127 => self.backspace(window),
+            263 => self.backspace(window),
+            command => self.insert_char(&window, command),
+        }
         true
     }
 }

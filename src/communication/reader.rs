@@ -142,7 +142,7 @@ pub mod main {
                     rows += (next_message.len() + (self.config.width as usize - 1)) / self.config.width as usize;
 
                     // If we can fit, increment the last row number
-                    if rows < self.config.last_row as usize && current_index < message_pointer_length {
+                    if rows < self.config.last_row as usize && current_index < message_pointer_length - 1 {
                         current_index += 1;
                         continue;
                     }
@@ -177,7 +177,7 @@ pub mod main {
                 end = message_pointer_length
             }
             self.config.current_end = end; // Save this row so we know where we are
-            let start = max(0, end - self.config.last_row as usize - 1);
+            let start = max(0, end as i32 - self.config.last_row - 1) as usize;
             (start, end)
         }
 
@@ -392,5 +392,80 @@ pub mod main {
             assert_eq!(start, 0);
             assert_eq!(end, 6);
         }
+
+        #[test]
+        fn test_render_few_from_middle() {
+            let mut logria = dummy_logria();
+
+            // Set scroll state
+            logria.config.manually_controlled_line = true;
+            logria.config.stick_to_top = false;
+            logria.config.stick_to_bottom = false;
+
+            // Set current scroll state
+            logria.config.current_end = 3;
+
+            // Set small content
+            logria.config.stderr_messages = (0..4).map(|x| x.to_string()).collect();
+
+            let (start, end) = logria.determine_render_position();
+            assert_eq!(start, 0);
+            assert_eq!(end, 3);
+        }
+
+        #[test]
+        fn test_render_from_middle() {
+            let mut logria = dummy_logria();
+
+            // Set scroll state
+            logria.config.manually_controlled_line = true;
+            logria.config.stick_to_top = false;
+            logria.config.stick_to_bottom = false;
+
+            // Set current scroll state
+            logria.config.current_end = 80;
+
+            let (start, end) = logria.determine_render_position();
+            assert_eq!(start, 72);
+            assert_eq!(end, 80);
+        }
+
+        #[test]
+        fn test_render_from_middle_early() {
+            let mut logria = dummy_logria();
+    
+            // Set scroll state
+            logria.config.manually_controlled_line = true;
+            logria.config.stick_to_top = false;
+            logria.config.stick_to_bottom = false;
+    
+            // Set current scroll state
+            logria.config.current_end = 5;
+    
+            let (start, end) = logria.determine_render_position();
+            assert_eq!(start, 0);
+            assert_eq!(end, 5);
+        }
+
+        #[test]
+        fn test_render_small_from_top() {
+            let mut logria = dummy_logria();
+    
+            // Set scroll state
+            logria.config.manually_controlled_line = false;
+            logria.config.stick_to_top = true;
+            logria.config.stick_to_bottom = false;
+    
+            // Set current scroll state
+            logria.config.current_end = 0;
+
+            // Set small content
+            logria.config.stderr_messages = (0..6).map(|x| x.to_string()).collect();
+    
+            let (start, end) = logria.determine_render_position();
+            assert_eq!(start, 0);
+            assert_eq!(end, 5);
+        }
     }
+
 }

@@ -3,7 +3,7 @@ pub mod main {
     use std::path::Path;
     use std::time::Instant;
 
-    use ncurses::{addstr, curs_set, getmaxyx, mv, wrefresh, CURSOR_VISIBILITY, mvwaddstr};
+    use ncurses::{addstr, curs_set, getmaxyx, mv, mvwaddstr, wrefresh, CURSOR_VISIBILITY};
 
     use crate::communication::handlers::command::CommandHandler;
     use crate::communication::handlers::handler::HanderMethods;
@@ -188,6 +188,7 @@ pub mod main {
 
         fn render_text_in_output(&mut self) {
             let mut current_row = self.config.last_row as usize;
+            let width = self.config.width as usize;
 
             // Determine the start and end position of the render
             let (start, end) = self.determine_render_position();
@@ -198,8 +199,12 @@ pub mod main {
                 return;
             }
 
+            // Lock in the previous render state
+            self.config.previous_render = (max(0, start), end);
+
             // Implement the rest of the rendering algorithm
             // Main issue is determining which vec we are reading the data from and adjusting as a result
+            // panic!("{:?}, {:?}", start, end);
             for index in (start..end).rev() {
                 let next_message: &str = match self.input_type {
                     InputType::Normal | InputType::MultipleChoice | InputType::Command => {
@@ -211,12 +216,14 @@ pub mod main {
                 };
 
                 // TODO: handle color codes
-                current_row -= (next_message.len() + (self.config.width as usize - 1))
-                    / self.config.width as usize;
+
+                current_row -= (next_message.len() + (width - 1)) / width;
                 if current_row <= 0 {
                     break;
                 }
-
+                if next_message.len() == 0 {
+                    current_row -= 1; // TODO: broken insertion for blank lines!
+                }
                 mvwaddstr(self.screen(), current_row as i32, 0, next_message);
             }
         }
@@ -358,6 +365,14 @@ pub mod main {
             // temp
             use crate::communication::handlers::user_input::UserInputHandler;
             let mut input_handler = UserInputHandler::new(); // input_handler.gather() to get contents
+
+            // Initial message collection
+            self.recieve_streams();
+
+            // Default is StdErr, swap based on number of messages
+            if self.config.stdout_messages.len() > self.config.stderr_messages.len() {
+                self.config.stream_type = StreamType::StdOut;
+            }
 
             // enum for input mode: {normal, command, regex, choice}
             // if input mode is command or regex, draw/remove the character to the command line

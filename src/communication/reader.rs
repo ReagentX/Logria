@@ -1,16 +1,21 @@
 pub mod main {
-    use ncurses::{curs_set, getmaxyx, mvaddstr, wrefresh, CURSOR_VISIBILITY, mv, addstr};
+    use std::cmp::{max, min};
     use std::path::Path;
+    use std::time::Instant;
 
+    use ncurses::{addstr, curs_set, getmaxyx, mv, wrefresh, CURSOR_VISIBILITY, mvwaddstr};
+
+    use crate::communication::handlers::command::CommandHandler;
+    use crate::communication::handlers::handler::HanderMethods;
+    use crate::communication::handlers::multiple_choice::MultipleChoiceHandler;
+    use crate::communication::handlers::normal::NormalHandler;
+    use crate::communication::handlers::parser::ParserHandler;
+    use crate::communication::handlers::regex::RegexHandler;
     use crate::communication::input::input_type::InputType;
     use crate::communication::input::stream::{FileInput, InputStream};
+    use crate::communication::input::stream_type::StreamType;
     use crate::constants::cli::poll_rate::FASTEST;
     use crate::ui::interface::build::{command_line, exit_scr, init_scr, output_window};
-    use crate::communication::handlers::handler::HanderMethods;
-    use crate::communication::handlers::normal::NormalHandler;
-    use crate::communication::handlers::command::CommandHandler;
-    use crate::communication::handlers::regex::RegexHandler;
-    use crate::communication::handlers::multiple_choice::MultipleChoiceHandler;
 
     #[derive(Debug)]
     pub struct LogiraConfig {
@@ -21,16 +26,16 @@ pub mod main {
         smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
         first_run: bool,       // Whether this is a first run or not
         loop_time: f64,        // How long a loop of the main app takes
-        messages: Option<&'static Vec<String>>, // Default to watching stderr
+        previous_render: (usize, usize),
         previous_messages: Option<&'static Vec<String>>, // Pointer to the previous non-parsed message list, which is continuously updated
         exit_val: i8,                                    // If exit_val is -1, the app dies
 
         // Message buffers
         stderr_messages: Vec<String>,
         stdout_messages: Vec<String>,
+        stream_type: StreamType,
 
         // Regex settings
-        // func_handle: // Reference to current regex test func
         regex_pattern: Option<String>, // Current regex pattern
         matched_rows: Vec<usize>,      // List of index of matches when regex filtering is active
         last_index_regexed: usize,     // The last index the filtering function saw
@@ -42,13 +47,13 @@ pub mod main {
         analytics_enabled: bool,        // Whetehr we are calcualting stats or not
         last_index_processed: usize,    // The last index the parsing function saw
         insert_mode: bool,              // Default to insert mode (like vim) off
-        current_status: &'static str,         // Current status, aka what is in the command line
+        current_status: String,         // Current status, aka what is in the command line
         highlight_match: bool,          // Determines whether we highlight the match to the user
         stick_to_bottom: bool,          // Whether we should follow the stream
         stick_to_top: bool, // Whether we should stick to the top and not render new lines
         manually_controlled_line: bool, // Whether manual scroll is active
         current_end: usize, // Current last row we have rendered
-        stream: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
+        streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
     }
 
     pub struct MainWindow {
@@ -60,7 +65,7 @@ pub mod main {
     }
 
     impl MainWindow {
-        fn build_streams(commands: Vec<String>) -> Vec<InputStream> {
+        fn build_streams(&self, commands: Vec<String>) -> Vec<InputStream> {
             let mut streams: Vec<InputStream> = vec![];
             for command in commands {
                 // determine if command is a file, create FileInput
@@ -76,9 +81,8 @@ pub mod main {
             streams
         }
 
-        pub fn new(cache: bool, smart_poll_rate: bool, commands: Vec<String>) -> MainWindow {
+        pub fn new(cache: bool, smart_poll_rate: bool) -> MainWindow {
             // Build streams here
-            let streams = MainWindow::build_streams(commands);
             MainWindow {
                 stdscr: None,
                 input_type: InputType::Normal,
@@ -91,11 +95,12 @@ pub mod main {
                     height: 0,
                     width: 0,
                     loop_time: 0.0,
-                    messages: None,
+                    previous_render: (0, 0),
                     previous_messages: None,
                     exit_val: 0,
                     stderr_messages: vec![], // fix
                     stdout_messages: vec![], // fix
+                    stream_type: StreamType::StdErr,
                     regex_pattern: None,
                     matched_rows: vec![],
                     last_index_regexed: 0,
@@ -104,15 +109,115 @@ pub mod main {
                     analytics_enabled: false,
                     last_index_processed: 0,
                     insert_mode: false,
-                    current_status: "", // fix
+                    current_status: String::from(""), // fix
                     highlight_match: false,
                     last_row: 0,
                     stick_to_bottom: true,
                     stick_to_top: false,
                     manually_controlled_line: false,
                     current_end: 0,
-                    stream: streams,
+                    streams: vec![],
                 },
+            }
+        }
+
+        fn determine_render_position(&mut self) -> (usize, usize) {
+            let mut end: usize = 0;
+            let mut rows: usize = 0;
+            let mut message_pointer_length: usize = self.messages().len();
+
+            if self.config.stick_to_top {
+                let mut current_index: usize = 0;
+                loop {
+                    let next_message: &str = match self.input_type {
+                        InputType::Normal | InputType::MultipleChoice | InputType::Command => {
+                            &self.messages()[current_index]
+                        }
+                        InputType::Parser | InputType::Regex => {
+                            message_pointer_length = self.config.matched_rows.len();
+                            &self.messages()[self.config.matched_rows[current_index]]
+                        }
+                    };
+
+                    // Determine if we can fit the next message
+                    // TODO: Fix Cast here
+                    rows += (next_message.len() + (self.config.width as usize - 1))
+                        / self.config.width as usize;
+
+                    // If we can fit, increment the last row number
+                    if rows < self.config.last_row as usize
+                        && current_index < message_pointer_length - 1
+                    {
+                        current_index += 1;
+                        continue;
+                    }
+
+                    // If the above if doesn't hit, we are done
+                    break;
+                }
+                return (0, current_index);
+            } else if self.config.stick_to_bottom {
+                end = message_pointer_length;
+            } else if self.config.manually_controlled_line {
+                if message_pointer_length < self.config.last_row as usize {
+                    // If have fewer messages than lines, just render it all
+                    end = message_pointer_length - 1;
+                } else if self.config.current_end < self.config.last_row as usize {
+                    // If the last row we rendered comes before the last row we can render,
+                    // use all of the available rows
+                    end = self.config.current_end;
+                } else if self.config.current_end < message_pointer_length {
+                    // If we are looking at a valid line, render ends there
+                    end = self.config.current_end;
+                } else {
+                    // If we have overscrolled, go back
+                    if self.config.current_end > message_pointer_length {
+                        self.config.current_end = message_pointer_length;
+                    } else {
+                        // Since current_end can be zero, we have to use the number of messages
+                        end = message_pointer_length
+                    }
+                }
+            } else {
+                end = message_pointer_length
+            }
+            self.config.current_end = end; // Save this row so we know where we are
+            let start = max(0, end as i32 - self.config.last_row - 1) as usize;
+            (start, end)
+        }
+
+        fn render_text_in_output(&mut self) {
+            let mut current_row = self.config.last_row as usize;
+
+            // Determine the start and end position of the render
+            let (start, end) = self.determine_render_position();
+
+            // Don't do anything if nothing changed; start at index 0
+            if !self.config.analytics_enabled && self.config.previous_render == (max(0, start), end)
+            {
+                return;
+            }
+
+            // Implement the rest of the rendering algorithm
+            // Main issue is determining which vec we are reading the data from and adjusting as a result
+            for index in (start..end).rev() {
+                let next_message: &str = match self.input_type {
+                    InputType::Normal | InputType::MultipleChoice | InputType::Command => {
+                        &self.messages()[index]
+                    }
+                    InputType::Parser | InputType::Regex => {
+                        &self.messages()[self.config.matched_rows[index]]
+                    }
+                };
+
+                // TODO: handle color codes
+                current_row -= (next_message.len() + (self.config.width as usize - 1))
+                    / self.config.width as usize;
+                if current_row <= 0 {
+                    break;
+                }
+
+                mvwaddstr(self.screen(), current_row as i32, 0, next_message);
             }
         }
 
@@ -142,6 +247,13 @@ pub mod main {
                 None => panic!(
                     "Attempted to get command line before command line has been initialized!"
                 ),
+            }
+        }
+
+        fn messages(&self) -> &Vec<String> {
+            match self.config.stream_type {
+                StreamType::StdErr => &self.config.stderr_messages,
+                StreamType::StdOut => &self.config.stdout_messages,
             }
         }
 
@@ -178,7 +290,10 @@ pub mod main {
             wrefresh(self.input());
         }
 
-        pub fn start(&mut self) {
+        pub fn start(&mut self, commands: Vec<String>) {
+            // Build the app
+            self.config.streams = self.build_streams(commands);
+
             // Build the UI, get reference to the text body content, etc
             self.stdscr = Some(init_scr());
             ncurses::nodelay(self.screen(), true);
@@ -199,8 +314,37 @@ pub mod main {
 
             // Build command line
             self.input = Some(command_line(self.screen(), &self.config));
+
             // Start the main event loop
             self.main();
+        }
+
+        /// Update stderr and stdout buffers from every stream's queue
+        fn recieve_streams(&mut self) -> i32 {
+            let mut total_messages = 0;
+            for stream in &self.config.streams {
+                // Read from streams until there is no more input
+                // May lock if logs come in too fast
+                loop {
+                    match stream.stderr.try_recv() {
+                        Ok(data) => {
+                            total_messages += 1;
+                            self.config.stderr_messages.push(data);
+                        }
+                        Err(_) => break,
+                    }
+                }
+                loop {
+                    match stream.stdout.try_recv() {
+                        Ok(data) => {
+                            total_messages += 1;
+                            self.config.stdout_messages.push(data);
+                        }
+                        Err(_) => break,
+                    }
+                }
+            }
+            total_messages
         }
 
         fn main(&mut self) {
@@ -208,8 +352,9 @@ pub mod main {
             let mut normal_handler = NormalHandler::new();
             let mut command_handler = CommandHandler::new();
             let mut regex_handler = RegexHandler::new();
+            let mut parser_handler = ParserHandler::new();
             let mut mc_handler = MultipleChoiceHandler::new(); // Possibly different path for building options
-            
+
             // temp
             use crate::communication::handlers::user_input::UserInputHandler;
             let mut input_handler = UserInputHandler::new(); // input_handler.gather() to get contents
@@ -218,19 +363,149 @@ pub mod main {
             // if input mode is command or regex, draw/remove the character to the command line
             // Otherwise, show status
             loop {
+                // Update streams here
+                let t_0 = Instant::now();
+                let new_messages = self.recieve_streams();
+                let t_1 = t_0.elapsed();
+                // println!("{} in {:?}", new_messages, t_1);
+
                 match ncurses::getch() {
                     -1 => self.write_to_command_line("no input"), // possibly sleep
                     input => match self.input_type {
                         InputType::Normal => normal_handler.recieve_input(&self, input),
                         InputType::Command => command_handler.recieve_input(&self, input),
                         InputType::Regex => regex_handler.recieve_input(&self, input),
+                        InputType::Parser => parser_handler.recieve_input(&self, input),
                         InputType::MultipleChoice => mc_handler.recieve_input(&self, input),
                     },
                 }
+                self.render_text_in_output();
                 use std::{thread, time};
-                let sleep = time::Duration::from_millis(500);
+                let sleep = time::Duration::from_millis(self.config.poll_rate);
                 thread::sleep(sleep);
             }
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::MainWindow;
+        fn dummy_logria() -> MainWindow {
+            let mut app = MainWindow::new(true, true);
+
+            // Set dimensions
+            app.config.height = 10;
+            app.config.width = 100;
+
+            // Set fake previous render
+            app.config.last_row = app.config.height - 3; // simulate the last row we can render to
+            app.config.current_end = 80; // Simulate the last message rendered
+
+            // Set fake messages
+            app.config.stderr_messages = (0..100).map(|x| x.to_string()).collect();
+
+            app
+        }
+
+        #[test]
+        fn test_render_final_items() {
+            let mut logria = dummy_logria();
+
+            // Set scroll state
+            logria.config.manually_controlled_line = false;
+            logria.config.stick_to_top = false;
+            logria.config.stick_to_bottom = true;
+
+            let (start, end) = logria.determine_render_position();
+            assert_eq!(start, 92);
+            assert_eq!(end, 100);
+        }
+
+        #[test]
+        fn test_render_first_items() {
+            let mut logria = dummy_logria();
+
+            // Set scroll state
+            logria.config.manually_controlled_line = false;
+            logria.config.stick_to_top = true;
+            logria.config.stick_to_bottom = false;
+
+            let (start, end) = logria.determine_render_position();
+            assert_eq!(start, 0);
+            assert_eq!(end, 6);
+        }
+
+        #[test]
+        fn test_render_few_from_middle() {
+            let mut logria = dummy_logria();
+
+            // Set scroll state
+            logria.config.manually_controlled_line = true;
+            logria.config.stick_to_top = false;
+            logria.config.stick_to_bottom = false;
+
+            // Set current scroll state
+            logria.config.current_end = 3;
+
+            // Set small content
+            logria.config.stderr_messages = (0..4).map(|x| x.to_string()).collect();
+
+            let (start, end) = logria.determine_render_position();
+            assert_eq!(start, 0);
+            assert_eq!(end, 3);
+        }
+
+        #[test]
+        fn test_render_from_middle() {
+            let mut logria = dummy_logria();
+
+            // Set scroll state
+            logria.config.manually_controlled_line = true;
+            logria.config.stick_to_top = false;
+            logria.config.stick_to_bottom = false;
+
+            // Set current scroll state
+            logria.config.current_end = 80;
+            let (start, end) = logria.determine_render_position();
+            assert_eq!(start, 72);
+            assert_eq!(end, 80);
+        }
+
+        #[test]
+        fn test_render_from_middle_early() {
+            let mut logria = dummy_logria();
+
+            // Set scroll state
+            logria.config.manually_controlled_line = true;
+            logria.config.stick_to_top = false;
+            logria.config.stick_to_bottom = false;
+
+            // Set current scroll state
+            logria.config.current_end = 5;
+
+            let (start, end) = logria.determine_render_position();
+            assert_eq!(start, 0);
+            assert_eq!(end, 5);
+        }
+
+        #[test]
+        fn test_render_small_from_top() {
+            let mut logria = dummy_logria();
+
+            // Set scroll state
+            logria.config.manually_controlled_line = false;
+            logria.config.stick_to_top = true;
+            logria.config.stick_to_bottom = false;
+
+            // Set current scroll state
+            logria.config.current_end = 0;
+
+            // Set small content
+            logria.config.stderr_messages = (0..6).map(|x| x.to_string()).collect();
+
+            let (start, end) = logria.determine_render_position();
+            assert_eq!(start, 0);
+            assert_eq!(end, 5);
         }
     }
 }

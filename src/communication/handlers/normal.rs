@@ -71,6 +71,7 @@ impl NormalHandler {
 
     fn set_regex_mode(&self, window: &mut MainWindow) {
         window.input_type = InputType::Regex;
+        window.set_cli_cursor(None);
     }
 
     fn swap_streams(&self, window: &mut MainWindow) {
@@ -89,8 +90,6 @@ impl HanderMethods for NormalHandler {
     }
 
     fn recieve_input(&mut self, window: &mut MainWindow, key: i32) {
-        //TODO: Remove
-        window.write_to_command_line(&format!("got data in NormalHandler: {}", key));
         match key {
             258 => self.scroll_down(window),     // down
             259 => self.scroll_up(window),       // up
@@ -100,8 +99,8 @@ impl HanderMethods for NormalHandler {
             263 => self.bottom(window),          // end
             338 => self.pg_down(window),         // pgdn
             339 => self.pg_up(window),           // pgup
-            47 => self.set_command_mode(window), // /
-            58 => self.set_regex_mode(window),   // :
+            58 => self.set_command_mode(window), // /
+            47 => self.set_regex_mode(window),   // :
             112 => self.set_parser_mode(window), // p
             115 => self.swap_streams(window),    // s
             _ => self.noop(),

@@ -20,7 +20,7 @@ impl HanderMethods for MultipleChoiceHandler {
         }
     }
 
-    fn recieve_input(&mut self, window: &MainWindow, key: i32) {
+    fn recieve_input(&mut self, window: &mut MainWindow, key: i32) {
         window.write_to_command_line("got data in MultipleChoiceHandler")
     }
 }

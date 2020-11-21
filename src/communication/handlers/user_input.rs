@@ -117,7 +117,7 @@ impl HanderMethods for UserInputHandler {
         }
     }
 
-    fn recieve_input(&mut self, window: &MainWindow, key: i32) {
+    fn recieve_input(&mut self, window: &mut MainWindow, key: i32) {
         curs_set(CURSOR_VISIBILITY::CURSOR_VISIBLE);
         let valid_key = self.validate(&key);
         let success = self.do_command(window, valid_key);

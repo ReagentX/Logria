@@ -2,6 +2,7 @@ use std::cmp::{max, min};
 
 use super::handler::HanderMethods;
 use crate::communication::input::input_type::InputType;
+use crate::communication::input::stream_type::StreamType;
 use crate::communication::reader::main::MainWindow;
 
 pub struct NormalHandler {}
@@ -39,11 +40,11 @@ impl NormalHandler {
     }
 
     fn pg_up(&self, window: &mut MainWindow) {
-        (0..window.config.last_row).for_each(|_| {self.scroll_up(window)});
+        (0..window.config.last_row).for_each(|_| self.scroll_up(window));
     }
 
     fn pg_down(&self, window: &mut MainWindow) {
-        (0..window.config.last_row).for_each(|_| {self.scroll_down(window)});
+        (0..window.config.last_row).for_each(|_| self.scroll_down(window));
     }
 
     fn bottom(&self, window: &mut MainWindow) {
@@ -60,6 +61,25 @@ impl NormalHandler {
         window.config.manually_controlled_line = false;
     }
 
+    fn set_command_mode(&self, window: &mut MainWindow) {
+        window.input_type = InputType::Command;
+    }
+
+    fn set_parser_mode(&self, window: &mut MainWindow) {
+        window.input_type = InputType::Parser;
+    }
+
+    fn set_regex_mode(&self, window: &mut MainWindow) {
+        window.input_type = InputType::Regex;
+    }
+
+    fn swap_streams(&self, window: &mut MainWindow) {
+        window.config.stream_type = match window.config.stream_type {
+            StreamType::StdOut => StreamType::StdErr,
+            StreamType::StdErr => StreamType::StdOut,
+        }
+    }
+
     fn noop(&self) {}
 }
 
@@ -69,16 +89,21 @@ impl HanderMethods for NormalHandler {
     }
 
     fn recieve_input(&mut self, window: &mut MainWindow, key: i32) {
+        //TODO: Remove
         window.write_to_command_line(&format!("got data in NormalHandler: {}", key));
         match key {
-            258 => self.scroll_down(window), // down
-            259 => self.scroll_up(window),   // up
-            260 => self.top(window),         // left
-            261 => self.bottom(window),      // right
-            262 => self.top(window),         // home
-            263 => self.bottom(window),      // end
-            338 => self.pg_down(window),     // pgdn
-            339 => self.pg_up(window),       // pgup
+            258 => self.scroll_down(window),     // down
+            259 => self.scroll_up(window),       // up
+            260 => self.top(window),             // left
+            261 => self.bottom(window),          // right
+            262 => self.top(window),             // home
+            263 => self.bottom(window),          // end
+            338 => self.pg_down(window),         // pgdn
+            339 => self.pg_up(window),           // pgup
+            47 => self.set_command_mode(window), // /
+            58 => self.set_regex_mode(window),   // :
+            112 => self.set_parser_mode(window), // p
+            115 => self.swap_streams(window),    // s
             _ => self.noop(),
         }
     }

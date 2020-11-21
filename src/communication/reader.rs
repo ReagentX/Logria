@@ -15,6 +15,7 @@ pub mod main {
     use crate::communication::input::stream::{FileInput, InputStream};
     use crate::communication::input::stream_type::StreamType;
     use crate::constants::cli::poll_rate::FASTEST;
+    use crate::util::sanitizers::length::LengthFinder;
     use crate::ui::interface::build::{command_line, exit_scr, init_scr, output_window};
 
     #[derive(Debug)]
@@ -33,7 +34,7 @@ pub mod main {
         // Message buffers
         stderr_messages: Vec<String>,
         stdout_messages: Vec<String>,
-        stream_type: StreamType,
+        pub stream_type: StreamType,
 
         // Regex settings
         regex_pattern: Option<String>, // Current regex pattern
@@ -60,8 +61,9 @@ pub mod main {
         pub config: LogiraConfig,
         pub input_type: InputType,
         stdscr: Option<ncurses::WINDOW>,
-        output: Option<ncurses::WINDOW>, // fix
-        input: Option<ncurses::WINDOW>,  // fix
+        output: Option<ncurses::WINDOW>,
+        input: Option<ncurses::WINDOW>,
+        length_finder: LengthFinder,
     }
 
     impl MainWindow {
@@ -88,6 +90,7 @@ pub mod main {
                 input_type: InputType::Normal,
                 output: None,
                 input: None,
+                length_finder: LengthFinder::new(),
                 config: LogiraConfig {
                     poll_rate: FASTEST,
                     smart_poll_rate: smart_poll_rate,
@@ -141,14 +144,15 @@ pub mod main {
 
                     // Determine if we can fit the next message
                     // TODO: Fix Cast here
+                    let message_length = self.length_finder.get_real_length(message);
                     rows += max(
                         1,
-                        (message.len() + (self.config.width as usize - 1))
+                        (message_length + (self.config.width as usize - 1))
                             / self.config.width as usize,
                     );
 
                     // TODO: broken insertion for blank lines!
-                    if message.len() == 0 {
+                    if message_length == 0 {
                         rows = match rows.checked_add(1) {
                             Some(value) => value,
                             None => break,
@@ -228,8 +232,9 @@ pub mod main {
                     }
                 };
 
+                let message_length = self.length_finder.get_real_length(message);
                 current_row =
-                    match current_row.checked_sub(max(1, (message.len() + (width - 1)) / width)) {
+                    match current_row.checked_sub(max(1, (message_length + (width - 1)) / width)) {
                         Some(value) => value,
                         None => break,
                     };

@@ -61,10 +61,12 @@ impl NormalHandler {
 
     fn set_command_mode(&self, window: &mut MainWindow) {
         window.input_type = InputType::Command;
+        window.set_cli_cursor(None);
     }
 
     fn set_parser_mode(&self, window: &mut MainWindow) {
         window.input_type = InputType::Parser;
+        window.set_cli_cursor(None);
     }
 
     fn set_regex_mode(&self, window: &mut MainWindow) {
@@ -78,8 +80,6 @@ impl NormalHandler {
             StreamType::StdErr => StreamType::StdOut,
         }
     }
-
-    fn noop(&self) {}
 }
 
 impl HanderMethods for NormalHandler {
@@ -101,7 +101,7 @@ impl HanderMethods for NormalHandler {
             47 => self.set_regex_mode(window),   // :
             112 => self.set_parser_mode(window), // p
             115 => self.swap_streams(window),    // s
-            _ => self.noop(),
+            _ => {}
         }
     }
 }

@@ -3,7 +3,9 @@ pub mod main {
     use std::path::Path;
     use std::time::Instant;
 
-    use ncurses::{addstr, curs_set, getmaxyx, mv, mvwaddstr, mvwaddch, wrefresh, CURSOR_VISIBILITY};
+    use ncurses::{
+        addstr, curs_set, getmaxyx, mv, mvwaddch, mvwaddstr, wrefresh, CURSOR_VISIBILITY,
+    };
 
     use crate::communication::handlers::command::CommandHandler;
     use crate::communication::handlers::handler::HanderMethods;
@@ -14,10 +16,11 @@ pub mod main {
     use crate::communication::input::input_type::InputType;
     use crate::communication::input::stream::{FileInput, InputStream};
     use crate::communication::input::stream_type::StreamType;
-    use crate::constants::cli::poll_rate::FASTEST;
     use crate::constants::cli::cli_chars;
-    use crate::util::sanitizers::length::LengthFinder;
+    use crate::constants::cli::poll_rate::FASTEST;
     use crate::ui::interface::build::{command_line, exit_scr, init_scr, output_window};
+    use crate::ui::scroll;
+    use crate::util::sanitizers::length::LengthFinder;
 
     #[derive(Debug)]
     pub struct LogiraConfig {
@@ -38,15 +41,15 @@ pub mod main {
         pub stream_type: StreamType,
 
         // Regex settings
-        regex_pattern: Option<String>, // Current regex pattern
-        pub matched_rows: Vec<usize>,  // List of index of matches when regex filtering is active
-        pub last_index_regexed: usize,     // The last index the filtering function saw
+        pub regex_pattern: Option<String>, // Current regex pattern
+        pub matched_rows: Vec<usize>, // List of index of matches when regex filtering is active
+        pub last_index_regexed: usize, // The last index the filtering function saw
 
         // Parser settings
-        // parser: ???  // Reference to the current parser
-        parser_index: usize,                // Index for the parser to look at
-        parsed_messages: Vec<String>,       // List of parsed messages
-        analytics_enabled: bool,            // Whetehr we are calcualting stats or not
+        pub parser: bool,                   // Reference to the current parser
+        pub parser_index: usize,            // Index for the parser to look at
+        pub parsed_messages: Vec<String>,   // List of parsed messages
+        pub analytics_enabled: bool,        // Whether we are calcualting stats or not
         last_index_processed: usize,        // The last index the parsing function saw
         insert_mode: bool,                  // Default to insert mode (like vim) off
         current_status: String,             // Current status, aka what is in the command line
@@ -108,6 +111,7 @@ pub mod main {
                     regex_pattern: None,
                     matched_rows: vec![],
                     last_index_regexed: 0,
+                    parser: false,
                     parser_index: 0,
                     parsed_messages: vec![],
                     analytics_enabled: false,
@@ -125,10 +129,37 @@ pub mod main {
             }
         }
 
+        pub fn numer_of_messages(&self) -> usize {
+            match self.input_type {
+                InputType::Normal | InputType::MultipleChoice | InputType::Command => {
+                    self.messages().len()
+                }
+                InputType::Regex => {
+                    if self.config.regex_pattern.is_none() {
+                        self.messages().len()
+                    } else {
+                        self.config.matched_rows.len()
+                    }
+                }
+                InputType::Parser => {
+                    if self.config.parser {
+                        self.config.parsed_messages.len()
+                    } else {
+                        self.messages().len()
+                    }
+                }
+            }
+        }
+
         fn determine_render_position(&mut self) -> (usize, usize) {
             let mut end: usize = 0;
             let mut rows: usize = 0;
-            let mut message_pointer_length: usize = self.messages().len();
+            let message_pointer_length = self.numer_of_messages();
+
+            // Handle empty message queue
+            if message_pointer_length == 0 {
+                return (0, 0);
+            }
 
             if self.config.stick_to_top {
                 let mut current_index: usize = 0;
@@ -137,9 +168,16 @@ pub mod main {
                         InputType::Normal | InputType::MultipleChoice | InputType::Command => {
                             &self.messages()[current_index]
                         }
-                        InputType::Parser | InputType::Regex => {
-                            message_pointer_length = self.config.matched_rows.len();
-                            &self.messages()[self.config.matched_rows[current_index]]
+                        InputType::Regex => {
+                            // If we have not activated regex or parser yet, render normal messages
+                            if self.config.regex_pattern.is_none() {
+                                &self.messages()[current_index]
+                            } else {
+                                &self.messages()[self.config.matched_rows[current_index]]
+                            }
+                        }
+                        InputType::Parser => {
+                            &self.messages()[current_index] // Fix
                         }
                     };
 
@@ -151,14 +189,6 @@ pub mod main {
                         (message_length + (self.config.width as usize - 1))
                             / self.config.width as usize,
                     );
-
-                    // TODO: broken insertion for blank lines!
-                    if message_length == 0 {
-                        rows = match rows.checked_add(1) {
-                            Some(value) => value,
-                            None => break,
-                        };
-                    }
 
                     // If we can fit, increment the last row number
                     if rows <= self.config.last_row as usize
@@ -222,14 +252,20 @@ pub mod main {
 
             // Implement the rest of the rendering algorithm
             // Main issue is determining which vec we are reading the data from and adjusting as a result
-            // panic!("{:?}, {:?}", start, end);
             for index in (start..end).rev() {
                 let message: &str = match self.input_type {
                     InputType::Normal | InputType::MultipleChoice | InputType::Command => {
                         &self.messages()[index]
                     }
-                    InputType::Parser | InputType::Regex => {
-                        &self.messages()[self.config.matched_rows[index]]
+                    InputType::Regex => {
+                        if self.config.regex_pattern.is_none() {
+                            &self.messages()[index]
+                        } else {
+                            &self.messages()[self.config.matched_rows[index]]
+                        }
+                    }
+                    InputType::Parser => {
+                        &self.messages()[index] // Fix
                     }
                 };
 
@@ -240,21 +276,15 @@ pub mod main {
                         None => break,
                     };
 
-                // TODO: broken insertion for blank lines!
-                if message.len() == 0 {
-                    current_row = match current_row.checked_sub(1) {
-                        Some(value) => value,
-                        None => break,
-                    };
-                }
-
                 // TODO: handle color codes
+                // TODO: fix cast?
                 mvwaddstr(self.screen(), current_row as i32, 0, message);
             }
         }
 
-        fn redraw(&self) {
-            wrefresh(self.output());
+        fn redraw(&mut self) {
+            // wrefresh(self.output());
+            self.render_text_in_output();
         }
 
         pub fn screen(&self) -> ncurses::WINDOW {
@@ -438,7 +468,23 @@ pub mod main {
                 // println!("{} in {:?}", new_messages, t_1);
 
                 match ncurses::getch() {
-                    -1 => (), // possibly sleep, cleanup, etc
+                    // No input
+                    -1 => {
+                        // possibly sleep, cleanup, etc
+                        if self.config.regex_pattern.is_some() {
+                            regex_handler.process_matches(self);
+                        }
+                    },
+                    // Scrolling
+                    258 => scroll::down(self),    // down
+                    259 => scroll::up(self),      // up
+                    260 => scroll::top(self),     // left
+                    261 => scroll::bottom(self),  // right
+                    262 => scroll::top(self),     // home
+                    263 => scroll::bottom(self),  // end
+                    338 => scroll::pg_down(self), // pgdn
+                    339 => scroll::pg_up(self),   // pgup
+                    // Other
                     input => match self.input_type {
                         InputType::Normal => normal_handler.recieve_input(self, input),
                         InputType::Command => command_handler.recieve_input(self, input),
@@ -449,7 +495,7 @@ pub mod main {
                 }
                 self.render_text_in_output();
                 use std::{thread, time};
-                let sleep = time::Duration::from_millis(100);
+                let sleep = time::Duration::from_millis(10);
                 thread::sleep(sleep);
             }
         }
@@ -574,6 +620,46 @@ pub mod main {
             let (start, end) = logria.determine_render_position();
             assert_eq!(start, 0);
             assert_eq!(end, 5);
+        }
+
+        #[test]
+        fn test_render_no_messages_top() {
+            let mut logria = dummy_logria();
+
+            // Set scroll state
+            logria.config.manually_controlled_line = false;
+            logria.config.stick_to_top = true;
+            logria.config.stick_to_bottom = false;
+
+            // Set current scroll state
+            logria.config.current_end = 0;
+
+            // Set small content
+            logria.config.stderr_messages = vec![];
+
+            let (start, end) = logria.determine_render_position();
+            assert_eq!(start, 0);
+            assert_eq!(end, 0);
+        }
+
+        #[test]
+        fn test_render_no_messages_bottom() {
+            let mut logria = dummy_logria();
+
+            // Set scroll state
+            logria.config.manually_controlled_line = false;
+            logria.config.stick_to_top = false;
+            logria.config.stick_to_bottom = true;
+
+            // Set current scroll state
+            logria.config.current_end = 0;
+
+            // Set small content
+            logria.config.stderr_messages = vec![];
+
+            let (start, end) = logria.determine_render_position();
+            assert_eq!(start, 0);
+            assert_eq!(end, 0);
         }
     }
 }

@@ -19,6 +19,7 @@ pub mod main {
     use crate::constants::cli::cli_chars;
     use crate::constants::cli::poll_rate::FASTEST;
     use crate::ui::interface::build::{command_line, exit_scr, init_scr, output_window};
+    use crate::ui::scroll;
     use crate::util::sanitizers::length::LengthFinder;
 
     #[derive(Debug)]
@@ -128,7 +129,7 @@ pub mod main {
             }
         }
 
-        fn numer_of_messages(&self) -> usize {
+        pub fn numer_of_messages(&self) -> usize {
             match self.input_type {
                 InputType::Normal | InputType::MultipleChoice | InputType::Command => {
                     self.messages().len()
@@ -467,12 +468,23 @@ pub mod main {
                 // println!("{} in {:?}", new_messages, t_1);
 
                 match ncurses::getch() {
+                    // No input
                     -1 => {
                         // possibly sleep, cleanup, etc
                         if self.config.regex_pattern.is_some() {
                             regex_handler.process_matches(self);
                         }
-                    }
+                    },
+                    // Scrolling
+                    258 => scroll::down(self),    // down
+                    259 => scroll::up(self),      // up
+                    260 => scroll::top(self),     // left
+                    261 => scroll::bottom(self),  // right
+                    262 => scroll::top(self),     // home
+                    263 => scroll::bottom(self),  // end
+                    338 => scroll::pg_down(self), // pgdn
+                    339 => scroll::pg_up(self),   // pgup
+                    // Other
                     input => match self.input_type {
                         InputType::Normal => normal_handler.recieve_input(self, input),
                         InputType::Command => command_handler.recieve_input(self, input),

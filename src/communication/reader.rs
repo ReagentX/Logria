@@ -241,12 +241,12 @@ pub mod main {
                     };
 
                 // TODO: broken insertion for blank lines!
-                if message.len() == 0 {
-                    current_row = match current_row.checked_sub(1) {
-                        Some(value) => value,
-                        None => break,
-                    };
-                }
+                // if message.len() == 0 {
+                //     current_row = match current_row.checked_sub(1) {
+                //         Some(value) => value,
+                //         None => break,
+                //     };
+                // }
 
                 // TODO: handle color codes
                 mvwaddstr(self.screen(), current_row as i32, 0, message);

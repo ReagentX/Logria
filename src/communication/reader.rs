@@ -87,6 +87,23 @@ pub mod main {
             streams
         }
 
+        /// Construct sample window for testing
+        pub fn _new_dummy() -> MainWindow {
+            let mut app = MainWindow::new(true, true);
+
+            // Set fake dimensions
+            app.config.height = 10;
+            app.config.width = 100;
+
+            // Set fake previous render
+            app.config.last_row = app.config.height - 3; // simulate the last row we can render to
+
+            // Set fake messages
+            app.config.stderr_messages = (0..100).map(|x| x.to_string()).collect();
+
+            app
+        }
+
         pub fn new(cache: bool, smart_poll_rate: bool) -> MainWindow {
             // Build streams here
             MainWindow {
@@ -151,7 +168,7 @@ pub mod main {
             }
         }
 
-        fn determine_render_position(&mut self) -> (usize, usize) {
+        pub fn determine_render_position(&mut self) -> (usize, usize) {
             let mut end: usize = 0;
             let mut rows: usize = 0;
             let message_pointer_length = self.numer_of_messages();
@@ -495,7 +512,7 @@ pub mod main {
                 }
                 self.render_text_in_output();
                 use std::{thread, time};
-                let sleep = time::Duration::from_millis(10);
+                let sleep = time::Duration::from_millis(FASTEST);
                 thread::sleep(sleep);
             }
         }
@@ -504,26 +521,10 @@ pub mod main {
     #[cfg(test)]
     mod tests {
         use super::MainWindow;
-        fn dummy_logria() -> MainWindow {
-            let mut app = MainWindow::new(true, true);
-
-            // Set dimensions
-            app.config.height = 10;
-            app.config.width = 100;
-
-            // Set fake previous render
-            app.config.last_row = app.config.height - 3; // simulate the last row we can render to
-            app.config.current_end = 80; // Simulate the last message rendered
-
-            // Set fake messages
-            app.config.stderr_messages = (0..100).map(|x| x.to_string()).collect();
-
-            app
-        }
 
         #[test]
         fn test_render_final_items() {
-            let mut logria = dummy_logria();
+            let mut logria = MainWindow::_new_dummy();
 
             // Set scroll state
             logria.config.manually_controlled_line = false;
@@ -537,7 +538,7 @@ pub mod main {
 
         #[test]
         fn test_render_first_items() {
-            let mut logria = dummy_logria();
+            let mut logria = MainWindow::_new_dummy();
 
             // Set scroll state
             logria.config.manually_controlled_line = false;
@@ -551,7 +552,7 @@ pub mod main {
 
         #[test]
         fn test_render_few_from_middle() {
-            let mut logria = dummy_logria();
+            let mut logria = MainWindow::_new_dummy();
 
             // Set scroll state
             logria.config.manually_controlled_line = true;
@@ -571,7 +572,7 @@ pub mod main {
 
         #[test]
         fn test_render_from_middle() {
-            let mut logria = dummy_logria();
+            let mut logria = MainWindow::_new_dummy();
 
             // Set scroll state
             logria.config.manually_controlled_line = true;
@@ -587,7 +588,7 @@ pub mod main {
 
         #[test]
         fn test_render_from_middle_early() {
-            let mut logria = dummy_logria();
+            let mut logria = MainWindow::_new_dummy();
 
             // Set scroll state
             logria.config.manually_controlled_line = true;
@@ -604,7 +605,7 @@ pub mod main {
 
         #[test]
         fn test_render_small_from_top() {
-            let mut logria = dummy_logria();
+            let mut logria = MainWindow::_new_dummy();
 
             // Set scroll state
             logria.config.manually_controlled_line = false;
@@ -624,7 +625,7 @@ pub mod main {
 
         #[test]
         fn test_render_no_messages_top() {
-            let mut logria = dummy_logria();
+            let mut logria = MainWindow::_new_dummy();
 
             // Set scroll state
             logria.config.manually_controlled_line = false;
@@ -644,7 +645,7 @@ pub mod main {
 
         #[test]
         fn test_render_no_messages_bottom() {
-            let mut logria = dummy_logria();
+            let mut logria = MainWindow::_new_dummy();
 
             // Set scroll state
             logria.config.manually_controlled_line = false;

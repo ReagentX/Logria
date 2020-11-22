@@ -94,7 +94,9 @@ impl HanderMethods for RegexHandler {
             None => match key {
                 10 => {
                    self.set_pattern(window);
-                   self.process_matches(window);
+                   if self.current_pattern.is_some() {
+                       self.process_matches(window);
+                   };
                 }, // enter/return
                 27 => self.return_to_normal(window), // esc
                 key => self.input_hander.recieve_input(window, key),

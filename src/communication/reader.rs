@@ -130,6 +130,11 @@ pub mod main {
             let mut rows: usize = 0;
             let mut message_pointer_length: usize = self.messages().len();
 
+            // Handle empty message queue
+            if message_pointer_length == 0 {
+                return (0, 0);
+            }
+
             if self.config.stick_to_top {
                 let mut current_index: usize = 0;
                 loop {
@@ -139,6 +144,11 @@ pub mod main {
                         }
                         InputType::Parser | InputType::Regex => {
                             message_pointer_length = self.config.matched_rows.len();
+
+                            // Handle empty regex message queue
+                            if message_pointer_length == 0 {
+                                return (0, 0);
+                            }
                             &self.messages()[self.config.matched_rows[current_index]]
                         }
                     };
@@ -151,14 +161,6 @@ pub mod main {
                         (message_length + (self.config.width as usize - 1))
                             / self.config.width as usize,
                     );
-
-                    // TODO: broken insertion for blank lines!
-                    if message_length == 0 {
-                        rows = match rows.checked_add(1) {
-                            Some(value) => value,
-                            None => break,
-                        };
-                    }
 
                     // If we can fit, increment the last row number
                     if rows <= self.config.last_row as usize
@@ -239,14 +241,6 @@ pub mod main {
                         Some(value) => value,
                         None => break,
                     };
-
-                // TODO: broken insertion for blank lines!
-                // if message.len() == 0 {
-                //     current_row = match current_row.checked_sub(1) {
-                //         Some(value) => value,
-                //         None => break,
-                //     };
-                // }
 
                 // TODO: handle color codes
                 mvwaddstr(self.screen(), current_row as i32, 0, message);
@@ -438,7 +432,9 @@ pub mod main {
                 // println!("{} in {:?}", new_messages, t_1);
 
                 match ncurses::getch() {
-                    -1 => (), // possibly sleep, cleanup, etc
+                    -1 => {
+                        regex_handler.process_matches(self);
+                    }, // possibly sleep, cleanup, etc
                     input => match self.input_type {
                         InputType::Normal => normal_handler.recieve_input(self, input),
                         InputType::Command => command_handler.recieve_input(self, input),
@@ -574,6 +570,46 @@ pub mod main {
             let (start, end) = logria.determine_render_position();
             assert_eq!(start, 0);
             assert_eq!(end, 5);
+        }
+
+        #[test]
+        fn test_render_no_messages_top() {
+            let mut logria = dummy_logria();
+
+            // Set scroll state
+            logria.config.manually_controlled_line = false;
+            logria.config.stick_to_top = true;
+            logria.config.stick_to_bottom = false;
+
+            // Set current scroll state
+            logria.config.current_end = 0;
+
+            // Set small content
+            logria.config.stderr_messages = vec![];
+
+            let (start, end) = logria.determine_render_position();
+            assert_eq!(start, 0);
+            assert_eq!(end, 0);
+        }
+
+        #[test]
+        fn test_render_no_messages_bottom() {
+            let mut logria = dummy_logria();
+
+            // Set scroll state
+            logria.config.manually_controlled_line = false;
+            logria.config.stick_to_top = false;
+            logria.config.stick_to_bottom = true;
+
+            // Set current scroll state
+            logria.config.current_end = 0;
+
+            // Set small content
+            logria.config.stderr_messages = vec![];
+
+            let (start, end) = logria.determine_render_position();
+            assert_eq!(start, 0);
+            assert_eq!(end, 0);
         }
     }
 }

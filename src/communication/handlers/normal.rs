@@ -48,14 +48,12 @@ impl NormalHandler {
     }
 
     fn bottom(&self, window: &mut MainWindow) {
-        window.write_to_command_line(&format!("got data in NormalHandler: scroll bottom"));
         window.config.stick_to_top = false;
         window.config.stick_to_bottom = true;
         window.config.manually_controlled_line = false;
     }
 
     fn top(&self, window: &mut MainWindow) {
-        window.write_to_command_line(&format!("got data in NormalHandler: scroll top"));
         window.config.stick_to_top = true;
         window.config.stick_to_bottom = false;
         window.config.manually_controlled_line = false;

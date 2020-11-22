@@ -4,6 +4,7 @@ use super::handler::HanderMethods;
 use crate::communication::handlers::user_input::UserInputHandler;
 use crate::communication::reader::main::MainWindow;
 use crate::constants::cli::patterns::ANSI_COLOR_PATTERN;
+use crate::communication::input::input_type::InputType::Normal;
 
 pub struct RegexHandler {
     color_pattern: Regex,
@@ -56,6 +57,12 @@ impl RegexHandler {
         window.set_cli_cursor(Some(ncurses::ACS_VLINE()));
     }
 
+    fn return_to_normal(&mut self, window: &mut MainWindow) {
+        self.clear_matches(window);
+        window.input_type = Normal;
+        window.set_cli_cursor(None);
+    }
+
     fn clear_matches(&mut self, window: &mut MainWindow) {
         self.current_pattern = None;
         window.config.regex_pattern = None;
@@ -80,7 +87,8 @@ impl HanderMethods for RegexHandler {
                 47 => {
                     self.clear_matches(window);
                     window.set_cli_cursor(None);
-                }
+                } // enter/return
+                27 => self.return_to_normal(window), // esc
                 _ => {}
             },
             None => match key {
@@ -88,6 +96,7 @@ impl HanderMethods for RegexHandler {
                    self.set_pattern(window);
                    self.process_matches(window);
                 }, // enter/return
+                27 => self.return_to_normal(window), // esc
                 key => self.input_hander.recieve_input(window, key),
             },
         }

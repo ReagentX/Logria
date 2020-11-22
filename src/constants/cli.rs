@@ -8,7 +8,7 @@ pub mod poll_rate {
 
 pub mod patterns {
     // TODO: this line need to exist
-    pub const ANSI_COLOR_PATTERN: &str = r"(\x9B|\x1B\[)[0-?]*[ -/]*[@-~]";
+    pub const ANSI_COLOR_PATTERN: &str = r"(?-u)(\x9b|\x1b\[)[0-?]*[ -/]*[@-~]";
 }
 
 pub mod cli_chars {

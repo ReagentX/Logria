@@ -462,10 +462,6 @@ pub mod main {
             let mut parser_handler = ParserHandler::new();
             let mut mc_handler = MultipleChoiceHandler::new(); // Possibly different path for building options
 
-            // temp
-            use crate::communication::handlers::user_input::UserInputHandler;
-            let mut input_handler = UserInputHandler::new(); // input_handler.gather() to get contents
-
             // Initial message collection
             self.recieve_streams();
 

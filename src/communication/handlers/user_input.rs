@@ -1,7 +1,7 @@
-use ncurses::{mvwinch, getmaxyx, mv, addch, curs_set, CURSOR_VISIBILITY};
+use ncurses::{addch, curs_set, getmaxyx, mv, mvwinch, CURSOR_VISIBILITY};
 
-use crate::communication::reader::main::MainWindow;
 use super::handler::HanderMethods;
+use crate::communication::reader::main::MainWindow;
 
 // Used in Command and Regex handler to capture user typing
 pub struct UserInputHandler {
@@ -11,7 +11,6 @@ pub struct UserInputHandler {
 }
 
 impl UserInputHandler {
-
     /// Get the useable area of the textbox container
     fn update_dimensions(&mut self, window: &MainWindow) {
         getmaxyx(window.screen(), &mut self.y, &mut self.x)
@@ -32,7 +31,7 @@ impl UserInputHandler {
 
     fn validate(&self, key: &i32) -> u32 {
         match key {
-            127 => 263,  // Ctrl-h to backspace
+            127 => 263, // Ctrl-h to backspace
             key => *key as u32,
         }
     }
@@ -54,7 +53,7 @@ impl UserInputHandler {
 
             // If we are at the first char, we have an empty cli
             if last == 1 {
-                break
+                break;
             }
 
             last -= 1;
@@ -87,15 +86,10 @@ impl UserInputHandler {
     }
 
     /// Remove char 1 to the left of the cursor
-    fn backspace(&self, window: &MainWindow) {
-
-    }
-
+    fn backspace(&self, window: &MainWindow) {}
 
     /// Remove char 1 to the right of the cursor
-    fn delete(&self, window: &MainWindow) {
-
-    }
+    fn delete(&self, window: &MainWindow) {}
 
     /// Get the contents of the command line as a string
     pub fn gather(&mut self, window: &MainWindow) -> String {
@@ -126,7 +120,7 @@ impl UserInputHandler {
 
 impl HanderMethods for UserInputHandler {
     fn new() -> UserInputHandler {
-        UserInputHandler{
+        UserInputHandler {
             x: 0,
             y: 0,
             last_write: 0,

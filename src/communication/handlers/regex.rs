@@ -1,4 +1,4 @@
-use regex::Regex;
+use regex::bytes::Regex;
 
 use super::handler::HanderMethods;
 use crate::communication::handlers::user_input::UserInputHandler;
@@ -24,7 +24,7 @@ impl RegexHandler {
                 // Iterate "forever", skipping to the start and taking up till end-start
                 // TODO: Something to indicate progress
                 for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
-                    if pattern.is_match(&window.messages()[index]) {
+                    if pattern.is_match(&window.messages()[index].as_bytes()) {
                         window.config.matched_rows.push(index);
                     }
 
@@ -75,7 +75,7 @@ impl RegexHandler {
 impl HanderMethods for RegexHandler {
     fn new() -> RegexHandler {
         RegexHandler {
-            color_pattern: Regex::new(&ANSI_COLOR_PATTERN).unwrap(),
+            color_pattern: Regex::new(ANSI_COLOR_PATTERN).unwrap(),
             current_pattern: None,
             input_hander: UserInputHandler::new(),
         }

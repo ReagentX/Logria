@@ -384,10 +384,10 @@ pub mod main {
             self.go_to_cli();
             let first_char = match self.input_type {
                 InputType::Normal => ncurses::ACS_VLINE(),
-                InputType::MultipleChoice => content.unwrap_or(cli_chars::mc_char),
-                InputType::Command => content.unwrap_or(cli_chars::command_char),
-                InputType::Regex => content.unwrap_or(cli_chars::regex_char),
-                InputType::Parser => content.unwrap_or(cli_chars::parser_char),
+                InputType::MultipleChoice => content.unwrap_or(cli_chars::MC_CHAR),
+                InputType::Command => content.unwrap_or(cli_chars::COMMAND_CHAR),
+                InputType::Regex => content.unwrap_or(cli_chars::REGEX_CHAR),
+                InputType::Parser => content.unwrap_or(cli_chars::PARSER_CHAR),
             };
             mvwaddch(self.screen(), self.config.last_row + 1, 0, first_char);
         }

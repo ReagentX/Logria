@@ -48,7 +48,7 @@ pub mod stream {
                     // Create a buffer and read from it
                     let reader = BufReader::new(file);
                     for line in reader.lines() {
-                        out_tx.send(line.unwrap().to_string()).unwrap();
+                        out_tx.send(line.unwrap()).unwrap();
                     }
                 });
 

@@ -8,14 +8,14 @@ pub mod poll_rate {
 
 pub mod patterns {
     // TODO: this line need to exist
-    pub const ANSI_COLOR_PATTERN: &str = r"(\x9B|\x1B\[)[0-?]*[ -/]*[@-~]";
+    pub const ANSI_COLOR_PATTERN: &str = r"(?-u)(\x9b|\x1b\[)[0-?]*[ -/]*[@-~]";
 }
 
 pub mod cli_chars {
-    pub const mc_char: u32 = 45;
-    pub const command_char: u32 = 58;
-    pub const regex_char: u32 = 47;
-    pub const parser_char: u32 = 43;
+    pub const MC_CHAR: u32 = 45;
+    pub const COMMAND_CHAR: u32 = 58;
+    pub const REGEX_CHAR: u32 = 47;
+    pub const PARSER_CHAR: u32 = 43;
 }
 
 pub mod messages {

@@ -1,3 +1,4 @@
+use std::cmp::min;
 use std::io::Write;
 
 use crossterm::event::KeyCode;
@@ -12,7 +13,7 @@ pub struct UserInputHandler {
     x: u16,
     y: u16,
     last_write: u16,
-    content: String,
+    content: Vec<char>,
 }
 
 impl UserInputHandler {
@@ -36,6 +37,21 @@ impl UserInputHandler {
         self.x - 3
     }
 
+    fn get_content(&self) -> String {
+        self.content.iter().collect()
+    }
+
+    fn write(&self, window: &mut MainWindow) {
+        // Insert the word to the screen
+        queue!(
+            window.output,
+            cursor::MoveTo(1, self.y()),
+            style::Print(self.get_content()),
+            cursor::MoveTo(self.last_write, self.y()),
+        );
+        window.output.flush();
+    }
+
     /// Insert character to the input window
     /// TODO: Support insert vs normal typing mode
     fn insert_char(&mut self, window: &mut MainWindow, character: KeyCode) {
@@ -46,36 +62,64 @@ impl UserInputHandler {
 
                 // Handle movement
                 if self.last_write < self.x() {
-                    // Insert the char
-                    queue!(
-                        window.output,
-                        cursor::MoveTo(self.last_write, self.y()),
-                        style::Print(c)
-                    )
-                    .unwrap();
+                    // Add the char to our data
+                    self.content.insert(self.position_as_index(), c);
 
                     // Increment the last written position
                     self.last_write += 1;
 
-                    self.content.push(c)
+                    // Insert the word to the screen
+                    self.write(window);
                 }
-                window.output.flush();
             }
             _ => {}
         }
     }
 
+    fn position_as_index(&self) -> usize {
+        (self.last_write - 1) as usize
+    }
+
     /// Remove char 1 to the left of the cursor
-    fn backspace(&self, window: &MainWindow) {}
+    fn backspace(&mut self, window: &mut MainWindow) {
+        if self.last_write >= 1 && self.content.len() > 0 {
+            self.content.remove(self.position_as_index() - 1);
+            self.move_left(window);
+            self.write(window);
+        }
+    }
 
     /// Remove char 1 to the right of the cursor
-    fn delete(&self, window: &MainWindow) {}
+    fn delete(&mut self, window: &mut MainWindow) {
+        if self.last_write < self.x() && self.content.len() > 0 {
+            self.content.remove(self.position_as_index());
+            self.write(window);
+        }
+    }
+
+    /// Move the cursor left
+    fn move_left(&mut self, window: &mut MainWindow) {
+        self.last_write = self.last_write.checked_sub(1).unwrap_or(0);
+        queue!(
+            window.output,
+            cursor::MoveTo(self.last_write, self.y()),
+        );
+    }
+
+    /// Move the cursor right
+    fn move_right(&mut self, window: &mut MainWindow) {
+        self.last_write = min(self.content.len() as u16, self.last_write + 1);
+        queue!(
+            window.output,
+            cursor::MoveTo(self.last_write, self.y()),
+        );
+    }
 
     /// Get the contents of the command line as a string
     pub fn gather(&mut self, window: &mut MainWindow) -> String {
         // Copy the result to a new place so we can clear out the existing one and reuse the struct
-        let result = String::from(&self.content);
-        self.content = String::new();
+        let result: String = self.get_content();
+        self.content = vec![];
 
         // Hide the cursor
         queue!(window.output, cursor::Hide).unwrap();
@@ -91,6 +135,9 @@ impl UserInputHandler {
         match command {
             KeyCode::Delete => self.delete(window),
             KeyCode::Backspace => self.backspace(window),
+            KeyCode::Left => self.move_left(window),
+            KeyCode::Right => self.move_right(window),
+            // Possibly opt+left to skip words/symbols
             command => self.insert_char(window, command),
         }
         window.output.flush();
@@ -104,12 +151,12 @@ impl HanderMethods for UserInputHandler {
             x: 0,
             y: 0,
             last_write: 1,
-            content: String::new(),
+            content: vec![],
         }
     }
 
     fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) {
-        queue!(window.output, cursor::Hide).unwrap();
+        queue!(window.output, cursor::Show).unwrap();
         let success = self.do_command(window, key);
     }
 }

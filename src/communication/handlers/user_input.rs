@@ -124,7 +124,7 @@ impl UserInputHandler {
     pub fn gather(&mut self, window: &mut MainWindow) -> String {
         // Copy the result to a new place so we can clear out the existing one and reuse the struct
         let result: String = self.get_content();
-        self.content = vec![];
+        self.content.clear();
 
         // Hide the cursor
         queue!(window.output, cursor::Hide).unwrap();

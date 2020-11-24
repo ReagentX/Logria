@@ -42,12 +42,16 @@ impl UserInputHandler {
     }
 
     fn write(&self, window: &mut MainWindow) {
+        // Remove the existing content
+        window.reset_command_line();
+
         // Insert the word to the screen
         queue!(
             window.output,
             cursor::MoveTo(1, self.y()),
             style::Print(self.get_content()),
             cursor::MoveTo(self.last_write, self.y()),
+            cursor::Show
         );
         window.output.flush();
     }
@@ -108,7 +112,8 @@ impl UserInputHandler {
 
     /// Move the cursor right
     fn move_right(&mut self, window: &mut MainWindow) {
-        self.last_write = min(self.content.len() as u16, self.last_write + 1);
+        // TODO: possible index errors here
+        self.last_write = min(self.content.len() as u16 + 1, self.last_write + 1);
         queue!(
             window.output,
             cursor::MoveTo(self.last_write, self.y()),

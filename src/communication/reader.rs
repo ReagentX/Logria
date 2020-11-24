@@ -296,7 +296,6 @@ pub mod main {
 
                 // TODO: handle color codes
                 // TODO: fix cast?
-                // mvwaddstr(self.screen(), current_row as i32, 0, message);
                 queue!(
                     stdout, // Not a ref to self.output because we need a mutable borrow and we are already borrowing a string above
                     cursor::MoveTo(0, current_row as u16),
@@ -329,7 +328,6 @@ pub mod main {
             let clear = " ".repeat((self.config.width) as usize); // TODO: Store this string as a class attribute, recalc on resize
 
             for row in 0..self.config.last_row {
-                // mvwaddstr(self.screen(), row as i32, 0, &clear);
                 queue!(self.output, cursor::MoveTo(0, row), style::Print(&clear));
             }
         }

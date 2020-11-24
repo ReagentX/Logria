@@ -1,10 +1,10 @@
 pub mod stream {
-    use std::sync::mpsc::{channel, Receiver};
-    use std::io::{BufRead, BufReader};
-    use std::sync::{Arc, Mutex};
     use std::error::Error;
-    use std::path::Path;
     use std::fs::File;
+    use std::io::{BufRead, BufReader};
+    use std::path::Path;
+    use std::sync::mpsc::{channel, Receiver};
+    use std::sync::{Arc, Mutex};
     use std::thread;
 
     use crate::constants::cli::poll_rate::FASTEST;
@@ -26,7 +26,9 @@ pub mod stream {
             // Setup multiprocessing queues
             let (_, err_rx) = channel();
             let (out_tx, out_rx) = channel();
-            out_tx.send(String::from("No stderr for File Input!")).unwrap(); // Otherwise typing breaks
+            out_tx
+                .send(String::from("No stderr for File Input!"))
+                .unwrap(); // Otherwise typing breaks
 
             // Start process
             let poll_rate = Arc::new(Mutex::new(poll_rate.unwrap_or(FASTEST)));
@@ -77,6 +79,6 @@ pub mod stream_type {
     #[derive(Debug)]
     pub enum StreamType {
         StdErr,
-        StdOut
+        StdOut,
     }
 }

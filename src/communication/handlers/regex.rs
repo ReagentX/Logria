@@ -1,9 +1,11 @@
+use crossterm::event::KeyCode;
 use regex::bytes::Regex;
 
 use super::handler::HanderMethods;
 use crate::communication::handlers::user_input::UserInputHandler;
 use crate::communication::input::input_type::InputType::Normal;
 use crate::communication::reader::main::MainWindow;
+use crate::constants::cli::cli_chars::NORMAL_CHAR;
 use crate::constants::cli::patterns::ANSI_COLOR_PATTERN;
 
 pub struct RegexHandler {
@@ -54,7 +56,7 @@ impl RegexHandler {
                 None
             }
         };
-        window.set_cli_cursor(Some(ncurses::ACS_VLINE()));
+        window.set_cli_cursor(Some(NORMAL_CHAR));
     }
 
     fn return_to_normal(&mut self, window: &mut MainWindow) {
@@ -81,24 +83,24 @@ impl HanderMethods for RegexHandler {
         }
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: i32) {
+    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) {
         match &self.current_pattern {
             Some(_) => match key {
-                47 => {
+                KeyCode::Enter => {
                     self.clear_matches(window);
                     window.set_cli_cursor(None);
-                } // enter/return
-                27 => self.return_to_normal(window), // esc
+                }
+                KeyCode::Esc | KeyCode::Char('/') => self.return_to_normal(window),
                 _ => {}
             },
             None => match key {
-                10 => {
+                KeyCode::Enter => {
                     self.set_pattern(window);
                     if self.current_pattern.is_some() {
                         self.process_matches(window);
                     };
-                } // enter/return
-                27 => self.return_to_normal(window), // esc
+                }
+                KeyCode::Esc => self.return_to_normal(window),
                 key => self.input_hander.recieve_input(window, key),
             },
         }

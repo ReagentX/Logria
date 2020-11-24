@@ -20,7 +20,6 @@ pub mod main {
     use crate::constants::cli::cli_chars;
     use crate::constants::cli::poll_rate::FASTEST;
     use crate::ui::interface::build;
-    use crate::ui::scroll;
     use crate::util::sanitizers::length::LengthFinder;
 
     #[derive(Debug)]
@@ -449,16 +448,6 @@ pub mod main {
                     match read()? {
                         Event::Key(input) => {
                             match input.code {
-                                // Scrolling
-                                KeyCode::Down => scroll::down(self), // down
-                                KeyCode::Up => scroll::up(self),     // up
-                                KeyCode::Left => scroll::top(self),  // left
-                                KeyCode::Right => scroll::bottom(self), // right
-                                KeyCode::Home => scroll::top(self),  // home
-                                KeyCode::End => scroll::bottom(self), // end
-                                KeyCode::PageUp => scroll::pg_down(self), // pgdn
-                                KeyCode::PageDown => scroll::pg_up(self), // pgup
-                                // Other
                                 input => match self.input_type {
                                     InputType::Normal => normal_handler.recieve_input(self, input),
                                     InputType::Command => {

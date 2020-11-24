@@ -4,6 +4,7 @@ use super::handler::HanderMethods;
 use crate::communication::input::input_type::InputType;
 use crate::communication::input::stream_type::StreamType;
 use crate::communication::reader::main::MainWindow;
+use crate::ui::scroll;
 
 pub struct NormalHandler {}
 
@@ -38,6 +39,17 @@ impl HanderMethods for NormalHandler {
 
     fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) {
         match key {
+            // Scroll
+            KeyCode::Down => scroll::down(window),
+            KeyCode::Up => scroll::up(window),
+            KeyCode::Left => scroll::top(window),
+            KeyCode::Right => scroll::bottom(window),
+            KeyCode::Home => scroll::top(window),
+            KeyCode::End => scroll::bottom(window),
+            KeyCode::PageUp => scroll::pg_down(window),
+            KeyCode::PageDown => scroll::pg_up(window),
+
+            // Modes
             KeyCode::Char(':') => self.set_command_mode(window),
             KeyCode::Char('/') => self.set_regex_mode(window),
             KeyCode::Char('p') => self.set_parser_mode(window),

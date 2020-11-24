@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use crossterm::event::KeyCode;
 use regex::bytes::Regex;
 
@@ -66,7 +64,7 @@ impl RegexHandler {
         self.clear_matches(window);
         window.input_type = Normal;
         window.set_cli_cursor(None);
-        window.output.flush();
+        window.redraw();
     }
 
     fn clear_matches(&mut self, window: &mut MainWindow) {

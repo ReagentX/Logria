@@ -311,7 +311,8 @@ pub mod main {
             self.output.flush();
         }
 
-        fn redraw(&mut self) {
+        pub fn redraw(&mut self) {
+            self.config.previous_render = (0, 0); // Force render
             self.render_text_in_output();
         }
 

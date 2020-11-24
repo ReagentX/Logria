@@ -9,5 +9,5 @@ edition = "2018"
 [dependencies]
 clap = "3.0.0-beta.2"
 dirs = "3.0.1"
-ncurses = "5.99.0"
+crossterm = "0.18.2"
 regex = "1"

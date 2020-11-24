@@ -230,7 +230,7 @@ mod tests {
 
         let (start, end) = logria.determine_render_position();
         assert_eq!(start, 0);
-        assert_eq!(end, 4);
+        assert_eq!(end, 5);
     }
 
     #[test]

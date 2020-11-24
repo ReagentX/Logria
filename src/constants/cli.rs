@@ -12,10 +12,11 @@ pub mod patterns {
 }
 
 pub mod cli_chars {
-    pub const MC_CHAR: u32 = 45;
-    pub const COMMAND_CHAR: u32 = 58;
-    pub const REGEX_CHAR: u32 = 47;
-    pub const PARSER_CHAR: u32 = 43;
+    pub const NORMAL_CHAR: &'static str = "│";
+    pub const MC_CHAR: &'static str = "?";
+    pub const COMMAND_CHAR: &'static str = ":";
+    pub const REGEX_CHAR: &'static str = "/";
+    pub const PARSER_CHAR: &'static str = "+";
 }
 
 pub mod messages {

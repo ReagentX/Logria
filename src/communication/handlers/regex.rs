@@ -86,11 +86,11 @@ impl HanderMethods for RegexHandler {
     fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) {
         match &self.current_pattern {
             Some(_) => match key {
-                KeyCode::Enter => {
+                KeyCode::Char('/') => {
                     self.clear_matches(window);
                     window.set_cli_cursor(None);
                 }
-                KeyCode::Esc | KeyCode::Char('/') => self.return_to_normal(window),
+                KeyCode::Esc => self.return_to_normal(window),
                 _ => {}
             },
             None => match key {

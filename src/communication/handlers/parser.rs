@@ -1,5 +1,7 @@
-use crate::communication::reader::main::MainWindow;
+use crossterm::event::KeyCode;
+
 use super::handler::HanderMethods;
+use crate::communication::reader::main::MainWindow;
 
 pub struct ParserHandler {}
 
@@ -8,7 +10,7 @@ impl HanderMethods for ParserHandler {
         ParserHandler {}
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: i32) {
+    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) {
         window.write_to_command_line("got data in ParserHandler")
     }
 }

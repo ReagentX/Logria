@@ -209,6 +209,31 @@ mod tests {
     }
 
     #[test]
+    fn test_render_scroll_past_end_small() {
+        let mut logria = MainWindow::_new_dummy();
+
+        // Set scroll state
+        logria.config.manually_controlled_line = false;
+        logria.config.stick_to_top = false;
+        logria.config.stick_to_bottom = true;
+
+        // Set existing status
+        logria.config.current_end = 10;
+        
+        // Set state to regex mode
+        logria.config.matched_rows = (0..5).collect();
+        logria.config.regex_pattern = Some(String::new());
+        logria.input_type = Regex;
+
+        // Scroll action
+        scroll::down(&mut logria);
+
+        let (start, end) = logria.determine_render_position();
+        assert_eq!(start, 0);
+        assert_eq!(end, 4);
+    }
+
+    #[test]
     fn test_render_final_items_scroll_down_matched() {
         let mut logria = MainWindow::_new_dummy();
 
@@ -222,14 +247,15 @@ mod tests {
 
         // Set state to regex mode
         logria.input_type = Regex;
+        logria.config.regex_pattern = Some(String::new());
         logria.config.matched_rows = (0..20).collect();
         
         // Scroll action
         scroll::down(&mut logria);
 
         let (start, end) = logria.determine_render_position();
-        assert_eq!(start, 92);
-        assert_eq!(end, 100);
+        assert_eq!(start, 12);
+        assert_eq!(end, 20);
     }
 
     #[test]

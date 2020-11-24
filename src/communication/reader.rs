@@ -1,11 +1,12 @@
 pub mod main {
-    use std::cmp::{max, min};
+    use std::cmp::max;
     use std::path::Path;
     use std::time::Instant;
 
-    use ncurses::{
-        addstr, curs_set, getmaxyx, mv, mvwaddch, mvwaddstr, wrefresh, CURSOR_VISIBILITY,
-    };
+    use crossterm::event::{poll, read, Event, KeyCode};
+    use crossterm::{cursor, execute, queue, style, terminal::size, Result};
+    use std::io::Stdout;
+    use std::io::{stdout, Write};
 
     use crate::communication::handlers::command::CommandHandler;
     use crate::communication::handlers::handler::HanderMethods;
@@ -18,16 +19,15 @@ pub mod main {
     use crate::communication::input::stream_type::StreamType;
     use crate::constants::cli::cli_chars;
     use crate::constants::cli::poll_rate::FASTEST;
-    use crate::ui::interface::build::{command_line, exit_scr, init_scr, output_window};
-    use crate::ui::scroll;
+    use crate::ui::interface::build;
     use crate::util::sanitizers::length::LengthFinder;
 
     #[derive(Debug)]
     pub struct LogiraConfig {
         pub poll_rate: u64,    // The rate at which we check for new messages
-        pub height: i32,       // Window height
-        pub width: i32,        // Window width
-        pub last_row: i32,     // The last row we can render, aka number of lines visible in the tty
+        pub height: u16,       // Window height
+        pub width: u16,        // Window width
+        pub last_row: u16,     // The last row we can render, aka number of lines visible in the tty
         smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
         first_run: bool,       // Whether this is a first run or not
         loop_time: f64,        // How long a loop of the main app takes
@@ -64,9 +64,7 @@ pub mod main {
     pub struct MainWindow {
         pub config: LogiraConfig,
         pub input_type: InputType,
-        stdscr: Option<ncurses::WINDOW>,
-        output: Option<ncurses::WINDOW>,
-        input: Option<ncurses::WINDOW>,
+        pub output: Stdout,
         length_finder: LengthFinder,
     }
 
@@ -107,10 +105,8 @@ pub mod main {
         pub fn new(cache: bool, smart_poll_rate: bool) -> MainWindow {
             // Build streams here
             MainWindow {
-                stdscr: None,
                 input_type: InputType::Normal,
-                output: None,
-                input: None,
+                output: stdout(),
                 length_finder: LengthFinder::new(),
                 config: LogiraConfig {
                     poll_rate: FASTEST,
@@ -246,13 +242,17 @@ pub mod main {
                 end = message_pointer_length
             }
             self.config.current_end = end; // Save this row so we know where we are
-            let start = max(0, end as i32 - self.config.last_row - 1) as usize;
+            let mut start: usize = 0; // default start
+            if end > self.config.last_row as usize {
+                start = (end as u16 - self.config.last_row - 1) as usize;
+            }
             (start, end)
         }
 
         fn render_text_in_output(&mut self) {
             let mut current_row = self.config.last_row as usize;
             let width = self.config.width as usize;
+            let mut stdout = stdout();
 
             // Determine the start and end position of the render
             let (start, end) = self.determine_render_position();
@@ -295,38 +295,18 @@ pub mod main {
 
                 // TODO: handle color codes
                 // TODO: fix cast?
-                mvwaddstr(self.screen(), current_row as i32, 0, message);
+                queue!(
+                    stdout, // Not a ref to self.output because we need a mutable borrow and we are already borrowing a string above
+                    cursor::MoveTo(0, current_row as u16),
+                    style::Print(message)
+                )
+                .unwrap();
             }
+            self.output.flush();
         }
 
         fn redraw(&mut self) {
-            // wrefresh(self.output());
             self.render_text_in_output();
-        }
-
-        pub fn screen(&self) -> ncurses::WINDOW {
-            match self.stdscr {
-                Some(scr) => scr,
-                None => panic!("Attempted to get screen before screen has been initialized!"),
-            }
-        }
-
-        pub fn output(&self) -> ncurses::WINDOW {
-            match self.output {
-                Some(scr) => scr,
-                None => panic!(
-                    "Attempted to get output window before output window has been initialized!"
-                ),
-            }
-        }
-
-        fn input(&self) -> ncurses::WINDOW {
-            match self.input {
-                Some(scr) => scr,
-                None => panic!(
-                    "Attempted to get command line before command line has been initialized!"
-                ),
-            }
         }
 
         pub fn messages(&self) -> &Vec<String> {
@@ -336,69 +316,63 @@ pub mod main {
             }
         }
 
-        pub fn go_to_cli(&self) {
-            mv(self.config.height - 2, 1);
+        pub fn go_to_cli(&mut self) -> Result<()> {
+            queue!(self.output, cursor::MoveTo(1, self.config.height - 2),)?;
+            Ok(())
         }
 
         /// Overwrites the output window with empty space
         /// TODO: faster?
-        fn reset_output(&self) {
+        fn reset_output(&mut self) {
             let clear = " ".repeat((self.config.width) as usize); // TODO: Store this string as a class attribute, recalc on resize
 
             for row in 0..self.config.last_row {
-                mvwaddstr(self.screen(), row as i32, 0, &clear);
+                queue!(self.output, cursor::MoveTo(0, row), style::Print(&clear));
             }
         }
 
-        pub fn reset_command_line(&self) {
+        pub fn reset_command_line(&mut self) {
             // Leave padding for surrounding rectangle, we cannot use deleteln because it destroys the rectangle
             let clear = " ".repeat((self.config.width - 3) as usize); // TODO: Store this string as a class attribute, recalc on resize
-            self.go_to_cli();
-            addstr(&clear);
+            self.go_to_cli().unwrap();
 
             // If the cursor was visible, hide it
-            curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
-
-            // Refresh the view
-            wrefresh(self.input());
+            queue!(self.output, style::Print(&clear), cursor::Hide);
         }
 
-        pub fn write_to_command_line(&self, content: &str) {
+        pub fn write_to_command_line(&mut self, content: &str) {
             // Remove what used to be in the command line
             self.reset_command_line();
 
             // Add the string to the front of the command line
             // TODO: Possibly validate length?
-            self.go_to_cli();
-            addstr(content);
-
-            // If the cursor was visible, hide it
-            curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
-
-            // Refresh the view
-            wrefresh(self.input());
+            self.go_to_cli().unwrap();
+            queue!(self.output, style::Print(content)).unwrap();
         }
 
         /// Set the first col of the command line depending on mode
-        pub fn set_cli_cursor(&self, content: Option<u32>) {
+        pub fn set_cli_cursor(&mut self, content: Option<&'static str>) {
             self.go_to_cli();
             let first_char = match self.input_type {
-                InputType::Normal => ncurses::ACS_VLINE(),
+                InputType::Normal => content.unwrap_or(cli_chars::NORMAL_CHAR),
                 InputType::MultipleChoice => content.unwrap_or(cli_chars::MC_CHAR),
                 InputType::Command => content.unwrap_or(cli_chars::COMMAND_CHAR),
                 InputType::Regex => content.unwrap_or(cli_chars::REGEX_CHAR),
                 InputType::Parser => content.unwrap_or(cli_chars::PARSER_CHAR),
             };
-            mvwaddch(self.screen(), self.config.last_row + 1, 0, first_char);
+            execute!(
+                self.output,
+                cursor::MoveTo(0, self.config.last_row + 1),
+                style::Print(first_char)
+            )
+            .unwrap();
         }
 
         /// Set dimensions
         fn update_dimensions(&mut self) {
-            getmaxyx(
-                self.screen(),
-                &mut self.config.height,
-                &mut self.config.width,
-            );
+            let (w, h) = size().unwrap();
+            self.config.height = h;
+            self.config.width = w;
             self.config.last_row = self.config.height - 3;
         }
 
@@ -406,21 +380,11 @@ pub mod main {
             // Build the app
             self.config.streams = self.build_streams(commands);
 
-            // Build the UI, get reference to the text body content, etc
-            self.stdscr = Some(init_scr());
-            ncurses::nodelay(self.screen(), true);
-
-            // Hide the cursor
-            curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
-
             // Set UI Size
             self.update_dimensions();
 
-            // Build output window
-            self.output = Some(output_window(&self.config));
-
-            // Build command line
-            self.input = Some(command_line(self.screen(), &self.config));
+            // Build the UI
+            build(self);
 
             // Start the main event loop
             self.main();
@@ -454,7 +418,7 @@ pub mod main {
             total_messages
         }
 
-        fn main(&mut self) {
+        fn main(&mut self) -> Result<()> {
             // Main app loop
             let mut normal_handler = NormalHandler::new();
             let mut command_handler = CommandHandler::new();
@@ -480,32 +444,33 @@ pub mod main {
                 let t_1 = t_0.elapsed();
                 // println!("{} in {:?}", new_messages, t_1);
 
-                match ncurses::getch() {
-                    // No input
-                    -1 => {
-                        // possibly sleep, cleanup, etc
-                        if self.config.regex_pattern.is_some() {
-                            regex_handler.process_matches(self);
+                if poll(time::Duration::from_millis(self.config.poll_rate))? {
+                    match read()? {
+                        Event::Key(input) => {
+                            match input.code {
+                                input => match self.input_type {
+                                    InputType::Normal => normal_handler.recieve_input(self, input),
+                                    InputType::Command => {
+                                        command_handler.recieve_input(self, input)
+                                    }
+                                    InputType::Regex => regex_handler.recieve_input(self, input),
+                                    InputType::Parser => parser_handler.recieve_input(self, input),
+                                    InputType::MultipleChoice => {
+                                        mc_handler.recieve_input(self, input)
+                                    }
+                                },
+                            }
                         }
-                    },
-                    // Scrolling
-                    258 => scroll::down(self),    // down
-                    259 => scroll::up(self),      // up
-                    260 => scroll::top(self),     // left
-                    261 => scroll::bottom(self),  // right
-                    262 => scroll::top(self),     // home
-                    263 => scroll::bottom(self),  // end
-                    338 => scroll::pg_down(self), // pgdn
-                    339 => scroll::pg_up(self),   // pgup
-                    // Other
-                    input => match self.input_type {
-                        InputType::Normal => normal_handler.recieve_input(self, input),
-                        InputType::Command => command_handler.recieve_input(self, input),
-                        InputType::Regex => regex_handler.recieve_input(self, input),
-                        InputType::Parser => parser_handler.recieve_input(self, input),
-                        InputType::MultipleChoice => mc_handler.recieve_input(self, input),
-                    },
+                        Event::Mouse(event) => {}
+                        Event::Resize(width, height) => {}
+                    }
+                } else {
+                    // possibly sleep, cleanup, etc
+                    if self.config.regex_pattern.is_some() {
+                        regex_handler.process_matches(self);
+                    }
                 }
+
                 self.render_text_in_output();
                 use std::{thread, time};
                 let sleep = time::Duration::from_millis(FASTEST);

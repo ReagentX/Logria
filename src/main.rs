@@ -20,9 +20,6 @@ fn main() {
     //     println!("got data: {:?}", input.stderr.recv().unwrap());
     // }
 
-    let mut app = communication::reader::main::MainWindow::new(
-        cache,
-        smart_poll_rate,
-    );
+    let mut app = communication::reader::main::MainWindow::new(cache, smart_poll_rate);
     app.start(vec![exec.unwrap_or("README.md").to_string()]);
 }

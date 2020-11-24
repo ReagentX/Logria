@@ -174,6 +174,12 @@ pub mod main {
                 return (0, 0);
             }
 
+            // Early escape: render all if we have fewer messages than rows
+            if message_pointer_length <= self.config.last_row as usize {
+                return (0, message_pointer_length);
+            }
+
+            // Otherwise, determine how much we can render
             if self.config.stick_to_top {
                 let mut current_index: usize = 0;
                 loop {
@@ -528,7 +534,7 @@ pub mod main {
 
             let (start, end) = logria.determine_render_position();
             assert_eq!(start, 0);
-            assert_eq!(end, 3);
+            assert_eq!(end, 4);
         }
 
         #[test]
@@ -581,7 +587,7 @@ pub mod main {
 
             let (start, end) = logria.determine_render_position();
             assert_eq!(start, 0);
-            assert_eq!(end, 5);
+            assert_eq!(end, 6);
         }
 
         #[test]

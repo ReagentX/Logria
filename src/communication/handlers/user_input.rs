@@ -59,6 +59,7 @@ impl UserInputHandler {
 
                     self.content.push(c)
                 }
+                window.output.flush();
             }
             _ => {}
         }
@@ -92,7 +93,7 @@ impl UserInputHandler {
             KeyCode::Backspace => self.backspace(window),
             command => self.insert_char(window, command),
         }
-        window.output.flush().unwrap();
+        window.output.flush();
         true
     }
 }

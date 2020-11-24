@@ -31,6 +31,6 @@ pub fn build(app: &mut MainWindow) -> Result<()> {
         app.config.height,
         app.config.width,
     )?;
-    // app.output.flush()?;
+    app.output.flush()?;
     Ok(())
 }

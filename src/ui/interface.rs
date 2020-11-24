@@ -24,7 +24,6 @@ pub fn build(app: &mut MainWindow) -> Result<()> {
     execute!(app.output, terminal::Clear(terminal::ClearType::All))?;
     execute!(app.output, cursor::Hide)?;
     terminal::enable_raw_mode()?;
-    // panic!("{}, {}", config.height - config.last_row, config.width);
     rect(
         &mut app.output,
         app.config.last_row,

@@ -1,7 +1,6 @@
-use std::io::Write;
-
-use crossterm::event::KeyCode;
+use crossterm::Result;
 use regex::bytes::Regex;
+use crossterm::event::KeyCode;
 
 use super::handler::HanderMethods;
 use crate::communication::handlers::user_input::UserInputHandler;
@@ -43,11 +42,15 @@ impl RegexHandler {
         }
     }
 
-    fn set_pattern(&mut self, window: &mut MainWindow) {
-        let pattern = self.input_hander.gather(window);
+    fn set_pattern(&mut self, window: &mut MainWindow) -> Result<()> {
+        let pattern = match self.input_hander.gather(window) {
+            Ok(pattern) => pattern,
+            Err(why) => panic!("Unable to gather text: {:?}", why),
+        };
+
         self.current_pattern = match Regex::new(&pattern) {
             Ok(regex) => {
-                window.write_to_command_line(&format!("Regex with pattern /{}/", pattern));
+                window.write_to_command_line(&format!("Regex with pattern /{}/", pattern))?;
 
                 // Update the main window's status
                 window.config.regex_pattern = Some(pattern);
@@ -55,26 +58,29 @@ impl RegexHandler {
             }
             Err(e) => {
                 // TODO: Alert user of invalid regex somehow?
-                window.write_to_command_line(&format!("Invalid regex: /{}/ ({})", pattern, e));
+                window.write_to_command_line(&format!("Invalid regex: /{}/ ({})", pattern, e))?;
                 None
             }
         };
-        window.set_cli_cursor(Some(NORMAL_CHAR));
+        window.set_cli_cursor(Some(NORMAL_CHAR))?;
+        Ok(())
     }
 
-    fn return_to_normal(&mut self, window: &mut MainWindow) {
-        self.clear_matches(window);
+    fn return_to_normal(&mut self, window: &mut MainWindow) -> Result<()>{
+        self.clear_matches(window)?;
         window.input_type = Normal;
-        window.set_cli_cursor(None);
-        window.output.flush();
+        window.set_cli_cursor(None)?;
+        window.redraw()?;
+        Ok(())
     }
 
-    fn clear_matches(&mut self, window: &mut MainWindow) {
+    fn clear_matches(&mut self, window: &mut MainWindow) -> Result<()>{
         self.current_pattern = None;
         window.config.regex_pattern = None;
         window.config.matched_rows = vec![];
         window.config.last_index_regexed = 0;
-        window.reset_command_line();
+        window.reset_command_line()?;
+        Ok(())
     }
 }
 
@@ -87,7 +93,7 @@ impl HanderMethods for RegexHandler {
         }
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) {
+    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
         match &self.current_pattern {
             Some(_) => match key {
                 // Scroll
@@ -102,25 +108,26 @@ impl HanderMethods for RegexHandler {
 
                 // Build new regex
                 KeyCode::Char('/') => {
-                    self.clear_matches(window);
-                    window.set_cli_cursor(None);
+                    self.clear_matches(window)?;
+                    window.set_cli_cursor(None)?;
                 }
 
                 // Return to normal
-                KeyCode::Esc => self.return_to_normal(window),
+                KeyCode::Esc => self.return_to_normal(window)?,
                 _ => {}
             },
             None => match key {
                 KeyCode::Enter => {
-                    self.set_pattern(window);
+                    self.set_pattern(window)?;
                     if self.current_pattern.is_some() {
                         self.process_matches(window);
                     };
                 }
-                KeyCode::Esc => self.return_to_normal(window),
-                key => self.input_hander.recieve_input(window, key),
-            },
+                KeyCode::Esc => self.return_to_normal(window)?,
+                key => self.input_hander.recieve_input(window, key)?,
+            }
         }
+        Ok(())
     }
 }
 
@@ -165,6 +172,7 @@ mod tests {
         assert_eq!(0, logria.config.matched_rows.len());
     }
 
+    #[test]
     fn test_can_return_normal() {
         let mut logria = MainWindow::_new_dummy();
         let mut handler = super::RegexHandler::new();
@@ -176,7 +184,7 @@ mod tests {
         let pattern = "0";
         handler.current_pattern = Some(Regex::new(pattern).unwrap());
         handler.process_matches(&mut logria);
-        handler.return_to_normal(&mut logria);
+        handler.return_to_normal(&mut logria).unwrap();
 
         assert_eq!(logria.config.regex_pattern, None);
         assert_eq!(logria.config.matched_rows, vec![]);

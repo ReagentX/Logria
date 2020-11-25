@@ -3,6 +3,7 @@ use std::io::Write;
 
 use crossterm::event::KeyCode;
 use crossterm::terminal::size;
+use crossterm::Result;
 use crossterm::{cursor, queue, style};
 
 use super::handler::HanderMethods;
@@ -24,11 +25,6 @@ impl UserInputHandler {
         self.x = w;
     }
 
-    /// Get the first and last spots we can write to on the command line
-    fn get_first_last(&self) -> (u16, u16) {
-        (1, self.x())
-    }
-
     fn y(&self) -> u16 {
         self.y - 2
     }
@@ -41,9 +37,9 @@ impl UserInputHandler {
         self.content.iter().collect()
     }
 
-    fn write(&self, window: &mut MainWindow) {
+    fn write(&self, window: &mut MainWindow) -> Result<()> {
         // Remove the existing content
-        window.reset_command_line();
+        window.reset_command_line()?;
 
         // Insert the word to the screen
         queue!(
@@ -52,13 +48,14 @@ impl UserInputHandler {
             style::Print(self.get_content()),
             cursor::MoveTo(self.last_write, self.y()),
             cursor::Show
-        );
-        window.output.flush();
+        )?;
+        window.output.flush()?;
+        Ok(())
     }
 
     /// Insert character to the input window
     /// TODO: Support insert vs normal typing mode
-    fn insert_char(&mut self, window: &mut MainWindow, character: KeyCode) {
+    fn insert_char(&mut self, window: &mut MainWindow, character: KeyCode) -> Result<()> {
         match character {
             KeyCode::Char(c) => {
                 // Ensure we are using the current screen size
@@ -73,10 +70,11 @@ impl UserInputHandler {
                     self.last_write += 1;
 
                     // Insert the word to the screen
-                    self.write(window);
+                    self.write(window)?;
                 }
+                Ok(())
             }
-            _ => {}
+            _ => Ok(()),
         }
     }
 
@@ -85,68 +83,66 @@ impl UserInputHandler {
     }
 
     /// Remove char 1 to the left of the cursor
-    fn backspace(&mut self, window: &mut MainWindow) {
+    fn backspace(&mut self, window: &mut MainWindow) -> Result<()> {
         if self.last_write >= 1 && self.content.len() > 0 {
             self.content.remove(self.position_as_index() - 1);
-            self.move_left(window);
-            self.write(window);
+            self.move_left(window)?;
+            self.write(window)?;
         }
+        Ok(())
     }
 
     /// Remove char 1 to the right of the cursor
-    fn delete(&mut self, window: &mut MainWindow) {
+    fn delete(&mut self, window: &mut MainWindow) -> Result<()> {
         if self.last_write < self.x() && self.content.len() > 0 {
             self.content.remove(self.position_as_index());
-            self.write(window);
+            self.write(window)?;
         }
+        Ok(())
     }
 
     /// Move the cursor left
-    fn move_left(&mut self, window: &mut MainWindow) {
+    fn move_left(&mut self, window: &mut MainWindow) -> Result<()> {
         self.last_write = self.last_write.checked_sub(1).unwrap_or(0);
-        queue!(
-            window.output,
-            cursor::MoveTo(self.last_write, self.y()),
-        );
+        queue!(window.output, cursor::MoveTo(self.last_write, self.y()),)?;
+        Ok(())
     }
 
     /// Move the cursor right
-    fn move_right(&mut self, window: &mut MainWindow) {
+    fn move_right(&mut self, window: &mut MainWindow) -> Result<()> {
         // TODO: possible index errors here
         self.last_write = min(self.content.len() as u16 + 1, self.last_write + 1);
-        queue!(
-            window.output,
-            cursor::MoveTo(self.last_write, self.y()),
-        );
+        queue!(window.output, cursor::MoveTo(self.last_write, self.y()),)?;
+        Ok(())
     }
 
     /// Get the contents of the command line as a string
-    pub fn gather(&mut self, window: &mut MainWindow) -> String {
+    pub fn gather(&mut self, window: &mut MainWindow) -> Result<String> {
         // Copy the result to a new place so we can clear out the existing one and reuse the struct
         let result: String = self.get_content();
         self.content.clear();
 
         // Hide the cursor
-        queue!(window.output, cursor::Hide).unwrap();
+        queue!(window.output, cursor::Hide)?;
 
         // Reset the last written spot
         self.last_write = 1;
-        window.reset_command_line();
+        window.reset_command_line()?;
 
-        result
+        Ok(result)
     }
 
-    fn do_command(&mut self, window: &mut MainWindow, command: KeyCode) -> bool {
+    fn do_command(&mut self, window: &mut MainWindow, command: KeyCode) -> Result<()> {
         match command {
-            KeyCode::Delete => self.delete(window),
-            KeyCode::Backspace => self.backspace(window),
-            KeyCode::Left => self.move_left(window),
-            KeyCode::Right => self.move_right(window),
+            KeyCode::Delete => self.delete(window)?,
+            KeyCode::Backspace => self.backspace(window)?,
+            KeyCode::Left => self.move_left(window)?,
+            KeyCode::Right => self.move_right(window)?,
             // Possibly opt+left to skip words/symbols
-            command => self.insert_char(window, command),
+            command => self.insert_char(window, command)?,
         }
-        window.output.flush();
-        true
+        window.output.flush()?;
+        Ok(())
     }
 }
 
@@ -160,8 +156,9 @@ impl HanderMethods for UserInputHandler {
         }
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) {
+    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
         queue!(window.output, cursor::Show).unwrap();
-        let success = self.do_command(window, key);
+        self.do_command(window, key)?;
+        Ok(())
     }
 }

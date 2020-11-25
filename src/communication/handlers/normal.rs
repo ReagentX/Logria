@@ -1,3 +1,4 @@
+use crossterm::Result;
 use crossterm::event::KeyCode;
 
 use super::handler::HanderMethods;
@@ -37,7 +38,7 @@ impl HanderMethods for NormalHandler {
         NormalHandler {}
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) {
+    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
         match key {
             // Scroll
             KeyCode::Down => scroll::down(window),
@@ -56,5 +57,6 @@ impl HanderMethods for NormalHandler {
             KeyCode::Char('s') => self.swap_streams(window),
             _ => {}
         }
+        Ok(())
     }
 }

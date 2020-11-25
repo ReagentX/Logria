@@ -361,7 +361,7 @@ pub mod main {
             // Add the string to the front of the command line
             // TODO: Possibly validate length?
             self.go_to_cli()?;
-            queue!(self.output, style::Print(content));
+            queue!(self.output, style::Print(content))?;
             Ok(())
         }
 

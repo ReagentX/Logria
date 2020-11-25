@@ -12,6 +12,7 @@ pub struct NormalHandler {}
 impl NormalHandler {
     fn set_command_mode(&self, window: &mut MainWindow) -> Result<()> {
         window.input_type = InputType::Command;
+        window.reset_command_line()?;
         window.set_cli_cursor(None)?;
         Ok(())
     }
@@ -24,6 +25,7 @@ impl NormalHandler {
 
     fn set_regex_mode(&self, window: &mut MainWindow) -> Result<()> {
         window.input_type = InputType::Regex;
+        window.reset_command_line()?;
         window.set_cli_cursor(None)?;
         Ok(())
     }

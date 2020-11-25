@@ -4,7 +4,7 @@ pub mod main {
     use std::time::Instant;
 
     use crossterm::event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers};
-    use crossterm::{cursor, execute, queue, style, terminal::size, Result};
+    use crossterm::{cursor, execute, queue, style, terminal, Result};
     use std::io::Stdout;
     use std::io::{stdout, Write};
 
@@ -29,8 +29,9 @@ pub mod main {
         pub width: u16,        // Window width
         pub last_row: u16,     // The last row we can render, aka number of lines visible in the tty
         smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
-        first_run: bool,       // Whether this is a first run or not
-        loop_time: f64,        // How long a loop of the main app takes
+        use_history: bool,
+        first_run: bool, // Whether this is a first run or not
+        loop_time: f64,  // How long a loop of the main app takes
         previous_render: (usize, usize),
         previous_messages: Option<&'static Vec<String>>, // Pointer to the previous non-parsed message list, which is continuously updated
         exit_val: i8,                                    // If exit_val is -1, the app dies
@@ -102,7 +103,7 @@ pub mod main {
             app
         }
 
-        pub fn new(cache: bool, smart_poll_rate: bool) -> MainWindow {
+        pub fn new(history: bool, smart_poll_rate: bool) -> MainWindow {
             // Build streams here
             MainWindow {
                 input_type: InputType::Normal,
@@ -111,6 +112,7 @@ pub mod main {
                 config: LogiraConfig {
                     poll_rate: FASTEST,
                     smart_poll_rate: smart_poll_rate,
+                    use_history: history,
                     first_run: true,
                     height: 0,
                     width: 0,
@@ -383,7 +385,7 @@ pub mod main {
 
         /// Set dimensions
         fn update_dimensions(&mut self) -> Result<()> {
-            let (w, h) = size()?;
+            let (w, h) = terminal::size()?;
             self.config.height = h;
             self.config.width = w;
             self.config.last_row = self.config.height - 3;
@@ -406,9 +408,12 @@ pub mod main {
         }
 
         /// Immediately exit the program
-        pub fn quit(&self) -> Result<()> {
-            use crossterm::terminal;
-            terminal::Clear(terminal::ClearType::All);
+        pub fn quit(&mut self) -> Result<()> {
+            execute!(
+                self.output,
+                cursor::Show,
+                terminal::Clear(terminal::ClearType::All)
+            )?;
             terminal::disable_raw_mode()?;
             std::process::exit(1);
         }
@@ -485,11 +490,19 @@ pub mod main {
                             // Otherwise, match input to action
                             match input.code {
                                 input => match self.input_type {
-                                    InputType::Normal => normal_handler.recieve_input(self, input)?,
-                                    InputType::Command => command_handler.recieve_input(self, input)?,
+                                    InputType::Normal => {
+                                        normal_handler.recieve_input(self, input)?
+                                    }
+                                    InputType::Command => {
+                                        command_handler.recieve_input(self, input)?
+                                    }
                                     InputType::Regex => regex_handler.recieve_input(self, input)?,
-                                    InputType::Parser => parser_handler.recieve_input(self, input)?,
-                                    InputType::MultipleChoice => mc_handler.recieve_input(self, input)?,
+                                    InputType::Parser => {
+                                        parser_handler.recieve_input(self, input)?
+                                    }
+                                    InputType::MultipleChoice => {
+                                        mc_handler.recieve_input(self, input)?
+                                    }
                                 },
                             }
                         }

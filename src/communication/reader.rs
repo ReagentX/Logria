@@ -407,7 +407,9 @@ pub mod main {
 
         /// Immediately exit the program
         pub fn quit(&self) -> Result<()> {
-            crossterm::terminal::disable_raw_mode()?;
+            use crossterm::terminal;
+            terminal::Clear(terminal::ClearType::All);
+            terminal::disable_raw_mode()?;
             std::process::exit(1);
         }
 

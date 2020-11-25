@@ -477,7 +477,7 @@ pub mod main {
                         Event::Key(input) => {
                             // Die on Ctrl-C
                             if input == exit_key {
-                                return Ok(());
+                                self.quit();
                             }
 
                             // Otherwise, match input to action

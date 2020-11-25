@@ -3,7 +3,7 @@ pub mod main {
     use std::path::Path;
     use std::time::Instant;
 
-    use crossterm::event::{poll, read, Event, KeyCode};
+    use crossterm::event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers};
     use crossterm::{cursor, execute, queue, style, terminal::size, Result};
     use std::io::Stdout;
     use std::io::{stdout, Write};
@@ -255,7 +255,7 @@ pub mod main {
             (start, end)
         }
 
-        fn render_text_in_output(&mut self) {
+        fn render_text_in_output(&mut self) -> Result<()> {
             let mut current_row = self.config.last_row as usize;
             let width = self.config.width as usize;
             let mut stdout = stdout();
@@ -266,12 +266,12 @@ pub mod main {
             // Don't do anything if nothing changed; start at index 0
             if !self.config.analytics_enabled && self.config.previous_render == (max(0, start), end)
             {
-                return;
+                return Ok(());
             }
 
             // Lock in the previous render state
             self.config.previous_render = (max(0, start), end);
-            self.reset_output();
+            self.reset_output()?;
 
             // Implement the rest of the rendering algorithm
             // Main issue is determining which vec we are reading the data from and adjusting as a result
@@ -308,12 +308,14 @@ pub mod main {
                 )
                 .unwrap();
             }
-            self.output.flush();
+            self.output.flush()?;
+            Ok(())
         }
 
-        pub fn redraw(&mut self) {
+        pub fn redraw(&mut self) -> Result<()> {
             self.config.previous_render = (0, 0); // Force render
-            self.render_text_in_output();
+            self.render_text_in_output()?;
+            Ok(())
         }
 
         pub fn messages(&self) -> &Vec<String> {
@@ -330,36 +332,40 @@ pub mod main {
 
         /// Overwrites the output window with empty space
         /// TODO: faster?
-        fn reset_output(&mut self) {
+        fn reset_output(&mut self) -> Result<()> {
             let clear = " ".repeat((self.config.width) as usize); // TODO: Store this string as a class attribute, recalc on resize
 
             for row in 0..self.config.last_row {
-                queue!(self.output, cursor::MoveTo(0, row), style::Print(&clear));
+                queue!(self.output, cursor::MoveTo(0, row), style::Print(&clear))?;
             }
+
+            Ok(())
         }
 
-        pub fn reset_command_line(&mut self) {
+        pub fn reset_command_line(&mut self) -> Result<()> {
             // Leave padding for surrounding rectangle, we cannot use deleteln because it destroys the rectangle
             let clear = " ".repeat((self.config.width - 3) as usize); // TODO: Store this string as a class attribute, recalc on resize
-            self.go_to_cli().unwrap();
+            self.go_to_cli()?;
 
             // If the cursor was visible, hide it
-            queue!(self.output, style::Print(&clear), cursor::Hide);
+            queue!(self.output, style::Print(&clear), cursor::Hide)?;
+            Ok(())
         }
 
-        pub fn write_to_command_line(&mut self, content: &str) {
+        pub fn write_to_command_line(&mut self, content: &str) -> Result<()> {
             // Remove what used to be in the command line
-            self.reset_command_line();
+            self.reset_command_line()?;
 
             // Add the string to the front of the command line
             // TODO: Possibly validate length?
-            self.go_to_cli().unwrap();
-            queue!(self.output, style::Print(content)).unwrap();
+            self.go_to_cli()?;
+            queue!(self.output, style::Print(content));
+            Ok(())
         }
 
         /// Set the first col of the command line depending on mode
-        pub fn set_cli_cursor(&mut self, content: Option<&'static str>) {
-            self.go_to_cli();
+        pub fn set_cli_cursor(&mut self, content: Option<&'static str>) -> Result<()> {
+            self.go_to_cli()?;
             let first_char = match self.input_type {
                 InputType::Normal => content.unwrap_or(cli_chars::NORMAL_CHAR),
                 InputType::MultipleChoice => content.unwrap_or(cli_chars::MC_CHAR),
@@ -371,30 +377,38 @@ pub mod main {
                 self.output,
                 cursor::MoveTo(0, self.config.last_row + 1),
                 style::Print(first_char)
-            )
-            .unwrap();
+            )?;
+            Ok(())
         }
 
         /// Set dimensions
-        fn update_dimensions(&mut self) {
-            let (w, h) = size().unwrap();
+        fn update_dimensions(&mut self) -> Result<()> {
+            let (w, h) = size()?;
             self.config.height = h;
             self.config.width = w;
             self.config.last_row = self.config.height - 3;
+            Ok(())
         }
 
-        pub fn start(&mut self, commands: Vec<String>) {
+        pub fn start(&mut self, commands: Vec<String>) -> Result<()> {
             // Build the app
             self.config.streams = self.build_streams(commands);
 
             // Set UI Size
-            self.update_dimensions();
+            self.update_dimensions()?;
 
             // Build the UI
-            build(self);
+            build(self)?;
 
             // Start the main event loop
-            self.main();
+            self.main()?;
+            Ok(())
+        }
+
+        /// Immediately exit the program
+        fn quit(&mut self) -> Result<()> {
+            crossterm::terminal::disable_raw_mode()?;
+            std::process::exit(1);
         }
 
         /// Update stderr and stdout buffers from every stream's queue
@@ -425,8 +439,15 @@ pub mod main {
             total_messages
         }
 
+        /// Main app loop
         fn main(&mut self) -> Result<()> {
-            // Main app loop
+            // Exit event
+            let exit_key = KeyEvent {
+                modifiers: KeyModifiers::CONTROL,
+                code: KeyCode::Char('c'),
+            };
+
+            // Instantiate handlers
             let mut normal_handler = NormalHandler::new();
             let mut command_handler = CommandHandler::new();
             let mut regex_handler = RegexHandler::new();
@@ -447,29 +468,31 @@ pub mod main {
             loop {
                 // Update streams here
                 let t_0 = Instant::now();
-                let new_messages = self.recieve_streams();
+                let num_new_messages = self.recieve_streams();
                 let t_1 = t_0.elapsed();
                 // println!("{} in {:?}", new_messages, t_1);
 
                 if poll(time::Duration::from_millis(self.config.poll_rate))? {
                     match read()? {
                         Event::Key(input) => {
+                            // Die on Ctrl-C
+                            if input == exit_key {
+                                return Ok(());
+                            }
+
+                            // Otherwise, match input to action
                             match input.code {
                                 input => match self.input_type {
-                                    InputType::Normal => normal_handler.recieve_input(self, input),
-                                    InputType::Command => {
-                                        command_handler.recieve_input(self, input)
-                                    }
-                                    InputType::Regex => regex_handler.recieve_input(self, input),
-                                    InputType::Parser => parser_handler.recieve_input(self, input),
-                                    InputType::MultipleChoice => {
-                                        mc_handler.recieve_input(self, input)
-                                    }
+                                    InputType::Normal => normal_handler.recieve_input(self, input)?,
+                                    InputType::Command => command_handler.recieve_input(self, input)?,
+                                    InputType::Regex => regex_handler.recieve_input(self, input)?,
+                                    InputType::Parser => parser_handler.recieve_input(self, input)?,
+                                    InputType::MultipleChoice => mc_handler.recieve_input(self, input)?,
                                 },
                             }
                         }
-                        Event::Mouse(event) => {}
-                        Event::Resize(width, height) => {}
+                        Event::Mouse(event) => {} // Probably remove
+                        Event::Resize(width, height) => {} // Call self.dimensions() and some other stuff
                     }
                 } else {
                     // possibly sleep, cleanup, etc
@@ -478,7 +501,7 @@ pub mod main {
                     }
                 }
 
-                self.render_text_in_output();
+                self.render_text_in_output()?;
                 use std::{thread, time};
                 let sleep = time::Duration::from_millis(FASTEST);
                 thread::sleep(sleep);

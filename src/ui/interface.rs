@@ -21,12 +21,8 @@ fn rect(stdout: &mut Stdout, start: u16, height: u16, width: u16) -> Result<()> 
 }
 
 pub fn build(app: &mut MainWindow) -> Result<()> {
-    execute!(
-        app.output,
-        terminal::Clear(terminal::ClearType::All),
-        cursor::Hide,
-        terminal::DisableLineWrap
-    )?;
+    execute!(app.output, terminal::Clear(terminal::ClearType::All))?;
+    execute!(app.output, cursor::Hide)?;
     terminal::enable_raw_mode()?;
     rect(
         &mut app.output,

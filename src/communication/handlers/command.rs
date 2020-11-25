@@ -20,9 +20,9 @@ impl CommandHandler {
         Ok(())
     }
 
-    fn process_command(&mut self, window: &MainWindow, command: &str) {
+    fn process_command(&mut self, window: &MainWindow, command: &str) -> Result<()> {
         match command {
-            "q" => {}
+            "q" => { window.quit()? }
             "poll" => {}
             "config" => {}
             "history" => {}
@@ -31,6 +31,7 @@ impl CommandHandler {
             "restart" => {}
             _ => {}
         }
+        Ok(())
     }
 }
 
@@ -49,7 +50,7 @@ impl HanderMethods for CommandHandler {
                     Ok(command) => command,
                     Err(why) => panic!("Unable to gather text: {:?}", why),
                 };
-                self.process_command(window, &command);
+                self.process_command(window, &command)?;
             }
             // Go back to the previous state
             KeyCode::Esc => self.return_to_prev_state(window)?,

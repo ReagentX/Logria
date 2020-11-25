@@ -1,6 +1,7 @@
 pub mod main {
     use std::cmp::max;
     use std::path::Path;
+    use std::str::from_utf8;
     use std::time::Instant;
 
     use crossterm::event::{poll, read, Event, KeyCode};
@@ -293,20 +294,39 @@ pub mod main {
                 };
 
                 let message_length = self.length_finder.get_real_length(message);
-                current_row =
-                    match current_row.checked_sub(max(1, (message_length + (width - 1)) / width)) {
-                        Some(value) => value,
-                        None => break,
-                    };
+                let message_lines = max(1, (message_length + (width - 1)) / width);
 
                 // TODO: handle color codes
                 // TODO: fix cast?
-                queue!(
-                    stdout, // Not a ref to self.output because we need a mutable borrow and we are already borrowing a string above
-                    cursor::MoveTo(0, current_row as u16),
-                    style::Print(message)
-                )
-                .unwrap();
+
+                // Blank messages should just adjust the row pointer without writing
+                if !message.is_empty() {
+                    // Update current row
+                    current_row = match current_row.checked_sub(message_lines) {
+                        Some(value) => value,
+                        None => break,
+                    };
+                    message.as_bytes().chunks(width).for_each(|part| {
+                        queue!(
+                            stdout, // Not a ref to self.output because we need a mutable borrow and we are already borrowing a string above
+                            cursor::MoveTo(0, current_row as u16),
+                            style::Print(from_utf8(part).unwrap())
+                        );
+                        // Move to next line to print the rest
+                        current_row += 1;
+                    });
+                    // Reset current row to above this message
+                    current_row = match current_row.checked_sub(message_lines) {
+                        Some(value) => value,
+                        None => break,
+                    };
+                } else {
+                    // Update current row
+                    current_row = match current_row.checked_sub(message_lines) {
+                        Some(value) => value,
+                        None => break,
+                    };
+                }
             }
             self.output.flush();
         }
@@ -453,21 +473,15 @@ pub mod main {
 
                 if poll(time::Duration::from_millis(self.config.poll_rate))? {
                     match read()? {
-                        Event::Key(input) => {
-                            match input.code {
-                                input => match self.input_type {
-                                    InputType::Normal => normal_handler.recieve_input(self, input),
-                                    InputType::Command => {
-                                        command_handler.recieve_input(self, input)
-                                    }
-                                    InputType::Regex => regex_handler.recieve_input(self, input),
-                                    InputType::Parser => parser_handler.recieve_input(self, input),
-                                    InputType::MultipleChoice => {
-                                        mc_handler.recieve_input(self, input)
-                                    }
-                                },
-                            }
-                        }
+                        Event::Key(input) => match input.code {
+                            input => match self.input_type {
+                                InputType::Normal => normal_handler.recieve_input(self, input),
+                                InputType::Command => command_handler.recieve_input(self, input),
+                                InputType::Regex => regex_handler.recieve_input(self, input),
+                                InputType::Parser => parser_handler.recieve_input(self, input),
+                                InputType::MultipleChoice => mc_handler.recieve_input(self, input),
+                            },
+                        },
                         Event::Mouse(event) => {}
                         Event::Resize(width, height) => {}
                     }

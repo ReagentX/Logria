@@ -64,7 +64,7 @@ impl CommandHandler {
     fn process_command(&mut self, window: &mut MainWindow, command: &str) -> Result<()> {
         if command == "q" {
             window.quit()?;
-        } else if command.contains("poll ") {
+        } else if command.starts_with("poll ") {
             match self.resolve_poll_rate(command) {
                 Ok(val) => {
                     window.config.poll_rate = val;
@@ -78,16 +78,16 @@ impl CommandHandler {
             }
         }
         // Enter configuration mode
-        else if command.contains("config") {
+        else if command.starts_with("config") {
         }
         // Enter history mode
-        else if command.contains("history") {
+        else if command.starts_with("history") {
         }
         // Exit history mode
-        else if command.contains("history off") {
+        else if command.starts_with("history off") {
         }
         // Remove saved sessions from the main screen
-        else if command.contains("r") {
+        else if command.starts_with("r") {
             match self.resolve_delete_command(command) {
                 Ok(items) => {
                     // Do the deletion here
@@ -102,7 +102,13 @@ impl CommandHandler {
             }
         }
         // Go back to start screen
-        else if command.contains("restart") {
+        else if command.starts_with("restart") {
+        }
+        else {
+            window.write_to_command_line(&format!(
+                "Invalid command: {:?}",
+                command
+            ))?;
         }
         self.return_to_prev_state(window)?;
         Ok(())

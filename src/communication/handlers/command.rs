@@ -1,5 +1,6 @@
 use std::io::Write;
 
+use crossterm::Result;
 use crossterm::event::KeyCode;
 
 use super::handler::HanderMethods;
@@ -12,10 +13,11 @@ pub struct CommandHandler {
 }
 
 impl CommandHandler {
-    fn return_to_prev_state(&mut self, window: &mut MainWindow) {
+    fn return_to_prev_state(&mut self, window: &mut MainWindow) -> Result<()> {
         window.input_type = Normal;
-        window.set_cli_cursor(None);
-        window.output.flush();
+        window.set_cli_cursor(None)?;
+        window.output.flush()?;
+        Ok(())
     }
 
     fn process_command(&mut self, window: &MainWindow, command: &str) {
@@ -39,16 +41,20 @@ impl HanderMethods for CommandHandler {
         }
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) {
+    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
         match key {
             // Execute the command
             KeyCode::Enter => {
-                let command = self.input_hander.gather(window);
+                let command = match self.input_hander.gather(window) {
+                    Ok(command) => command,
+                    Err(why) => panic!("Unable to gather text: {:?}", why),
+                };
                 self.process_command(window, &command);
             }
             // Go back to the previous state
-            KeyCode::Esc => self.return_to_prev_state(window),
-            key => self.input_hander.recieve_input(window, key),
+            KeyCode::Esc => self.return_to_prev_state(window)?,
+            key => self.input_hander.recieve_input(window, key)?,
         }
+        Ok(())
     }
 }

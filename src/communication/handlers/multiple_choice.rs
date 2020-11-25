@@ -1,3 +1,4 @@
+use crossterm::Result;
 use crossterm::event::KeyCode;
 
 use super::handler::HanderMethods;
@@ -18,7 +19,8 @@ impl HanderMethods for MultipleChoiceHandler {
         MultipleChoiceHandler { choices: vec![] }
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) {
-        window.write_to_command_line("got data in MultipleChoiceHandler")
+    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
+        window.write_to_command_line("got data in MultipleChoiceHandler")?;
+        Ok(())
     }
 }

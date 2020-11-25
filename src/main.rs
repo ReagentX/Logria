@@ -1,4 +1,4 @@
-#![allow(dead_code)] // REMOVE!!!
+use crossterm::Result;
 
 mod communication;
 mod constants;
@@ -6,7 +6,7 @@ mod ui;
 mod util;
 use std::sync::Arc;
 
-fn main() {
+fn main() -> Result<()> {
     let options = util::options::from_command_line();
     let cache = options.is_present("cache");
     let smart_poll_rate = options.is_present("smart-poll-rate");
@@ -21,5 +21,6 @@ fn main() {
     // }
 
     let mut app = communication::reader::main::MainWindow::new(cache, smart_poll_rate);
-    app.start(vec![exec.unwrap_or("README.md").to_string()]);
+    app.start(vec![exec.unwrap_or("README.md").to_string()])?;
+    Ok(())
 }

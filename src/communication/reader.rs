@@ -406,7 +406,7 @@ pub mod main {
         }
 
         /// Immediately exit the program
-        fn quit(&mut self) -> Result<()> {
+        pub fn quit(&self) -> Result<()> {
             crossterm::terminal::disable_raw_mode()?;
             std::process::exit(1);
         }

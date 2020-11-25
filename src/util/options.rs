@@ -8,9 +8,9 @@ pub fn from_command_line() -> ArgMatches {
         .version(crate_version!())
         .about(messages::APP_DESCRIPTION)
         .arg(
-            Arg::new("cache")
-                .short('c')
-                .long("no-cache")
+            Arg::new("history")
+                .short('i')
+                .long("no-history")
                 .about(messages::HISTORY_HELP),
         )
         .arg(

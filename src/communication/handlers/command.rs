@@ -20,7 +20,7 @@ impl CommandHandler {
         Ok(())
     }
 
-    fn process_command(&mut self, window: &MainWindow, command: &str) -> Result<()> {
+    fn process_command(&mut self, window: &mut MainWindow, command: &str) -> Result<()> {
         match command {
             "q" => { window.quit()? }
             "poll" => {}

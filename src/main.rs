@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 fn main() -> Result<()> {
     let options = util::options::from_command_line();
-    let cache = options.is_present("cache");
+    let history = options.is_present("history");
     let smart_poll_rate = options.is_present("smart-poll-rate");
     let exec = options.value_of("exec");
 
@@ -20,7 +20,7 @@ fn main() -> Result<()> {
     //     println!("got data: {:?}", input.stderr.recv().unwrap());
     // }
 
-    let mut app = communication::reader::main::MainWindow::new(cache, smart_poll_rate);
+    let mut app = communication::reader::main::MainWindow::new(history, smart_poll_rate);
     app.start(vec![exec.unwrap_or("README.md").to_string()])?;
     Ok(())
 }

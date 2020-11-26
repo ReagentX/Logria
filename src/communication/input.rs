@@ -1,5 +1,6 @@
 pub mod stream {
     use std::error::Error;
+    use std::ffi::OsString;
     use std::fs::File;
     use std::io::{BufRead, BufReader};
     use std::path::Path;
@@ -10,6 +11,7 @@ pub mod stream {
     use subprocess::{Popen, PopenConfig, Redirection};
 
     use crate::constants::cli::poll_rate::FASTEST;
+    use crate::constants::directories::home;
 
     #[derive(Debug)]
     pub struct InputStream {
@@ -38,7 +40,7 @@ pub mod stream {
             let poll_rate = Arc::new(Mutex::new(poll_rate.unwrap_or(FASTEST)));
             let internal_poll_rate = Arc::clone(&poll_rate);
             let process = thread::Builder::new()
-                .name(name.to_string())
+                .name(String::from(format!("FileInput: {}", name)))
                 .spawn(move || {
                     // Remove, as file input should be immediately buffered...
                     let num = internal_poll_rate.lock().unwrap();
@@ -75,8 +77,9 @@ pub mod stream {
     pub struct CommandInput {}
 
     impl CommandInput {
-        fn resolve_command(command: &str) -> Vec<String> {
-            vec![]
+        /// Parse a command string to a list of parts for `subprocess`
+        fn parse_command(command: &str) -> Vec<&str> {
+            command.split(" ").collect()
         }
     }
 
@@ -92,13 +95,14 @@ pub mod stream {
 
             // Start reading from the queues
             let process = thread::Builder::new()
-                .name(name.to_string())
+                .name(String::from(format!("CommandInput: {}", name)))
                 .spawn(move || {
-                    let mut proc_read = match Popen::create(
-                        &CommandInput::resolve_command(&command),
+                    let proc_read = match Popen::create(
+                        &CommandInput::parse_command(&command),
                         PopenConfig {
                             stdout: Redirection::Pipe,
                             stderr: Redirection::Pipe,
+                            cwd: Some(OsString::from(home())),
                             ..Default::default()
                         },
                     ) {
@@ -106,25 +110,37 @@ pub mod stream {
                         Err(why) => panic!("Unable to connect to process: {}", why),
                     };
 
+                    // Get buffers from stderr and stdout handles
+                    let mut stderr = BufReader::new(proc_read.stderr.as_ref().unwrap());
+                    let mut stdout = BufReader::new(proc_read.stdout.as_ref().unwrap());
+
+                    // Buffers to fill with output from each BufReader
+                    let mut out_buf = String::new();
+                    let mut err_buf = String::new();
                     loop {
-                        let output = proc_read.communicate(None);
-                        match output {
-                            Ok(output) => {
-                                let (stdout_content, stderr_content) = output;
-                                if stderr_content.is_some() {
-                                    err_tx.send(stderr_content.unwrap()).unwrap();
-                                }
-                                if stdout_content.is_some() {
-                                    out_tx.send(stdout_content.unwrap()).unwrap();
+                        // Handle stdout
+                        match stdout.read_line(&mut out_buf) {
+                            Ok(_) => {
+                                if !out_buf.is_empty() {
+                                    out_tx.send(out_buf.to_owned()).unwrap();
+                                    out_buf.clear();
                                 }
                             }
-                            Err(_) => {
-                                // No more data to read, end the pipe
-                                break;
+                            Err(_) => {}
+                        };
+
+                        // Handle stderr
+                        match stderr.read_line(&mut err_buf) {
+                            Ok(_) => {
+                                if !err_buf.is_empty() {
+                                    err_tx.send(err_buf.to_owned()).unwrap();
+                                    err_buf.clear();
+                                }
                             }
-                        }
+                            Err(_) => {}
+                        };
                     }
-                }); // TODO
+                });
 
             InputStream {
                 poll_rate: poll_rate,
@@ -172,14 +188,14 @@ pub mod stream {
 
         #[test]
         fn test_build_command_stream() {
-            let commands = vec![String::from("ls -lq")];
+            let commands = vec![String::from("ls -la ~")];
             let streams = build_streams(commands);
             assert_eq!(streams[0]._type, "CommandInput");
         }
 
         #[test]
         fn test_build_command_and_file_streams() {
-            let commands = vec![String::from("ls -lq"), String::from("README.md")];
+            let commands = vec![String::from("ls -la ~"), String::from("README.md")];
             let streams = build_streams(commands);
             assert_eq!(streams[0]._type, "CommandInput");
             assert_eq!(streams[1]._type, "FileInput");
@@ -187,7 +203,7 @@ pub mod stream {
 
         #[test]
         fn test_build_multiple_command_streams() {
-            let commands = vec![String::from("ls -lq"), String::from("ls ~")];
+            let commands = vec![String::from("ls -la ~"), String::from("ls /")];
             let streams = build_streams(commands);
             assert_eq!(streams[0]._type, "CommandInput");
             assert_eq!(streams[1]._type, "CommandInput");

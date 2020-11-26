@@ -176,6 +176,30 @@ pub mod stream {
             let streams = build_streams(commands);
             assert_eq!(streams[0]._type, "CommandInput");
         }
+
+        #[test]
+        fn test_build_command_and_file_streams() {
+            let commands = vec![String::from("ls -lq"), String::from("README.md")];
+            let streams = build_streams(commands);
+            assert_eq!(streams[0]._type, "CommandInput");
+            assert_eq!(streams[1]._type, "FileInput");
+        }
+
+        #[test]
+        fn test_build_multiple_command_streams() {
+            let commands = vec![String::from("ls -lq"), String::from("ls ~")];
+            let streams = build_streams(commands);
+            assert_eq!(streams[0]._type, "CommandInput");
+            assert_eq!(streams[1]._type, "CommandInput");
+        }
+
+        #[test]
+        fn test_build_multiple_file_streams() {
+            let commands = vec![String::from("README.md"), String::from("Cargo.toml")];
+            let streams = build_streams(commands);
+            assert_eq!(streams[0]._type, "FileInput");
+            assert_eq!(streams[1]._type, "FileInput");
+        }
     }
 }
 

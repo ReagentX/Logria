@@ -18,6 +18,7 @@ pub mod stream {
         pub stderr: Receiver<String>,
         pub proccess_name: String,
         pub process: Result<std::thread::JoinHandle<()>, std::io::Error>,
+        _type: String,
     }
 
     pub trait Input {
@@ -65,6 +66,7 @@ pub mod stream {
                 stderr: err_rx,
                 proccess_name: name,
                 process: process,
+                _type: String::from("FileInput"),
             }
         }
     }
@@ -130,7 +132,49 @@ pub mod stream {
                 stderr: err_rx,
                 proccess_name: name,
                 process: process,
+                _type: String::from("CommandInput"),
             }
+        }
+    }
+
+    pub fn build_streams(commands: Vec<String>) -> Vec<InputStream> {
+        let mut streams: Vec<InputStream> = vec![];
+        for command in commands {
+            // Determine if command is a file, create FileInput if it is, CommandInput if not
+            let path = Path::new(&command);
+            match path.exists() {
+                true => {
+                    // Additional convetsion because file_name() generates OSString
+                    let name = path.file_name().unwrap().to_str().unwrap().to_string();
+                    // None indicates default poll rate
+                    streams.push(FileInput::new(None, name, command));
+                }
+                false => {
+                    let name = path.to_str().unwrap().to_string();
+                    // None indicates default poll rate
+                    streams.push(CommandInput::new(None, name, command));
+                }
+            }
+        }
+        streams
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::build_streams;
+
+        #[test]
+        fn test_build_file_stream() {
+            let commands = vec![String::from("README.md")];
+            let streams = build_streams(commands);
+            assert_eq!(streams[0]._type, "FileInput");
+        }
+
+        #[test]
+        fn test_build_command_stream() {
+            let commands = vec![String::from("ls -lq")];
+            let streams = build_streams(commands);
+            assert_eq!(streams[0]._type, "CommandInput");
         }
     }
 }

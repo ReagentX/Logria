@@ -461,7 +461,7 @@ pub mod main {
                 let t_0 = Instant::now();
                 let num_new_messages = self.recieve_streams();
                 let t_1 = t_0.elapsed();
-                // println!("{} in {:?}", new_messages, t_1);
+                // self.write_to_command_line(&format!("{} in {:?}", num_new_messages, t_1))?;
 
                 if poll(time::Duration::from_millis(self.config.poll_rate))? {
                     match read()? {
@@ -502,7 +502,7 @@ pub mod main {
 
                 self.render_text_in_output()?;
                 use std::{thread, time};
-                let sleep = time::Duration::from_millis(FASTEST);
+                let sleep = time::Duration::from_millis(self.config.poll_rate);
                 thread::sleep(sleep);
             }
         }

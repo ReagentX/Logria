@@ -17,18 +17,29 @@ pub struct RegexHandler {
 }
 
 impl RegexHandler {
-    /// Process matches, loading the buffer of indexes to matched messages in the main buffer
-    /// TODO: possibly async? possibly loading indicator for large jobs?
-    pub fn process_matches(&self, window: &mut MainWindow) {
+
+    /// Test a message to see if it matches the pattern while also escaping the color code
+    fn test(&self, message: &str) -> bool {
+        // TODO: Possibly without the extra allocation here?
+        let clean_message = self.color_pattern.replace_all(message.as_bytes(), "".as_bytes());
         match &self.current_pattern {
-            Some(pattern) => {
+            Some(pattern) => pattern.is_match(&clean_message),
+            None => panic!("Match called with no pattern!")
+        }  
+    }
+
+    /// Process matches, loading the buffer of indexes to matched messages in the main buffer
+    pub fn process_matches(&self, window: &mut MainWindow) {
+        // TODO: Possibly async? Possibly loading indicator for large jobs?
+        match &self.current_pattern {
+            Some(_) => {
                 // Start from where we left off to the most recent message
                 let buf_range = (window.config.last_index_regexed, window.messages().len());
 
                 // Iterate "forever", skipping to the start and taking up till end-start
                 // TODO: Something to indicate progress
                 for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
-                    if pattern.is_match(&window.messages()[index].as_bytes()) {
+                    if self.test(&window.messages()[index]) {
                         window.config.matched_rows.push(index);
                     }
 
@@ -204,5 +215,27 @@ mod tests {
         handler.current_pattern = Some(Regex::new(pattern).unwrap());
         handler.process_matches(&mut logria);
         assert_eq!(100, logria.config.last_index_regexed);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_cant_process_no_pattern() {
+        let mut logria = MainWindow::_new_dummy();
+        let handler = super::RegexHandler::new();
+
+        // Set state to regex mode
+        logria.input_type = InputType::Regex;
+        handler.process_matches(&mut logria);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_test_no_pattern() {
+        let mut logria = MainWindow::_new_dummy();
+        let handler = super::RegexHandler::new();
+
+        // Set state to regex mode
+        logria.input_type = InputType::Regex;
+        handler.test("test");
     }
 }

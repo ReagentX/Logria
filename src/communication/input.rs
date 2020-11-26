@@ -18,11 +18,15 @@ pub mod stream {
         pub process: Result<std::thread::JoinHandle<()>, std::io::Error>,
     }
 
+    pub trait Input {
+        fn new(poll_rate: Option<u64>, name: String, command: String) -> InputStream;
+    }
+
     #[derive(Debug)]
     pub struct FileInput {}
 
-    impl FileInput {
-        pub fn new(poll_rate: Option<u64>, name: String, command: String) -> InputStream {
+    impl Input for FileInput {
+        fn new(poll_rate: Option<u64>, name: String, command: String) -> InputStream {
             // Setup multiprocessing queues
             let (_, err_rx) = channel();
             let (out_tx, out_rx) = channel();
@@ -53,6 +57,41 @@ pub mod stream {
                         out_tx.send(line.unwrap()).unwrap();
                     }
                 });
+
+            InputStream {
+                poll_rate: poll_rate,
+                stdout: out_rx,
+                stderr: err_rx,
+                proccess_name: name,
+                process: process,
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct CommandInput {}
+
+    impl CommandInput {
+        fn resolve_command(&self, command: &str) -> Vec<String> {
+            vec![]
+        }
+    }
+
+    impl Input for CommandInput {
+        fn new(poll_rate: Option<u64>, name: String, command: String) -> InputStream {
+            // Setup multiprocessing queues
+            let (err_tx, err_rx) = channel();
+            let (out_tx, out_rx) = channel();
+            
+
+            // Handle poll rate
+            let poll_rate = Arc::new(Mutex::new(poll_rate.unwrap_or(FASTEST)));
+            let internal_poll_rate = Arc::clone(&poll_rate);
+
+            // Start reading from the queues
+            let process = thread::Builder::new()
+                .name(name.to_string())
+                .spawn(move || {}); // TODO
 
             InputStream {
                 poll_rate: poll_rate,

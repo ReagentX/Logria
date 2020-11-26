@@ -15,7 +15,7 @@ pub mod main {
     use crate::communication::handlers::parser::ParserHandler;
     use crate::communication::handlers::regex::RegexHandler;
     use crate::communication::input::input_type::InputType;
-    use crate::communication::input::stream::{FileInput, InputStream};
+    use crate::communication::input::stream::{FileInput, InputStream, Input};
     use crate::communication::input::stream_type::StreamType;
     use crate::constants::cli::cli_chars;
     use crate::constants::cli::poll_rate::FASTEST;

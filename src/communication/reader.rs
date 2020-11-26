@@ -1,6 +1,5 @@
 pub mod main {
     use std::cmp::max;
-    use std::path::Path;
     use std::time::Instant;
 
     use crossterm::event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers};
@@ -15,7 +14,7 @@ pub mod main {
     use crate::communication::handlers::parser::ParserHandler;
     use crate::communication::handlers::regex::RegexHandler;
     use crate::communication::input::input_type::InputType;
-    use crate::communication::input::stream::{FileInput, InputStream};
+    use crate::communication::input::stream::{InputStream, build_streams};
     use crate::communication::input::stream_type::StreamType;
     use crate::constants::cli::cli_chars;
     use crate::constants::cli::poll_rate::FASTEST;
@@ -70,21 +69,6 @@ pub mod main {
     }
 
     impl MainWindow {
-        fn build_streams(&self, commands: Vec<String>) -> Vec<InputStream> {
-            let mut streams: Vec<InputStream> = vec![];
-            for command in commands {
-                // determine if command is a file, create FileInput
-                // otherwise, create CommandInput
-                let name = Path::new(&command)
-                    .file_name()
-                    .unwrap()
-                    .to_str()
-                    .unwrap()
-                    .to_string();
-                streams.push(FileInput::new(None, name, command)); // None indicates default poll rate
-            }
-            streams
-        }
 
         /// Construct sample window for testing
         pub fn _new_dummy() -> MainWindow {
@@ -394,7 +378,7 @@ pub mod main {
 
         pub fn start(&mut self, commands: Vec<String>) -> Result<()> {
             // Build the app
-            self.config.streams = self.build_streams(commands);
+            self.config.streams = build_streams(commands);
 
             // Set UI Size
             self.update_dimensions()?;
@@ -477,7 +461,7 @@ pub mod main {
                 let t_0 = Instant::now();
                 let num_new_messages = self.recieve_streams();
                 let t_1 = t_0.elapsed();
-                // println!("{} in {:?}", new_messages, t_1);
+                // self.write_to_command_line(&format!("{} in {:?}", num_new_messages, t_1))?;
 
                 if poll(time::Duration::from_millis(self.config.poll_rate))? {
                     match read()? {
@@ -518,7 +502,7 @@ pub mod main {
 
                 self.render_text_in_output()?;
                 use std::{thread, time};
-                let sleep = time::Duration::from_millis(FASTEST);
+                let sleep = time::Duration::from_millis(self.config.poll_rate);
                 thread::sleep(sleep);
             }
         }

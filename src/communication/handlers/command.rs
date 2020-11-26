@@ -82,9 +82,11 @@ impl CommandHandler {
         }
         // Enter history mode
         else if command.starts_with("history") {
+            // Possibly to go to alternate screen?
         }
         // Exit history mode
         else if command.starts_with("history off") {
+            // Possibly unnecessary? Use esc to go back from alternate screen?
         }
         // Remove saved sessions from the main screen
         else if command.starts_with("r") {

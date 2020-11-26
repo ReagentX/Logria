@@ -7,6 +7,8 @@ pub mod stream {
     use std::sync::{Arc, Mutex};
     use std::thread;
 
+    use subprocess::{Popen, PopenConfig, Redirection};
+
     use crate::constants::cli::poll_rate::FASTEST;
 
     #[derive(Debug)]
@@ -30,9 +32,6 @@ pub mod stream {
             // Setup multiprocessing queues
             let (_, err_rx) = channel();
             let (out_tx, out_rx) = channel();
-            out_tx
-                .send(String::from("No stderr for File Input!"))
-                .unwrap(); // Otherwise typing breaks
 
             // Start process
             let poll_rate = Arc::new(Mutex::new(poll_rate.unwrap_or(FASTEST)));
@@ -54,7 +53,9 @@ pub mod stream {
                     // Create a buffer and read from it
                     let reader = BufReader::new(file);
                     for line in reader.lines() {
-                        out_tx.send(line.unwrap()).unwrap();
+                        if line.is_ok() {
+                            out_tx.send(line.unwrap()).unwrap();
+                        }
                     }
                 });
 
@@ -72,7 +73,7 @@ pub mod stream {
     pub struct CommandInput {}
 
     impl CommandInput {
-        fn resolve_command(&self, command: &str) -> Vec<String> {
+        fn resolve_command(command: &str) -> Vec<String> {
             vec![]
         }
     }
@@ -82,7 +83,6 @@ pub mod stream {
             // Setup multiprocessing queues
             let (err_tx, err_rx) = channel();
             let (out_tx, out_rx) = channel();
-            
 
             // Handle poll rate
             let poll_rate = Arc::new(Mutex::new(poll_rate.unwrap_or(FASTEST)));
@@ -91,7 +91,38 @@ pub mod stream {
             // Start reading from the queues
             let process = thread::Builder::new()
                 .name(name.to_string())
-                .spawn(move || {}); // TODO
+                .spawn(move || {
+                    let mut proc_read = match Popen::create(
+                        &CommandInput::resolve_command(&command),
+                        PopenConfig {
+                            stdout: Redirection::Pipe,
+                            stderr: Redirection::Pipe,
+                            ..Default::default()
+                        },
+                    ) {
+                        Ok(connected) => connected,
+                        Err(why) => panic!("Unable to connect to process: {}", why),
+                    };
+
+                    loop {
+                        let output = proc_read.communicate(None);
+                        match output {
+                            Ok(output) => {
+                                let (stdout_content, stderr_content) = output;
+                                if stderr_content.is_some() {
+                                    err_tx.send(stderr_content.unwrap()).unwrap();
+                                }
+                                if stdout_content.is_some() {
+                                    out_tx.send(stdout_content.unwrap()).unwrap();
+                                }
+                            }
+                            Err(_) => {
+                                // No more data to read, end the pipe
+                                break;
+                            }
+                        }
+                    }
+                }); // TODO
 
             InputStream {
                 poll_rate: poll_rate,

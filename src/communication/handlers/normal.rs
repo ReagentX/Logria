@@ -66,6 +66,7 @@ impl HanderMethods for NormalHandler {
             KeyCode::Char('s') => self.swap_streams(window)?,
             _ => {}
         }
+        window.redraw()?;
         Ok(())
     }
 }

@@ -1,11 +1,12 @@
 pub mod main {
     use std::cmp::max;
     use std::time::Instant;
+    use std::io::Stdout;
+    use std::io::{stdout, Write};
 
     use crossterm::event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers};
     use crossterm::{cursor, execute, queue, style, terminal, Result};
-    use std::io::Stdout;
-    use std::io::{stdout, Write};
+    use regex::bytes::Regex;
 
     use crate::communication::handlers::command::CommandHandler;
     use crate::communication::handlers::handler::HanderMethods;
@@ -41,7 +42,7 @@ pub mod main {
         pub stream_type: StreamType,
 
         // Regex settings
-        pub regex_pattern: Option<String>, // Current regex pattern
+        pub regex_pattern: Option<regex::bytes::Regex>, // Current regex pattern
         pub matched_rows: Vec<usize>, // List of index of matches when regex filtering is active
         pub last_index_regexed: usize, // The last index the filtering function saw
 
@@ -53,7 +54,7 @@ pub mod main {
         last_index_processed: usize,        // The last index the parsing function saw
         insert_mode: bool,                  // Default to insert mode (like vim) off
         current_status: String,             // Current status, aka what is in the command line
-        highlight_match: bool,              // Determines whether we highlight the match to the user
+        pub highlight_match: bool,              // Determines whether we highlight the match to the user
         pub stick_to_bottom: bool,          // Whether we should follow the stream
         pub stick_to_top: bool, // Whether we should stick to the top and not render new lines
         pub manually_controlled_line: bool, // Whether manual scroll is active
@@ -262,7 +263,8 @@ pub mod main {
             // Implement the rest of the rendering algorithm
             // Main issue is determining which vec we are reading the data from and adjusting as a result
             for index in (start..end).rev() {
-                let message: &str = match self.input_type {
+                // Message is mutable so we can highlight a possible regex match
+                let mut message: &str = match self.input_type {
                     InputType::Normal | InputType::MultipleChoice | InputType::Command => {
                         &self.messages()[index]
                     }
@@ -286,13 +288,42 @@ pub mod main {
                     };
 
                 // TODO: handle color codes
+                let highlighted: Option<String> = match self.config.highlight_match {
+                    true => {
+                        // Highlight match in pink
+                        match &self.config.regex_pattern {
+                            Some(pattern) => {
+                                let mut replaced = message.to_owned();
+                                let r = Regex::new(crate::constants::cli::patterns::ANSI_COLOR_PATTERN).unwrap();
+                                replaced = String::from_utf8(r.replace_all(replaced.as_bytes(), "".as_bytes()).to_vec()).unwrap();
+                                for capture in pattern.find_iter(message.as_bytes()) {
+                                    let matched_text = String::from_utf8(capture.as_bytes().to_vec()).unwrap();
+                                    replaced = replaced.replace(&matched_text, &format!("\x1b[35m{}\x1b[0m", matched_text));
+                                }
+                                Some(replaced.to_owned())
+                            },
+                            None => None,
+                        }
+                    },
+                    false => None
+                };
                 // TODO: fix cast?
-                queue!(
-                    stdout, // Not a ref to self.output because we need a mutable borrow and we are already borrowing a string above
-                    cursor::MoveTo(0, current_row as u16),
-                    style::Print(message)
-                )
-                .unwrap();
+                match highlighted {
+                    Some(h) => {
+                        queue!(
+                            stdout,
+                            cursor::MoveTo(0, current_row as u16),
+                            style::Print(h)
+                        );
+                    },
+                    None => {
+                        queue!(
+                            stdout,
+                            cursor::MoveTo(0, current_row as u16),
+                            style::Print(message)
+                        );
+                    }
+                };
             }
             self.output.flush()?;
             Ok(())
@@ -500,7 +531,9 @@ pub mod main {
                     }
                 }
 
-                self.render_text_in_output()?;
+                if num_new_messages > 0 {
+                    self.render_text_in_output()?;
+                }
                 use std::{thread, time};
                 let sleep = time::Duration::from_millis(self.config.poll_rate);
                 thread::sleep(sleep);

@@ -1,26 +1,35 @@
 pub mod main {
-    use std::cmp::max;
-    use std::io::Stdout;
-    use std::io::{stdout, Write};
-    use std::time::Instant;
+    use std::{
+        cmp::max,
+        io::{stdout, Stdout, Write},
+        thread, time,
+        time::Instant,
+    };
 
-    use crossterm::event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers};
-    use crossterm::{cursor, execute, queue, style, terminal, Result};
+    use crossterm::{
+        cursor,
+        event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers},
+        execute, queue, style, terminal, Result,
+    };
     use regex::bytes::Regex;
 
-    use crate::communication::handlers::command::CommandHandler;
-    use crate::communication::handlers::handler::HanderMethods;
-    use crate::communication::handlers::multiple_choice::MultipleChoiceHandler;
-    use crate::communication::handlers::normal::NormalHandler;
-    use crate::communication::handlers::parser::ParserHandler;
-    use crate::communication::handlers::regex::RegexHandler;
-    use crate::communication::input::input_type::InputType;
-    use crate::communication::input::stream::{build_streams, InputStream};
-    use crate::communication::input::stream_type::StreamType;
-    use crate::constants::cli::cli_chars;
-    use crate::constants::cli::poll_rate::FASTEST;
-    use crate::ui::interface::build;
-    use crate::util::sanitizers::length::LengthFinder;
+    use crate::{
+        communication::{
+            handlers::{
+                command::CommandHandler, handler::HanderMethods,
+                multiple_choice::MultipleChoiceHandler, normal::NormalHandler,
+                parser::ParserHandler, regex::RegexHandler,
+            },
+            input::{
+                input_type::InputType,
+                stream::{build_streams, InputStream},
+                stream_type::StreamType,
+            },
+        },
+        constants::cli::{cli_chars, poll_rate::FASTEST},
+        ui::interface::build,
+        util::sanitizers::length::LengthFinder,
+    };
 
     #[derive(Debug)]
     pub struct LogiraConfig {
@@ -555,7 +564,6 @@ pub mod main {
                 if num_new_messages > 0 {
                     self.render_text_in_output()?;
                 }
-                use std::{thread, time};
                 let sleep = time::Duration::from_millis(self.config.poll_rate);
                 thread::sleep(sleep);
             }

@@ -25,6 +25,7 @@ impl NormalHandler {
 
     fn set_regex_mode(&self, window: &mut MainWindow) -> Result<()> {
         window.input_type = InputType::Regex;
+        window.config.highlight_match = true;
         window.reset_command_line()?;
         window.set_cli_cursor(None)?;
         Ok(())

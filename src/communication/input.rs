@@ -10,8 +10,7 @@ pub mod stream {
 
     use subprocess::{Popen, PopenConfig, Redirection};
 
-    use crate::constants::cli::poll_rate::FASTEST;
-    use crate::constants::directories::home;
+    use crate::constants::{cli::poll_rate::FASTEST, directories::home};
 
     #[derive(Debug)]
     pub struct InputStream {
@@ -45,7 +44,7 @@ pub mod stream {
                     // Try and open a handle to the file
                     let file = match File::open(&path) {
                         // The `description` method of `io::Error` returns a string that describes the error
-                        Err(why) => panic!("couldn't open {:?}: {}", path, Error::to_string(&why)),
+                        Err(why) => panic!("Couldn't open {:?}: {}", path, Error::to_string(&why)),
                         Ok(file) => file,
                     };
 

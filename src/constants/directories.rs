@@ -2,7 +2,6 @@ use crate::constants::resolver::{get_env_var_or_default, get_home_dir};
 
 // Paths
 pub fn home() -> String {
-    println!("{}", get_home_dir());
     get_home_dir()
 }
 

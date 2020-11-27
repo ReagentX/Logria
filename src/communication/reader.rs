@@ -192,7 +192,7 @@ pub mod main {
                     let message_length = self.length_finder.get_real_length(message);
                     rows += max(
                         1,
-                        (message_length + (self.config.width as usize - 1))
+                        (message_length + (self.config.width as usize - 2))
                             / self.config.width as usize,
                     );
 
@@ -282,7 +282,7 @@ pub mod main {
 
                 let message_length = self.length_finder.get_real_length(message);
                 current_row =
-                    match current_row.checked_sub(max(1, (message_length + (width - 1)) / width)) {
+                    match current_row.checked_sub(max(1, ((message_length) + (width - 2)) / width)) {
                         Some(value) => value,
                         None => break,
                     };

@@ -1,8 +1,8 @@
 pub mod main {
     use std::cmp::max;
-    use std::time::Instant;
     use std::io::Stdout;
     use std::io::{stdout, Write};
+    use std::time::Instant;
 
     use crossterm::event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers};
     use crossterm::{cursor, execute, queue, style, terminal, Result};
@@ -15,7 +15,7 @@ pub mod main {
     use crate::communication::handlers::parser::ParserHandler;
     use crate::communication::handlers::regex::RegexHandler;
     use crate::communication::input::input_type::InputType;
-    use crate::communication::input::stream::{InputStream, build_streams};
+    use crate::communication::input::stream::{build_streams, InputStream};
     use crate::communication::input::stream_type::StreamType;
     use crate::constants::cli::cli_chars;
     use crate::constants::cli::poll_rate::FASTEST;
@@ -45,6 +45,7 @@ pub mod main {
         pub regex_pattern: Option<regex::bytes::Regex>, // Current regex pattern
         pub matched_rows: Vec<usize>, // List of index of matches when regex filtering is active
         pub last_index_regexed: usize, // The last index the filtering function saw
+        color_replace_regex: Regex,   // A regex to remove ANSI color codes
 
         // Parser settings
         pub parser: bool,                   // Reference to the current parser
@@ -54,7 +55,7 @@ pub mod main {
         last_index_processed: usize,        // The last index the parsing function saw
         insert_mode: bool,                  // Default to insert mode (like vim) off
         current_status: String,             // Current status, aka what is in the command line
-        pub highlight_match: bool,              // Determines whether we highlight the match to the user
+        pub highlight_match: bool,          // Determines whether we highlight the match to the user
         pub stick_to_bottom: bool,          // Whether we should follow the stream
         pub stick_to_top: bool, // Whether we should stick to the top and not render new lines
         pub manually_controlled_line: bool, // Whether manual scroll is active
@@ -70,7 +71,6 @@ pub mod main {
     }
 
     impl MainWindow {
-
         /// Construct sample window for testing
         pub fn _new_dummy() -> MainWindow {
             let mut app = MainWindow::new(true, true);
@@ -111,6 +111,10 @@ pub mod main {
                     regex_pattern: None,
                     matched_rows: vec![],
                     last_index_regexed: 0,
+                    color_replace_regex: Regex::new(
+                        crate::constants::cli::patterns::ANSI_COLOR_PATTERN,
+                    )
+                    .unwrap(),
                     parser: false,
                     parser_index: 0,
                     parsed_messages: vec![],
@@ -264,7 +268,7 @@ pub mod main {
             // Main issue is determining which vec we are reading the data from and adjusting as a result
             for index in (start..end).rev() {
                 // Message is mutable so we can highlight a possible regex match
-                let mut message: &str = match self.input_type {
+                let message: &str = match self.input_type {
                     InputType::Normal | InputType::MultipleChoice | InputType::Command => {
                         &self.messages()[index]
                     }
@@ -281,31 +285,42 @@ pub mod main {
                 };
 
                 let message_length = self.length_finder.get_real_length(message);
-                current_row =
-                    match current_row.checked_sub(max(1, ((message_length) + (width - 2)) / width)) {
-                        Some(value) => value,
-                        None => break,
-                    };
+                current_row = match current_row
+                    .checked_sub(max(1, ((message_length) + (width - 2)) / width))
+                {
+                    Some(value) => value,
+                    None => break,
+                };
 
-                // TODO: handle color codes
+                // TODO: make this faster
+                // We use a match on the boolean to avoid the replace() call getting captured only in the `if {}` lifetime
                 let highlighted: Option<String> = match self.config.highlight_match {
                     true => {
                         // Highlight match in pink
                         match &self.config.regex_pattern {
                             Some(pattern) => {
                                 let mut replaced = message.to_owned();
-                                let r = Regex::new(crate::constants::cli::patterns::ANSI_COLOR_PATTERN).unwrap();
-                                replaced = String::from_utf8(r.replace_all(replaced.as_bytes(), "".as_bytes()).to_vec()).unwrap();
+                                replaced = String::from_utf8(
+                                    self.config
+                                        .color_replace_regex
+                                        .replace_all(replaced.as_bytes(), "".as_bytes())
+                                        .to_vec(),
+                                )
+                                .unwrap();
                                 for capture in pattern.find_iter(message.as_bytes()) {
-                                    let matched_text = String::from_utf8(capture.as_bytes().to_vec()).unwrap();
-                                    replaced = replaced.replace(&matched_text, &format!("\x1b[35m{}\x1b[0m", matched_text));
+                                    let matched_text =
+                                        String::from_utf8(capture.as_bytes().to_vec()).unwrap();
+                                    replaced = replaced.replace(
+                                        &matched_text,
+                                        &format!("\x1b[35m{}\x1b[0m", matched_text),
+                                    );
                                 }
                                 Some(replaced.to_owned())
-                            },
+                            }
                             None => None,
                         }
-                    },
-                    false => None
+                    }
+                    false => None,
                 };
                 // TODO: fix cast?
                 match highlighted {
@@ -315,7 +330,7 @@ pub mod main {
                             cursor::MoveTo(0, current_row as u16),
                             style::Print(h)
                         );
-                    },
+                    }
                     None => {
                         queue!(
                             stdout,

@@ -6,7 +6,7 @@ pub mod stream {
     use std::path::Path;
     use std::sync::mpsc::{channel, Receiver};
     use std::sync::{Arc, Mutex};
-    use std::thread;
+    use std::{thread, time};
 
     use subprocess::{Popen, PopenConfig, Redirection};
 
@@ -118,6 +118,10 @@ pub mod stream {
                     let mut out_buf = String::new();
                     let mut err_buf = String::new();
                     loop {
+                        // Unwrap poll rate
+                        let wait = internal_poll_rate.lock().unwrap();
+                        thread::sleep(time::Duration::from_millis(*wait));
+
                         // Handle stdout
                         match stdout.read_line(&mut out_buf) {
                             Ok(_) => {

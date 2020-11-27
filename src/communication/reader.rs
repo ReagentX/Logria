@@ -38,7 +38,7 @@ pub mod main {
         pub width: u16,        // Window width
         pub last_row: u16,     // The last row we can render, aka number of lines visible in the tty
         smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
-        use_history: bool,
+        pub use_history: bool,
         first_run: bool, // Whether this is a first run or not
         loop_time: f64,  // How long a loop of the main app takes
         previous_render: (usize, usize),
@@ -261,7 +261,7 @@ pub mod main {
             let mut stdout = stdout();
 
             // Save the cursor position
-            queue!(self.output, cursor::SavePosition)?;
+            execute!(self.output, cursor::SavePosition)?;
 
             // Determine the start and end position of the render
             let (start, end) = self.determine_render_position();
@@ -341,7 +341,6 @@ pub mod main {
                             stdout,
                             cursor::MoveTo(0, current_row as u16),
                             style::Print(h),
-                            cursor::RestorePosition
                         );
                     }
                     None => {
@@ -349,11 +348,11 @@ pub mod main {
                             stdout,
                             cursor::MoveTo(0, current_row as u16),
                             style::Print(message),
-                            cursor::RestorePosition
                         );
                     }
                 };
             }
+            execute!(self.output, cursor::RestorePosition)?;
             self.output.flush()?;
             Ok(())
         }
@@ -400,13 +399,14 @@ pub mod main {
         }
 
         pub fn write_to_command_line(&mut self, content: &str) -> Result<()> {
+            queue!(self.output, cursor::SavePosition)?;
             // Remove what used to be in the command line
             self.reset_command_line()?;
 
             // Add the string to the front of the command line
             // TODO: Possibly validate length?
             self.go_to_cli()?;
-            queue!(self.output, style::Print(content))?;
+            queue!(self.output, style::Print(content), cursor::RestorePosition)?;
             Ok(())
         }
 

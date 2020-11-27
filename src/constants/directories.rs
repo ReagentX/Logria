@@ -36,7 +36,6 @@ pub fn history_tape() -> String {
     root
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::constants::directories;

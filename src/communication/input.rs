@@ -114,6 +114,7 @@ pub mod stream {
                         thread::sleep(time::Duration::from_millis(*wait));
 
                         // Create buffers from stderr and stdout handles
+                        // TODO: Possibly do not redefine each loop? Possibly read the whole buffer before redefining?
                         let mut stdout = BufReader::new(proc_read.stdout.as_ref().unwrap());
                         let mut stderr = BufReader::new(proc_read.stderr.as_ref().unwrap());
 

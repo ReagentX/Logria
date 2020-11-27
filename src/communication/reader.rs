@@ -251,6 +251,9 @@ pub mod main {
             let width = self.config.width as usize;
             let mut stdout = stdout();
 
+            // Save the cursor position
+            queue!(self.output, cursor::SavePosition)?;
+
             // Determine the start and end position of the render
             let (start, end) = self.determine_render_position();
 
@@ -328,14 +331,16 @@ pub mod main {
                         queue!(
                             stdout,
                             cursor::MoveTo(0, current_row as u16),
-                            style::Print(h)
+                            style::Print(h),
+                            cursor::RestorePosition
                         );
                     }
                     None => {
                         queue!(
                             stdout,
                             cursor::MoveTo(0, current_row as u16),
-                            style::Print(message)
+                            style::Print(message),
+                            cursor::RestorePosition
                         );
                     }
                 };
@@ -344,8 +349,9 @@ pub mod main {
             Ok(())
         }
 
+        /// Force render
         pub fn redraw(&mut self) -> Result<()> {
-            self.config.previous_render = (0, 0); // Force render
+            self.config.previous_render = (0, 0);
             self.render_text_in_output()?;
             Ok(())
         }
@@ -358,7 +364,7 @@ pub mod main {
         }
 
         pub fn go_to_cli(&mut self) -> Result<()> {
-            queue!(self.output, cursor::MoveTo(1, self.config.height - 2),)?;
+            queue!(self.output, cursor::MoveTo(1, self.config.height - 2))?;
             Ok(())
         }
 

@@ -157,7 +157,7 @@ impl HanderMethods for UserInputHandler {
     }
 
     fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
-        queue!(window.output, cursor::Show).unwrap();
+        queue!(window.output, cursor::Show)?;
         self.do_command(window, key)?;
         Ok(())
     }

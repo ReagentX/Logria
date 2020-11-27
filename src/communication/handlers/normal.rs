@@ -1,5 +1,8 @@
+use std::io::Write;
+
 use crossterm::event::KeyCode;
 use crossterm::Result;
+use crossterm::{cursor, queue};
 
 use super::handler::HanderMethods;
 use crate::communication::input::input_type::InputType;
@@ -11,9 +14,11 @@ pub struct NormalHandler {}
 
 impl NormalHandler {
     fn set_command_mode(&self, window: &mut MainWindow) -> Result<()> {
+        window.go_to_cli()?;
         window.input_type = InputType::Command;
         window.reset_command_line()?;
         window.set_cli_cursor(None)?;
+        queue!(window.output, cursor::Show)?;
         Ok(())
     }
 
@@ -24,9 +29,12 @@ impl NormalHandler {
     }
 
     fn set_regex_mode(&self, window: &mut MainWindow) -> Result<()> {
+        window.go_to_cli()?;
         window.input_type = InputType::Regex;
+        window.config.highlight_match = true;
         window.reset_command_line()?;
         window.set_cli_cursor(None)?;
+        queue!(window.output, cursor::Show)?;
         Ok(())
     }
 
@@ -65,6 +73,7 @@ impl HanderMethods for NormalHandler {
             KeyCode::Char('s') => self.swap_streams(window)?,
             _ => {}
         }
+        window.redraw()?;
         Ok(())
     }
 }

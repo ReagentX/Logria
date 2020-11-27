@@ -2,36 +2,35 @@ use crate::constants::resolver::{get_env_var_or_default, get_home_dir};
 
 // Paths
 pub fn home() -> String {
-    println!("{}", get_home_dir());
     get_home_dir()
 }
 
-fn app_root() -> String {
+pub fn app_root() -> String {
     let mut root = home();
     root.push_str("/");
     root.push_str(&get_env_var_or_default("LOGRIA_ROOT", ".logria"));
     return root;
 }
 
-fn patterns() -> String {
+pub fn patterns() -> String {
     let mut root = app_root();
     root.push_str("/patterns");
     root
 }
 
-fn sessions() -> String {
+pub fn sessions() -> String {
     let mut root = app_root();
     root.push_str("/sessions");
     root
 }
 
-fn history() -> String {
+pub fn history() -> String {
     let mut root = app_root();
     root.push_str("/history");
     root
 }
 
-fn history_tape() -> String {
+pub fn history_tape() -> String {
     let mut root = app_root();
     root.push_str("/history/tape");
     root

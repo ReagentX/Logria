@@ -6,7 +6,7 @@ pub mod stream {
     use std::path::Path;
     use std::sync::mpsc::{channel, Receiver};
     use std::sync::{Arc, Mutex};
-    use std::thread;
+    use std::{thread, time};
 
     use subprocess::{Popen, PopenConfig, Redirection};
 
@@ -15,7 +15,6 @@ pub mod stream {
 
     #[derive(Debug)]
     pub struct InputStream {
-        pub poll_rate: Arc<Mutex<u64>>,
         pub stdout: Receiver<String>,
         pub stderr: Receiver<String>,
         pub proccess_name: String,
@@ -31,19 +30,16 @@ pub mod stream {
     pub struct FileInput {}
 
     impl Input for FileInput {
-        fn new(poll_rate: Option<u64>, name: String, command: String) -> InputStream {
+        fn new(_: Option<u64>, name: String, command: String) -> InputStream {
             // Setup multiprocessing queues
             let (_, err_rx) = channel();
             let (out_tx, out_rx) = channel();
 
             // Start process
-            let poll_rate = Arc::new(Mutex::new(poll_rate.unwrap_or(FASTEST)));
-            let internal_poll_rate = Arc::clone(&poll_rate);
             let process = thread::Builder::new()
                 .name(String::from(format!("FileInput: {}", name)))
                 .spawn(move || {
                     // Remove, as file input should be immediately buffered...
-                    let num = internal_poll_rate.lock().unwrap();
                     let path = Path::new(&command);
 
                     // Try and open a handle to the file
@@ -63,7 +59,6 @@ pub mod stream {
                 });
 
             InputStream {
-                poll_rate: poll_rate,
                 stdout: out_rx,
                 stderr: err_rx,
                 proccess_name: name,
@@ -110,14 +105,19 @@ pub mod stream {
                         Err(why) => panic!("Unable to connect to process: {}", why),
                     };
 
-                    // Get buffers from stderr and stdout handles
-                    let mut stderr = BufReader::new(proc_read.stderr.as_ref().unwrap());
-                    let mut stdout = BufReader::new(proc_read.stdout.as_ref().unwrap());
-
                     // Buffers to fill with output from each BufReader
                     let mut out_buf = String::new();
                     let mut err_buf = String::new();
                     loop {
+                        // Unwrap poll rate
+                        let wait = internal_poll_rate.lock().unwrap();
+                        thread::sleep(time::Duration::from_millis(*wait));
+
+                        // Create buffers from stderr and stdout handles
+                        // TODO: Possibly do not redefine each loop? Possibly read the whole buffer before redefining?
+                        let mut stdout = BufReader::new(proc_read.stdout.as_ref().unwrap());
+                        let mut stderr = BufReader::new(proc_read.stderr.as_ref().unwrap());
+
                         // Handle stdout
                         match stdout.read_line(&mut out_buf) {
                             Ok(_) => {
@@ -143,7 +143,6 @@ pub mod stream {
                 });
 
             InputStream {
-                poll_rate: poll_rate,
                 stdout: out_rx,
                 stderr: err_rx,
                 proccess_name: name,

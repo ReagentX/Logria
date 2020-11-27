@@ -63,8 +63,8 @@ impl RegexHandler {
             Ok(regex) => {
                 window.write_to_command_line(&format!("Regex with pattern /{}/", pattern))?;
 
-                // Update the main window's status
-                window.config.regex_pattern = Some(pattern);
+                // Update the main window's regex
+                window.config.regex_pattern = Some(regex.to_owned());
                 Some(regex)
             }
             Err(e) => {
@@ -90,6 +90,7 @@ impl RegexHandler {
         window.config.regex_pattern = None;
         window.config.matched_rows = vec![];
         window.config.last_index_regexed = 0;
+        window.config.highlight_match = false;
         window.reset_command_line()?;
         Ok(())
     }
@@ -121,6 +122,11 @@ impl HanderMethods for RegexHandler {
                 KeyCode::Char('/') => {
                     self.clear_matches(window)?;
                     window.set_cli_cursor(None)?;
+                }
+
+                // Toggle match highlight
+                KeyCode::Char('h') => {
+                    window.config.highlight_match = !window.config.highlight_match;
                 }
 
                 // Return to normal
@@ -179,6 +185,7 @@ mod tests {
         // Set regex pattern
         let pattern = "a";
         handler.current_pattern = Some(Regex::new(pattern).unwrap());
+        logria.config.regex_pattern = Some(Regex::new(pattern).unwrap());
         handler.process_matches(&mut logria);
         assert_eq!(0, logria.config.matched_rows.len());
     }
@@ -197,7 +204,8 @@ mod tests {
         handler.process_matches(&mut logria);
         handler.return_to_normal(&mut logria).unwrap();
 
-        assert_eq!(logria.config.regex_pattern, None);
+        assert!(handler.current_pattern.is_none());
+        assert!(logria.config.regex_pattern.is_none());
         assert_eq!(logria.config.matched_rows, vec![]);
         assert_eq!(logria.config.last_index_regexed, 0);
     }

@@ -1,25 +1,35 @@
 pub mod main {
-    use std::cmp::max;
-    use std::time::Instant;
+    use std::{
+        cmp::max,
+        io::{stdout, Stdout, Write},
+        thread, time,
+        time::Instant,
+    };
 
-    use crossterm::event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers};
-    use crossterm::{cursor, execute, queue, style, terminal, Result};
-    use std::io::Stdout;
-    use std::io::{stdout, Write};
+    use crossterm::{
+        cursor,
+        event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers},
+        execute, queue, style, terminal, Result,
+    };
+    use regex::bytes::Regex;
 
-    use crate::communication::handlers::command::CommandHandler;
-    use crate::communication::handlers::handler::HanderMethods;
-    use crate::communication::handlers::multiple_choice::MultipleChoiceHandler;
-    use crate::communication::handlers::normal::NormalHandler;
-    use crate::communication::handlers::parser::ParserHandler;
-    use crate::communication::handlers::regex::RegexHandler;
-    use crate::communication::input::input_type::InputType;
-    use crate::communication::input::stream::{InputStream, build_streams};
-    use crate::communication::input::stream_type::StreamType;
-    use crate::constants::cli::cli_chars;
-    use crate::constants::cli::poll_rate::FASTEST;
-    use crate::ui::interface::build;
-    use crate::util::sanitizers::length::LengthFinder;
+    use crate::{
+        communication::{
+            handlers::{
+                command::CommandHandler, handler::HanderMethods,
+                multiple_choice::MultipleChoiceHandler, normal::NormalHandler,
+                parser::ParserHandler, regex::RegexHandler,
+            },
+            input::{
+                input_type::InputType,
+                stream::{build_streams, InputStream},
+                stream_type::StreamType,
+            },
+        },
+        constants::cli::{cli_chars, poll_rate::FASTEST},
+        ui::interface::build,
+        util::sanitizers::length::LengthFinder,
+    };
 
     #[derive(Debug)]
     pub struct LogiraConfig {
@@ -41,9 +51,10 @@ pub mod main {
         pub stream_type: StreamType,
 
         // Regex settings
-        pub regex_pattern: Option<String>, // Current regex pattern
+        pub regex_pattern: Option<regex::bytes::Regex>, // Current regex pattern
         pub matched_rows: Vec<usize>, // List of index of matches when regex filtering is active
         pub last_index_regexed: usize, // The last index the filtering function saw
+        color_replace_regex: Regex,   // A regex to remove ANSI color codes
 
         // Parser settings
         pub parser: bool,                   // Reference to the current parser
@@ -53,7 +64,7 @@ pub mod main {
         last_index_processed: usize,        // The last index the parsing function saw
         insert_mode: bool,                  // Default to insert mode (like vim) off
         current_status: String,             // Current status, aka what is in the command line
-        highlight_match: bool,              // Determines whether we highlight the match to the user
+        pub highlight_match: bool,          // Determines whether we highlight the match to the user
         pub stick_to_bottom: bool,          // Whether we should follow the stream
         pub stick_to_top: bool, // Whether we should stick to the top and not render new lines
         pub manually_controlled_line: bool, // Whether manual scroll is active
@@ -69,7 +80,6 @@ pub mod main {
     }
 
     impl MainWindow {
-
         /// Construct sample window for testing
         pub fn _new_dummy() -> MainWindow {
             let mut app = MainWindow::new(true, true);
@@ -110,6 +120,10 @@ pub mod main {
                     regex_pattern: None,
                     matched_rows: vec![],
                     last_index_regexed: 0,
+                    color_replace_regex: Regex::new(
+                        crate::constants::cli::patterns::ANSI_COLOR_PATTERN,
+                    )
+                    .unwrap(),
                     parser: false,
                     parser_index: 0,
                     parsed_messages: vec![],
@@ -191,7 +205,7 @@ pub mod main {
                     let message_length = self.length_finder.get_real_length(message);
                     rows += max(
                         1,
-                        (message_length + (self.config.width as usize - 1))
+                        (message_length + (self.config.width as usize - 2))
                             / self.config.width as usize,
                     );
 
@@ -246,6 +260,9 @@ pub mod main {
             let width = self.config.width as usize;
             let mut stdout = stdout();
 
+            // Save the cursor position
+            queue!(self.output, cursor::SavePosition)?;
+
             // Determine the start and end position of the render
             let (start, end) = self.determine_render_position();
 
@@ -262,6 +279,7 @@ pub mod main {
             // Implement the rest of the rendering algorithm
             // Main issue is determining which vec we are reading the data from and adjusting as a result
             for index in (start..end).rev() {
+                // Message is mutable so we can highlight a possible regex match
                 let message: &str = match self.input_type {
                     InputType::Normal | InputType::MultipleChoice | InputType::Command => {
                         &self.messages()[index]
@@ -279,27 +297,70 @@ pub mod main {
                 };
 
                 let message_length = self.length_finder.get_real_length(message);
-                current_row =
-                    match current_row.checked_sub(max(1, (message_length + (width - 1)) / width)) {
-                        Some(value) => value,
-                        None => break,
-                    };
+                current_row = match current_row
+                    .checked_sub(max(1, ((message_length) + (width - 2)) / width))
+                {
+                    Some(value) => value,
+                    None => break,
+                };
 
-                // TODO: handle color codes
+                // TODO: make this faster
+                // We use a match on the boolean to avoid the replace() call getting captured only in the `if {}` lifetime
+                let highlighted: Option<String> = match self.config.highlight_match {
+                    true => {
+                        // Highlight match in pink
+                        match &self.config.regex_pattern {
+                            Some(pattern) => {
+                                let mut replaced = message.to_owned();
+                                replaced = String::from_utf8(
+                                    self.config
+                                        .color_replace_regex
+                                        .replace_all(replaced.as_bytes(), "".as_bytes())
+                                        .to_vec(),
+                                )
+                                .unwrap();
+                                for capture in pattern.find_iter(message.as_bytes()) {
+                                    let matched_text =
+                                        String::from_utf8(capture.as_bytes().to_vec()).unwrap();
+                                    replaced = replaced.replace(
+                                        &matched_text,
+                                        &format!("\x1b[35m{}\x1b[0m", matched_text),
+                                    );
+                                }
+                                Some(replaced.to_owned())
+                            }
+                            None => None,
+                        }
+                    }
+                    false => None,
+                };
                 // TODO: fix cast?
-                queue!(
-                    stdout, // Not a ref to self.output because we need a mutable borrow and we are already borrowing a string above
-                    cursor::MoveTo(0, current_row as u16),
-                    style::Print(message)
-                )
-                .unwrap();
+                match highlighted {
+                    Some(h) => {
+                        queue!(
+                            stdout,
+                            cursor::MoveTo(0, current_row as u16),
+                            style::Print(h),
+                            cursor::RestorePosition
+                        );
+                    }
+                    None => {
+                        queue!(
+                            stdout,
+                            cursor::MoveTo(0, current_row as u16),
+                            style::Print(message),
+                            cursor::RestorePosition
+                        );
+                    }
+                };
             }
             self.output.flush()?;
             Ok(())
         }
 
+        /// Force render
         pub fn redraw(&mut self) -> Result<()> {
-            self.config.previous_render = (0, 0); // Force render
+            self.config.previous_render = (0, 0);
             self.render_text_in_output()?;
             Ok(())
         }
@@ -312,7 +373,7 @@ pub mod main {
         }
 
         pub fn go_to_cli(&mut self) -> Result<()> {
-            queue!(self.output, cursor::MoveTo(1, self.config.height - 2),)?;
+            queue!(self.output, cursor::MoveTo(1, self.config.height - 2))?;
             Ok(())
         }
 
@@ -500,8 +561,9 @@ pub mod main {
                     }
                 }
 
-                self.render_text_in_output()?;
-                use std::{thread, time};
+                if num_new_messages > 0 {
+                    self.render_text_in_output()?;
+                }
                 let sleep = time::Duration::from_millis(self.config.poll_rate);
                 thread::sleep(sleep);
             }

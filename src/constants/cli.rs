@@ -11,6 +11,11 @@ pub mod patterns {
     pub const ANSI_COLOR_PATTERN: &str = r"(?-u)(\x9b|\x1b\[)[0-?]*[ -/]*[@-~]";
 }
 
+pub mod excludes {
+    // Text to exclude from message history
+    pub const HISTORY_EXCLUDES: [&'static str; 2] = [":history", ":history off"];
+}
+
 pub mod cli_chars {
     pub const NORMAL_CHAR: &'static str = "│";
     pub const MC_CHAR: &'static str = "?";
@@ -20,8 +25,6 @@ pub mod cli_chars {
 }
 
 pub mod messages {
-    // Text to exclude from message history
-    pub const HISTORY_EXCLUDES: [&'static str; 2] = [":history", ":history off"];
 
     // Messages
     pub const START_MESSAGE: [&'static str; 7] = [

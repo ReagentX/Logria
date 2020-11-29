@@ -127,6 +127,8 @@ impl HanderMethods for RegexHandler {
                 // Toggle match highlight
                 KeyCode::Char('h') => {
                     window.config.highlight_match = !window.config.highlight_match;
+                    // Immediately re-render
+                    window.redraw()?;
                 }
 
                 // Return to normal

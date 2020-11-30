@@ -280,71 +280,75 @@ pub mod main {
             // Since we are rendering if we got here, lock in the new render state
             self.config.previous_render = (max(0, start), end);
 
-            // Render each message
+            // Render each message from bottom to top
             for index in (start..end).rev() {
                 // Get the next message from the message pointer
-                // Message is mutable so we can highlight a possible regex match
-                let mut message: &str = match self.input_type {
+                // We use String so we can modify `message` and not change the buffer
+                let mut message: String = match self.input_type {
                     InputType::Normal | InputType::MultipleChoice | InputType::Command => {
-                        &self.messages()[index]
+                        self.messages()[index].to_string()
                     }
                     InputType::Regex => {
                         if self.config.regex_pattern.is_none() {
-                            &self.messages()[index]
+                            self.messages()[index].to_string()
                         } else {
-                            &self.messages()[self.config.matched_rows[index]]
+                            self.messages()[self.config.matched_rows[index]].to_string()
                         }
                     }
                     InputType::Parser => {
                         // TODO: build parser
-                        &self.messages()[index]
+                        self.messages()[index].to_string()
                     }
                 };
 
                 // Trim any spaces or newlines from the end of the message
-                message = message.trim_end();
+                message = message.trim_end().to_string();
 
                 // Get some metadata we need to render the message
-                let message_length = self.length_finder.get_real_length(message);
+                let message_length = self.length_finder.get_real_length(&message);
                 let message_rows = ((message_length) + (width - 2)) / width;
 
-                // Update the current row
+                // Update the current row, stop writing if there is no more space
                 current_row = match current_row.checked_sub(max(1, message_rows as u16)) {
                     Some(value) => value,
                     None => break,
                 };
 
                 // TODO: make this faster
-                // We use a match on the boolean to avoid the replace() call getting captured only in the `if {}` lifetime
-                let highlighted: Option<String> = match self.config.highlight_match {
-                    true => {
-                        // Highlight match in pink
-                        match &self.config.regex_pattern {
-                            Some(pattern) => {
-                                // Regex out any existing color codes
-                                let mut replaced = message.to_owned();
-                                replaced = String::from_utf8(
-                                    self.config
-                                        .color_replace_regex
-                                        .replace_all(replaced.as_bytes(), "".as_bytes())
-                                        .to_vec(),
-                                )
-                                .unwrap(); // TODO
-                                for capture in pattern.find_iter(message.as_bytes()) {
-                                    let matched_text =
-                                        String::from_utf8(capture.as_bytes().to_vec()).unwrap(); // TODO
-                                    replaced = replaced.replace(
-                                        &matched_text,
-                                        &format!("\x1b[35m{}\x1b[0m", matched_text),
-                                    );
-                                }
-                                Some(replaced.to_owned())
+                if self.config.highlight_match {
+                    // Highlight match in pink if a pattern is set
+                    match &self.config.regex_pattern {
+                        Some(pattern) => {
+                            // Regex out any existing color codes
+                            // We use a bytes regex becasue we cannot compile the pattern using normal regex
+                            let clean_message = self
+                                .config
+                                .color_replace_regex
+                                .replace_all(message.as_bytes(), "".as_bytes());
+
+                            // Store some vectors of char bytes so we don't have to cast to a string every loop
+                            let mut new_msg: Vec<u8> = vec![];
+                            let mut last_end = 0;
+
+                            // Replace matched patterns with highlighted matched patterns
+                            for capture in pattern.find_iter(&clean_message) {
+                                new_msg.extend(clean_message[last_end..capture.start()].to_vec());
+                                // Add start color string
+                                new_msg.extend("\x1b[35m".as_bytes().to_vec());
+                                new_msg
+                                    .extend(clean_message[capture.start()..capture.end()].to_vec());
+                                // Add end color string
+                                new_msg.extend("\x1b[0m".as_bytes().to_vec());
+                                // Store the ending in case we have multiple matches so we can add the end later
+                                last_end = capture.end();
                             }
-                            None => None,
+                            // Add on any extra chars and update the message String
+                            new_msg.extend(clean_message[last_end..].to_vec());
+                            message = String::from_utf8(new_msg).unwrap();
                         }
+                        None => {}
                     }
-                    false => None,
-                };
+                }
 
                 // Adding padding and printing over the rest of the line is better than
                 // clearing the screen and writing again. This is becuase we can only fit
@@ -353,23 +357,17 @@ pub mod main {
                 // renders, i.e. a lot of flickering, which makes for bad UX. This is not
                 // a perfect solution because we can still get partial renders if the
                 // terminal has a lot of lines, but we are guaranteed to never have blank
-                // lines in the render.
-                let message_padding_size =
-                    (self.config.width as usize * message_rows) - message_length;
+                // lines in the render, which are what cause the flickering effect.
+                let message_padding_size = (width * message_rows) - message_length;
                 let padding = " ".repeat(message_padding_size);
 
-                // If we should highlight the message, render that, otherwise render it normally
-                match highlighted {
-                    Some(mut h) => {
-                        h.push_str(&padding);
-                        queue!(self.output, cursor::MoveTo(0, current_row), style::Print(h),);
-                    }
-                    None => {
-                        let mut t = message.to_owned();
-                        t.push_str(&padding);
-                        queue!(self.output, cursor::MoveTo(0, current_row), style::Print(t),);
-                    }
-                };
+                // Render message
+                message.push_str(&padding);
+                queue!(
+                    self.output,
+                    cursor::MoveTo(0, current_row),
+                    style::Print(message)
+                );
             }
 
             // Overwrite any new blank lines

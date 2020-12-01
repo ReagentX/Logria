@@ -257,6 +257,59 @@ pub mod main {
             (start, end)
         }
 
+        fn get_message_at_index(&self, index: usize) -> String {
+            match self.input_type {
+                InputType::Normal | InputType::MultipleChoice | InputType::Command => {
+                    self.messages()[index].to_string()
+                }
+                InputType::Regex => {
+                    if self.config.regex_pattern.is_none() {
+                        self.messages()[index].to_string()
+                    } else {
+                        self.messages()[self.config.matched_rows[index]].to_string()
+                    }
+                }
+                InputType::Parser => {
+                    // TODO: build parser
+                    self.messages()[index].to_string()
+                }
+            }
+        }
+
+        fn highlight_match(&self, message: String) -> String {
+            // Regex out any existing color codes
+            // We use a bytes regex becasue we cannot compile the pattern using normal regex
+            let clean_message = self
+                .config
+                .color_replace_regex
+                .replace_all(message.as_bytes(), "".as_bytes());
+
+            // Store some vectors of char bytes so we don't have to cast to a string every loop
+            let mut new_msg: Vec<u8> = vec![];
+            let mut last_end = 0;
+
+            // Replace matched patterns with highlighted matched patterns
+            for capture in self
+                .config
+                .regex_pattern
+                .as_ref()
+                .unwrap()
+                .find_iter(&clean_message)
+            {
+                new_msg.extend(clean_message[last_end..capture.start()].to_vec());
+                // Add start color string
+                new_msg.extend("\x1b[35m".as_bytes().to_vec());
+                new_msg.extend(clean_message[capture.start()..capture.end()].to_vec());
+                // Add end color string
+                new_msg.extend("\x1b[0m".as_bytes().to_vec());
+                // Store the ending in case we have multiple matches so we can add the end later
+                last_end = capture.end();
+            }
+            // Add on any extra chars and update the message String
+            new_msg.extend(clean_message[last_end..].to_vec());
+            String::from_utf8(new_msg).unwrap()
+        }
+
         fn render_text_in_output(&mut self) -> Result<()> {
             // Start the render from the last row
             let mut current_row = self.config.last_row;
@@ -284,25 +337,10 @@ pub mod main {
             for index in (start..end).rev() {
                 // Get the next message from the message pointer
                 // We use String so we can modify `message` and not change the buffer
-                let mut message: String = match self.input_type {
-                    InputType::Normal | InputType::MultipleChoice | InputType::Command => {
-                        self.messages()[index].to_string()
-                    }
-                    InputType::Regex => {
-                        if self.config.regex_pattern.is_none() {
-                            self.messages()[index].to_string()
-                        } else {
-                            self.messages()[self.config.matched_rows[index]].to_string()
-                        }
-                    }
-                    InputType::Parser => {
-                        // TODO: build parser
-                        self.messages()[index].to_string()
-                    }
-                };
+                let mut message: String = self.get_message_at_index(index);
 
                 // Trim any spaces or newlines from the end of the message
-                message = message.trim_end().to_string();
+                message = message.trim_end().into();
 
                 // Get some metadata we need to render the message
                 let message_length = self.length_finder.get_real_length(&message);
@@ -315,39 +353,8 @@ pub mod main {
                 };
 
                 // TODO: make this faster
-                if self.config.highlight_match {
-                    // Highlight match in pink if a pattern is set
-                    match &self.config.regex_pattern {
-                        Some(pattern) => {
-                            // Regex out any existing color codes
-                            // We use a bytes regex becasue we cannot compile the pattern using normal regex
-                            let clean_message = self
-                                .config
-                                .color_replace_regex
-                                .replace_all(message.as_bytes(), "".as_bytes());
-
-                            // Store some vectors of char bytes so we don't have to cast to a string every loop
-                            let mut new_msg: Vec<u8> = vec![];
-                            let mut last_end = 0;
-
-                            // Replace matched patterns with highlighted matched patterns
-                            for capture in pattern.find_iter(&clean_message) {
-                                new_msg.extend(clean_message[last_end..capture.start()].to_vec());
-                                // Add start color string
-                                new_msg.extend("\x1b[35m".as_bytes().to_vec());
-                                new_msg
-                                    .extend(clean_message[capture.start()..capture.end()].to_vec());
-                                // Add end color string
-                                new_msg.extend("\x1b[0m".as_bytes().to_vec());
-                                // Store the ending in case we have multiple matches so we can add the end later
-                                last_end = capture.end();
-                            }
-                            // Add on any extra chars and update the message String
-                            new_msg.extend(clean_message[last_end..].to_vec());
-                            message = String::from_utf8(new_msg).unwrap();
-                        }
-                        None => {}
-                    }
+                if self.config.highlight_match && self.config.regex_pattern.is_some() {
+                    message = self.highlight_match(message);
                 }
 
                 // Adding padding and printing over the rest of the line is better than

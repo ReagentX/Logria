@@ -8,7 +8,7 @@ pub mod stream {
     use std::sync::{Arc, Mutex};
     use std::{thread, time};
 
-    use crate::constants::cli::poll_rate::FASTEST;
+    use crate::constants::{cli::poll_rate::FASTEST, directories::home};
 
     #[derive(Debug)]
     pub struct InputStream {
@@ -92,6 +92,7 @@ pub mod stream {
                     let command_to_run = CommandInput::parse_command(&command);
                     let mut proc_read = match Command::new(command_to_run[0])
                         .args(&command_to_run[1..])
+                        .current_dir(home())
                         .stdout(Stdio::piped())
                         .stderr(Stdio::piped())
                         .spawn()

@@ -1,16 +1,14 @@
 pub mod stream {
     use std::error::Error;
-    use std::ffi::OsString;
     use std::fs::File;
     use std::io::{BufRead, BufReader};
     use std::path::Path;
+    use std::process::{Command, Stdio};
     use std::sync::mpsc::{channel, Receiver};
     use std::sync::{Arc, Mutex};
     use std::{thread, time};
 
-    use subprocess::{Popen, PopenConfig, Redirection};
-
-    use crate::constants::{cli::poll_rate::FASTEST, directories::home};
+    use crate::constants::cli::poll_rate::FASTEST;
 
     #[derive(Debug)]
     pub struct InputStream {
@@ -91,15 +89,13 @@ pub mod stream {
             let process = thread::Builder::new()
                 .name(String::from(format!("CommandInput: {}", name)))
                 .spawn(move || {
-                    let proc_read = match Popen::create(
-                        &CommandInput::parse_command(&command),
-                        PopenConfig {
-                            stdout: Redirection::Pipe,
-                            stderr: Redirection::Pipe,
-                            cwd: Some(OsString::from(home())),
-                            ..Default::default()
-                        },
-                    ) {
+                    let command_to_run = CommandInput::parse_command(&command);
+                    let mut proc_read = match Command::new(command_to_run[0])
+                        .args(&command_to_run[1..])
+                        .stdout(Stdio::piped())
+                        .stderr(Stdio::piped())
+                        .spawn()
+                    {
                         Ok(connected) => connected,
                         Err(why) => panic!("Unable to connect to process: {}", why),
                     };
@@ -107,18 +103,23 @@ pub mod stream {
                     // Buffers to fill with output from each BufReader
                     let mut out_buf = String::new();
                     let mut err_buf = String::new();
+
+                    // Create handles to stdout and stderr
+                    let stdout = proc_read.stdout.take().unwrap();
+                    let stderr = proc_read.stderr.take().unwrap();
+
+                    // Create buffers from stderr and stdout handles
+                    // TODO: Possibly do not redefine each loop? Possibly read the whole buffer before redefining?
+                    let mut stdoutr = BufReader::new(stdout);
+                    let mut stderrr = BufReader::new(stderr);
+
                     loop {
                         // Unwrap poll rate
                         let wait = internal_poll_rate.lock().unwrap();
                         thread::sleep(time::Duration::from_millis(*wait));
 
-                        // Create buffers from stderr and stdout handles
-                        // TODO: Possibly do not redefine each loop? Possibly read the whole buffer before redefining?
-                        let mut stdout = BufReader::new(proc_read.stdout.as_ref().unwrap());
-                        let mut stderr = BufReader::new(proc_read.stderr.as_ref().unwrap());
-
                         // Handle stdout
-                        match stdout.read_line(&mut out_buf) {
+                        match stdoutr.read_line(&mut out_buf) {
                             Ok(_) => {
                                 if !out_buf.is_empty() {
                                     out_tx.send(out_buf.to_owned()).unwrap();
@@ -129,7 +130,7 @@ pub mod stream {
                         };
 
                         // Handle stderr
-                        match stderr.read_line(&mut err_buf) {
+                        match stderrr.read_line(&mut err_buf) {
                             Ok(_) => {
                                 if !err_buf.is_empty() {
                                     err_tx.send(err_buf.to_owned()).unwrap();

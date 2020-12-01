@@ -9,7 +9,9 @@ pub mod main {
     use crossterm::{
         cursor,
         event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers},
-        execute, queue, style, terminal, Result,
+        execute, queue, style,
+        terminal::{disable_raw_mode, size, Clear, ClearType},
+        Result,
     };
     use regex::bytes::Regex;
 
@@ -38,7 +40,7 @@ pub mod main {
         pub width: u16,        // Window width
         pub last_row: u16,     // The last row we can render, aka number of lines visible in the tty
         smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
-        use_history: bool,
+        pub use_history: bool,
         first_run: bool, // Whether this is a first run or not
         loop_time: f64,  // How long a loop of the main app takes
         previous_render: (usize, usize),
@@ -63,9 +65,9 @@ pub mod main {
         pub analytics_enabled: bool,        // Whether we are calcualting stats or not
         last_index_processed: usize,        // The last index the parsing function saw
         insert_mode: bool,                  // Default to insert mode (like vim) off
-        current_status: String,             // Current status, aka what is in the command line
-        pub highlight_match: bool,          // Determines whether we highlight the match to the user
-        pub stick_to_bottom: bool,          // Whether we should follow the stream
+        current_status: String, // UNUSED Current status, aka what is in the command line
+        pub highlight_match: bool, // Determines whether we highlight the match to the user
+        pub stick_to_bottom: bool, // Whether we should follow the stream
         pub stick_to_top: bool, // Whether we should stick to the top and not render new lines
         pub manually_controlled_line: bool, // Whether manual scroll is active
         pub current_end: usize, // Current last row we have rendered
@@ -142,7 +144,7 @@ pub mod main {
             }
         }
 
-        pub fn numer_of_messages(&self) -> usize {
+        pub fn number_of_messages(&self) -> usize {
             match self.input_type {
                 InputType::Normal | InputType::MultipleChoice | InputType::Command => {
                     self.messages().len()
@@ -167,7 +169,7 @@ pub mod main {
         pub fn determine_render_position(&mut self) -> (usize, usize) {
             let mut end: usize = 0;
             let mut rows: usize = 0;
-            let message_pointer_length = self.numer_of_messages();
+            let message_pointer_length = self.number_of_messages();
 
             // Handle empty message queue
             if message_pointer_length == 0 {
@@ -255,12 +257,67 @@ pub mod main {
             (start, end)
         }
 
-        fn render_text_in_output(&mut self) -> Result<()> {
-            let mut current_row = self.config.last_row as usize;
-            let width = self.config.width as usize;
-            let mut stdout = stdout();
+        fn get_message_at_index(&self, index: usize) -> String {
+            match self.input_type {
+                InputType::Normal | InputType::MultipleChoice | InputType::Command => {
+                    self.messages()[index].to_string()
+                }
+                InputType::Regex => {
+                    if self.config.regex_pattern.is_none() {
+                        self.messages()[index].to_string()
+                    } else {
+                        self.messages()[self.config.matched_rows[index]].to_string()
+                    }
+                }
+                InputType::Parser => {
+                    // TODO: build parser
+                    self.messages()[index].to_string()
+                }
+            }
+        }
 
-            // Save the cursor position
+        fn highlight_match(&self, message: String) -> String {
+            // Regex out any existing color codes
+            // We use a bytes regex becasue we cannot compile the pattern using normal regex
+            let clean_message = self
+                .config
+                .color_replace_regex
+                .replace_all(message.as_bytes(), "".as_bytes());
+
+            // Store some vectors of char bytes so we don't have to cast to a string every loop
+            let mut new_msg: Vec<u8> = vec![];
+            let mut last_end = 0;
+
+            // Replace matched patterns with highlighted matched patterns
+            for capture in self
+                .config
+                .regex_pattern
+                .as_ref()
+                .unwrap()
+                .find_iter(&clean_message)
+            {
+                new_msg.extend(clean_message[last_end..capture.start()].to_vec());
+                // Add start color string
+                new_msg.extend("\x1b[35m".as_bytes().to_vec());
+                new_msg.extend(clean_message[capture.start()..capture.end()].to_vec());
+                // Add end color string
+                new_msg.extend("\x1b[0m".as_bytes().to_vec());
+                // Store the ending in case we have multiple matches so we can add the end later
+                last_end = capture.end();
+            }
+            // Add on any extra chars and update the message String
+            new_msg.extend(clean_message[last_end..].to_vec());
+            String::from_utf8(new_msg).unwrap()
+        }
+
+        fn render_text_in_output(&mut self) -> Result<()> {
+            // Start the render from the last row
+            let mut current_row = self.config.last_row;
+
+            // Cast to usize so we can reference this instead of casting every time we need
+            let width = self.config.width as usize;
+
+            // Save the cursor position (i.e. if the user is editing text in the command line)
             queue!(self.output, cursor::SavePosition)?;
 
             // Determine the start and end position of the render
@@ -269,91 +326,72 @@ pub mod main {
             // Don't do anything if nothing changed; start at index 0
             if !self.config.analytics_enabled && self.config.previous_render == (max(0, start), end)
             {
+                queue!(self.output, cursor::RestorePosition)?;
                 return Ok(());
             }
 
-            // Lock in the previous render state
+            // Since we are rendering if we got here, lock in the new render state
             self.config.previous_render = (max(0, start), end);
-            self.reset_output()?;
 
-            // Implement the rest of the rendering algorithm
-            // Main issue is determining which vec we are reading the data from and adjusting as a result
+            // Render each message from bottom to top
             for index in (start..end).rev() {
-                // Message is mutable so we can highlight a possible regex match
-                let message: &str = match self.input_type {
-                    InputType::Normal | InputType::MultipleChoice | InputType::Command => {
-                        &self.messages()[index]
-                    }
-                    InputType::Regex => {
-                        if self.config.regex_pattern.is_none() {
-                            &self.messages()[index]
-                        } else {
-                            &self.messages()[self.config.matched_rows[index]]
-                        }
-                    }
-                    InputType::Parser => {
-                        &self.messages()[index] // Fix
-                    }
-                };
+                // Get the next message from the message pointer
+                // We use String so we can modify `message` and not change the buffer
+                let mut message: String = self.get_message_at_index(index);
 
-                let message_length = self.length_finder.get_real_length(message);
-                current_row = match current_row
-                    .checked_sub(max(1, ((message_length) + (width - 2)) / width))
-                {
+                // Trim any spaces or newlines from the end of the message
+                message = message.trim_end().into();
+
+                // Get some metadata we need to render the message
+                let message_length = self.length_finder.get_real_length(&message);
+                let message_rows = max(1, ((message_length) + (width - 2)) / width);
+
+                // Update the current row, stop writing if there is no more space
+                current_row = match current_row.checked_sub(max(1, message_rows as u16)) {
                     Some(value) => value,
                     None => break,
                 };
 
                 // TODO: make this faster
-                // We use a match on the boolean to avoid the replace() call getting captured only in the `if {}` lifetime
-                let highlighted: Option<String> = match self.config.highlight_match {
-                    true => {
-                        // Highlight match in pink
-                        match &self.config.regex_pattern {
-                            Some(pattern) => {
-                                let mut replaced = message.to_owned();
-                                replaced = String::from_utf8(
-                                    self.config
-                                        .color_replace_regex
-                                        .replace_all(replaced.as_bytes(), "".as_bytes())
-                                        .to_vec(),
-                                )
-                                .unwrap();
-                                for capture in pattern.find_iter(message.as_bytes()) {
-                                    let matched_text =
-                                        String::from_utf8(capture.as_bytes().to_vec()).unwrap();
-                                    replaced = replaced.replace(
-                                        &matched_text,
-                                        &format!("\x1b[35m{}\x1b[0m", matched_text),
-                                    );
-                                }
-                                Some(replaced.to_owned())
-                            }
-                            None => None,
-                        }
-                    }
-                    false => None,
-                };
-                // TODO: fix cast?
-                match highlighted {
-                    Some(h) => {
-                        queue!(
-                            stdout,
-                            cursor::MoveTo(0, current_row as u16),
-                            style::Print(h),
-                            cursor::RestorePosition
-                        );
-                    }
-                    None => {
-                        queue!(
-                            stdout,
-                            cursor::MoveTo(0, current_row as u16),
-                            style::Print(message),
-                            cursor::RestorePosition
-                        );
-                    }
-                };
+                if self.config.highlight_match && self.config.regex_pattern.is_some() {
+                    message = self.highlight_match(message);
+                }
+
+                // Adding padding and printing over the rest of the line is better than
+                // clearing the screen and writing again. This is becuase we can only fit
+                // a few items into the render queue. Because the queue is flushed
+                // automatically when it is full, we end up having a lot of partial screen
+                // renders, i.e. a lot of flickering, which makes for bad UX. This is not
+                // a perfect solution because we can still get partial renders if the
+                // terminal has a lot of lines, but we are guaranteed to never have blank
+                // lines in the render, which are what cause the flickering effect.
+                let message_padding_size = (width * message_rows) - message_length;
+                let padding = " ".repeat(message_padding_size);
+
+                // Render message
+                message.push_str(&padding);
+                queue!(
+                    self.output,
+                    cursor::MoveTo(0, current_row),
+                    style::Print(message)
+                );
             }
+
+            // Overwrite any new blank lines
+            // We could iterate over (0..current_row), but we don't need to allocate clear_line
+            if current_row > 0 {
+                let clear_line = " ".repeat(width);
+                (0..current_row).for_each(|row| {
+                    queue!(
+                        self.output,
+                        cursor::MoveTo(0, row),
+                        style::Print(&clear_line),
+                    );
+                });
+            }
+
+            // Restore the cursor position and flush the queue
+            queue!(self.output, cursor::RestorePosition)?;
             self.output.flush()?;
             Ok(())
         }
@@ -365,6 +403,7 @@ pub mod main {
             Ok(())
         }
 
+        /// Get the current messagep pointer
         pub fn messages(&self) -> &Vec<String> {
             match self.config.stream_type {
                 StreamType::StdErr => &self.config.stderr_messages,
@@ -372,6 +411,7 @@ pub mod main {
             }
         }
 
+        /// Move the cursor to the CLI window
         pub fn go_to_cli(&mut self) -> Result<()> {
             queue!(self.output, cursor::MoveTo(1, self.config.height - 2))?;
             Ok(())
@@ -380,12 +420,14 @@ pub mod main {
         /// Overwrites the output window with empty space
         /// TODO: faster?
         fn reset_output(&mut self) -> Result<()> {
-            let clear = " ".repeat((self.config.width) as usize); // TODO: Store this string as a class attribute, recalc on resize
-
-            for row in 0..self.config.last_row {
-                queue!(self.output, cursor::MoveTo(0, row), style::Print(&clear))?;
-            }
-
+            execute!(self.output, cursor::SavePosition);
+            queue!(
+                self.output,
+                cursor::MoveTo(1, self.config.last_row - 1),
+                Clear(ClearType::CurrentLine),
+                Clear(ClearType::FromCursorUp),
+            )?;
+            execute!(self.output, cursor::RestorePosition);
             Ok(())
         }
 
@@ -400,13 +442,14 @@ pub mod main {
         }
 
         pub fn write_to_command_line(&mut self, content: &str) -> Result<()> {
+            queue!(self.output, cursor::SavePosition)?;
             // Remove what used to be in the command line
             self.reset_command_line()?;
 
             // Add the string to the front of the command line
             // TODO: Possibly validate length?
             self.go_to_cli()?;
-            queue!(self.output, style::Print(content))?;
+            queue!(self.output, style::Print(content), cursor::RestorePosition)?;
             Ok(())
         }
 
@@ -430,7 +473,7 @@ pub mod main {
 
         /// Set dimensions
         fn update_dimensions(&mut self) -> Result<()> {
-            let (w, h) = terminal::size()?;
+            let (w, h) = size()?;
             self.config.height = h;
             self.config.width = w;
             self.config.last_row = self.config.height - 3;
@@ -454,12 +497,8 @@ pub mod main {
 
         /// Immediately exit the program
         pub fn quit(&mut self) -> Result<()> {
-            execute!(
-                self.output,
-                cursor::Show,
-                terminal::Clear(terminal::ClearType::All)
-            )?;
-            terminal::disable_raw_mode()?;
+            execute!(self.output, cursor::Show, Clear(ClearType::All))?;
+            disable_raw_mode()?;
             std::process::exit(1);
         }
 
@@ -513,6 +552,9 @@ pub mod main {
             if self.config.stdout_messages.len() > self.config.stderr_messages.len() {
                 self.config.stream_type = StreamType::StdOut;
             }
+
+            // Render anything new in case the streams are already finished
+            self.render_text_in_output()?;
 
             // enum for input mode: {normal, command, regex, choice}
             // if input mode is command or regex, draw/remove the character to the command line

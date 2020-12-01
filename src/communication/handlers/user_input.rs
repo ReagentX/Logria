@@ -1,5 +1,6 @@
-use std::cmp::min;
+use std::cmp::{min, max};
 use std::io::Write;
+
 
 use crossterm::event::KeyCode;
 use crossterm::terminal::size;
@@ -8,6 +9,7 @@ use crossterm::{cursor, queue, style};
 
 use super::handler::HanderMethods;
 use crate::communication::reader::main::MainWindow;
+use crate::util::history::Tape;
 
 // Used in Command and Regex handler to capture user typing
 pub struct UserInputHandler {
@@ -15,6 +17,7 @@ pub struct UserInputHandler {
     y: u16,
     last_write: u16,
     content: Vec<char>,
+    history: Tape,
 }
 
 impl UserInputHandler {
@@ -103,7 +106,7 @@ impl UserInputHandler {
 
     /// Move the cursor left
     fn move_left(&mut self, window: &mut MainWindow) -> Result<()> {
-        self.last_write = self.last_write.checked_sub(1).unwrap_or(0);
+        self.last_write = max(1, self.last_write.checked_sub(1).unwrap_or(1));
         queue!(window.output, cursor::MoveTo(self.last_write, self.y()),)?;
         Ok(())
     }
@@ -112,7 +115,30 @@ impl UserInputHandler {
     fn move_right(&mut self, window: &mut MainWindow) -> Result<()> {
         // TODO: possible index errors here
         self.last_write = min(self.content.len() as u16 + 1, self.last_write + 1);
-        queue!(window.output, cursor::MoveTo(self.last_write, self.y()),)?;
+        queue!(window.output, cursor::MoveTo(self.last_write, self.y()))?;
+        Ok(())
+    }
+
+    /// Get the next item in the history tape if it exists
+    fn tape_forward(&mut self, window: &mut MainWindow) -> Result<()> {
+        let content = self.history.scroll_forward();
+        self.tape_render(window, content)?;
+        Ok(())
+    }
+
+    /// Get the previous item in the history tape if it exists
+    fn tape_back(&mut self, window: &mut MainWindow) -> Result<()> {
+        let content = self.history.scroll_back();
+        self.tape_render(window, content)?;
+        Ok(())
+    }
+
+    /// Render the new choice
+    fn tape_render(&mut self, window: &mut MainWindow, content: String) -> Result<()> {
+        self.last_write = content.len() as u16 + 1;
+        window.write_to_command_line(&content)?;
+        self.content = content.chars().collect();
+        queue!(window.output, cursor::MoveTo(self.last_write, self.y()), cursor::Show)?;
         Ok(())
     }
 
@@ -129,16 +155,30 @@ impl UserInputHandler {
         self.last_write = 1;
         window.reset_command_line()?;
 
+        // Write to the history tape
+        if window.config.use_history {
+            self.history.add_item(&result);
+        }
+
         Ok(result)
     }
 
     fn do_command(&mut self, window: &mut MainWindow, command: KeyCode) -> Result<()> {
         match command {
+            // Remove data
             KeyCode::Delete => self.delete(window)?,
             KeyCode::Backspace => self.backspace(window)?,
+
+            // Move cursor
+            // TODO: Possibly opt+left to skip words/symbols
             KeyCode::Left => self.move_left(window)?,
             KeyCode::Right => self.move_right(window)?,
-            // Possibly opt+left to skip words/symbols
+
+            // TODO: History tape
+            KeyCode::Up => self.tape_back(window)?,
+            KeyCode::Down => self.tape_forward(window)?,
+
+            // Insert char
             command => self.insert_char(window, command)?,
         }
         window.output.flush()?;
@@ -148,12 +188,15 @@ impl UserInputHandler {
 
 impl HanderMethods for UserInputHandler {
     fn new() -> UserInputHandler {
-        UserInputHandler {
+        let mut handler = UserInputHandler {
             x: 0,
             y: 0,
             last_write: 1,
             content: vec![],
-        }
+            history: Tape::new(),
+        };
+        handler.update_dimensions();
+        handler
     }
 
     fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {

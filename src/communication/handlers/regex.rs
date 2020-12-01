@@ -1,6 +1,6 @@
+use crossterm::event::KeyCode;
 use crossterm::Result;
 use regex::bytes::Regex;
-use crossterm::event::KeyCode;
 
 use super::handler::HanderMethods;
 use crate::communication::handlers::user_input::UserInputHandler;
@@ -17,15 +17,16 @@ pub struct RegexHandler {
 }
 
 impl RegexHandler {
-
     /// Test a message to see if it matches the pattern while also escaping the color code
     fn test(&self, message: &str) -> bool {
         // TODO: Possibly without the extra allocation here?
-        let clean_message = self.color_pattern.replace_all(message.as_bytes(), "".as_bytes());
+        let clean_message = self
+            .color_pattern
+            .replace_all(message.as_bytes(), "".as_bytes());
         match &self.current_pattern {
             Some(pattern) => pattern.is_match(&clean_message),
-            None => panic!("Match called with no pattern!")
-        }  
+            None => panic!("Match called with no pattern!"),
+        }
     }
 
     /// Process matches, loading the buffer of indexes to matched messages in the main buffer
@@ -74,10 +75,11 @@ impl RegexHandler {
             }
         };
         window.set_cli_cursor(Some(NORMAL_CHAR))?;
+        window.config.highlight_match = true;
         Ok(())
     }
 
-    fn return_to_normal(&mut self, window: &mut MainWindow) -> Result<()>{
+    fn return_to_normal(&mut self, window: &mut MainWindow) -> Result<()> {
         self.clear_matches(window)?;
         window.input_type = Normal;
         window.set_cli_cursor(None)?;
@@ -85,7 +87,7 @@ impl RegexHandler {
         Ok(())
     }
 
-    fn clear_matches(&mut self, window: &mut MainWindow) -> Result<()>{
+    fn clear_matches(&mut self, window: &mut MainWindow) -> Result<()> {
         self.current_pattern = None;
         window.config.regex_pattern = None;
         window.config.matched_rows = vec![];
@@ -127,6 +129,8 @@ impl HanderMethods for RegexHandler {
                 // Toggle match highlight
                 KeyCode::Char('h') => {
                     window.config.highlight_match = !window.config.highlight_match;
+                    // Immediately re-render
+                    window.redraw()?;
                 }
 
                 // Return to normal
@@ -139,10 +143,12 @@ impl HanderMethods for RegexHandler {
                     if self.current_pattern.is_some() {
                         self.process_matches(window);
                     };
+                    // Immediately re-render
+                    window.redraw()?;
                 }
                 KeyCode::Esc => self.return_to_normal(window)?,
                 key => self.input_hander.recieve_input(window, key)?,
-            }
+            },
         }
         Ok(())
     }

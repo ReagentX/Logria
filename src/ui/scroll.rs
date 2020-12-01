@@ -22,7 +22,7 @@ pub fn down(window: &mut MainWindow) {
     window.config.manually_controlled_line = true;
 
     // Get number of messages we can scroll
-    let num_messages = window.numer_of_messages();
+    let num_messages = window.number_of_messages();
 
     // No scrolling past the last message
     window.config.current_end = min(num_messages, window.config.current_end + 1);

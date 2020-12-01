@@ -144,7 +144,7 @@ pub mod main {
             }
         }
 
-        pub fn numer_of_messages(&self) -> usize {
+        pub fn number_of_messages(&self) -> usize {
             match self.input_type {
                 InputType::Normal | InputType::MultipleChoice | InputType::Command => {
                     self.messages().len()
@@ -169,7 +169,7 @@ pub mod main {
         pub fn determine_render_position(&mut self) -> (usize, usize) {
             let mut end: usize = 0;
             let mut rows: usize = 0;
-            let message_pointer_length = self.numer_of_messages();
+            let message_pointer_length = self.number_of_messages();
 
             // Handle empty message queue
             if message_pointer_length == 0 {
@@ -344,7 +344,7 @@ pub mod main {
 
                 // Get some metadata we need to render the message
                 let message_length = self.length_finder.get_real_length(&message);
-                let message_rows = ((message_length) + (width - 2)) / width;
+                let message_rows = max(1, ((message_length) + (width - 2)) / width);
 
                 // Update the current row, stop writing if there is no more space
                 current_row = match current_row.checked_sub(max(1, message_rows as u16)) {
@@ -552,6 +552,9 @@ pub mod main {
             if self.config.stdout_messages.len() > self.config.stderr_messages.len() {
                 self.config.stream_type = StreamType::StdOut;
             }
+
+            // Render anything new in case the streams are already finished
+            self.render_text_in_output()?;
 
             // enum for input mode: {normal, command, regex, choice}
             // if input mode is command or regex, draw/remove the character to the command line

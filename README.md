@@ -2,7 +2,7 @@
 
 # Logria
 
-A powerful CLI tool that puts log analytics at your fingertips.
+A powerful CLI tool that puts log analytics at your fingertips. This is a Rust implementation of my [Python](https://github.com/ReagentX/Logria-py) proof-of-concept.
 
 ## tl;dr
 
@@ -44,7 +44,6 @@ For more details, see [Sample Usage Session](docs/README.md#sample-usage-session
 | `:` | [command mode](docs/commands.md) |
 | `/` | regex search |
 | `h` | if regex active, toggle highlighting of matches |
-| `i` | toggle insert mode (default off) |
 | `s` | swap reading `stdin` and `stdout` |
 | `p` | activate parser |
 | `a` | toggle analytics mode when parser is active |
@@ -85,3 +84,10 @@ See [patterns](/docs/patterns.md) docs.
 ## Acknowledgements
 
 This is the Rust edition of my [Python](https://github.com/ReagentX/Logria-py) proof-of-concept app.
+
+## Special Thanks
+
+- [Voidsphere](https://voidsphere.bandcamp.com), for providing all the hacking music I could want.
+- [Julian Coleman](https://github.com/juliancoleman/), for lots of code review and general Rust advice.
+- [@rhamorim](https://twitter.com/rhamorim), for [suggesting](https://twitter.com/rhamorim/status/1333856615624306692) an alternative for non-blocking IO without `O_NONBLOCK`.
+- [@andy_crab_gear](https://twitter.com/andy_crab_gear), for [suggesting](https://twitter.com/andy_crab_gear/status/1333866079555239936) an alternative for non-blocking IO without `O_NONBLOCK`.

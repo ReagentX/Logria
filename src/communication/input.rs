@@ -3,10 +3,14 @@ pub mod stream {
     use std::fs::File;
     use std::io::{BufRead, BufReader};
     use std::path::Path;
-    use std::process::{Command, Stdio};
+    use std::process::Stdio;
     use std::sync::mpsc::{channel, Receiver};
     use std::sync::{Arc, Mutex};
     use std::{thread, time};
+
+    use tokio::io::{AsyncBufReadExt, BufReader as TokioBufReader};
+    use tokio::process::Command;
+    use tokio::runtime::Runtime;
 
     use crate::constants::{cli::poll_rate::FASTEST, directories::home};
 
@@ -89,58 +93,46 @@ pub mod stream {
             let process = thread::Builder::new()
                 .name(String::from(format!("CommandInput: {}", name)))
                 .spawn(move || {
-                    let command_to_run = CommandInput::parse_command(&command);
-                    let mut proc_read = match Command::new(command_to_run[0])
-                        .args(&command_to_run[1..])
-                        .current_dir(home())
-                        .stdout(Stdio::piped())
-                        .stderr(Stdio::piped())
-                        .spawn()
-                    {
-                        Ok(connected) => connected,
-                        Err(why) => panic!("Unable to connect to process: {}", why),
-                    };
-
-                    // Buffers to fill with output from each BufReader
-                    let mut out_buf = String::new();
-                    let mut err_buf = String::new();
-
-                    // Create handles to stdout and stderr
-                    let stdout = proc_read.stdout.take().unwrap();
-                    let stderr = proc_read.stderr.take().unwrap();
-
-                    // Create buffers from stderr and stdout handles
-                    // TODO: Possibly do not redefine each loop? Possibly read the whole buffer before redefining?
-                    let mut stdoutr = BufReader::new(stdout);
-                    let mut stderrr = BufReader::new(stderr);
-
-                    loop {
-                        // Unwrap poll rate
-                        let wait = internal_poll_rate.lock().unwrap();
-                        thread::sleep(time::Duration::from_millis(*wait));
-
-                        // Handle stdout
-                        match stdoutr.read_line(&mut out_buf) {
-                            Ok(_) => {
-                                if !out_buf.is_empty() {
-                                    out_tx.send(out_buf.to_owned()).unwrap();
-                                    out_buf.clear();
-                                }
-                            }
-                            Err(_) => {}
+                    let runtime = Runtime::new().unwrap();
+                    runtime.block_on(async {
+                        let command_to_run = CommandInput::parse_command(&command);
+                        let mut proc_read = match Command::new(command_to_run[0])
+                            .args(&command_to_run[1..])
+                            .current_dir(home())
+                            .stdout(Stdio::piped())
+                            .stderr(Stdio::piped())
+                            .spawn()
+                        {
+                            Ok(connected) => connected,
+                            Err(why) => panic!("Unable to connect to process: {}", why),
                         };
 
-                        // Handle stderr
-                        match stderrr.read_line(&mut err_buf) {
-                            Ok(_) => {
-                                if !err_buf.is_empty() {
-                                    err_tx.send(err_buf.to_owned()).unwrap();
-                                    err_buf.clear();
+                        // Create buffers from stderr and stdout handles
+                        let mut stdout =
+                            TokioBufReader::new(proc_read.stdout.take().unwrap()).lines();
+                        let mut stderr =
+                            TokioBufReader::new(proc_read.stderr.take().unwrap()).lines();
+
+                        loop {
+                            let wait = internal_poll_rate.lock().unwrap();
+                            thread::sleep(time::Duration::from_millis(*wait));
+
+                            tokio::select! {
+                                Ok(line) = stdout.next_line() => {
+                                    match line {
+                                        Some(l) =>  out_tx.send(l).unwrap(),
+                                        None => {},
+                                    }
+                                }
+                                Ok(line) = stderr.next_line() => {
+                                    match line {
+                                        Some(l) =>  err_tx.send(l).unwrap(),
+                                        None => {},
+                                    }
                                 }
                             }
-                            Err(_) => {}
-                        };
-                    }
+                        }
+                    });
                 });
 
             InputStream {

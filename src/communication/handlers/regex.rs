@@ -1,14 +1,15 @@
-use crossterm::event::KeyCode;
-use crossterm::Result;
+use crossterm::{event::KeyCode, Result};
 use regex::bytes::Regex;
 
 use super::handler::HanderMethods;
-use crate::communication::handlers::user_input::UserInputHandler;
-use crate::communication::input::input_type::InputType::Normal;
-use crate::communication::reader::main::MainWindow;
-use crate::constants::cli::cli_chars::NORMAL_CHAR;
-use crate::constants::cli::patterns::ANSI_COLOR_PATTERN;
-use crate::ui::scroll;
+use crate::{
+    communication::{
+        handlers::user_input::UserInputHandler, input::input_type::InputType::Normal,
+        reader::main::MainWindow,
+    },
+    constants::cli::{cli_chars::NORMAL_CHAR, patterns::ANSI_COLOR_PATTERN},
+    ui::scroll,
+};
 
 pub struct RegexHandler {
     color_pattern: Regex,

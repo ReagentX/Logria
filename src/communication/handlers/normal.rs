@@ -1,14 +1,15 @@
 use std::io::Write;
 
-use crossterm::event::KeyCode;
-use crossterm::Result;
-use crossterm::{cursor, queue};
+use crossterm::{cursor, event::KeyCode, queue, Result};
 
 use super::handler::HanderMethods;
-use crate::communication::input::input_type::InputType;
-use crate::communication::input::stream_type::StreamType;
-use crate::communication::reader::main::MainWindow;
-use crate::ui::scroll;
+use crate::{
+    communication::{
+        input::{input_type::InputType, stream_type::StreamType},
+        reader::main::MainWindow,
+    },
+    ui::scroll,
+};
 
 pub struct NormalHandler {}
 

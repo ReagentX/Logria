@@ -1,16 +1,22 @@
 pub mod stream {
-    use std::error::Error;
-    use std::fs::File;
-    use std::io::{BufRead, BufReader};
-    use std::path::Path;
-    use std::process::Stdio;
-    use std::sync::mpsc::{channel, Receiver};
-    use std::sync::{Arc, Mutex};
-    use std::{thread, time};
+    use std::{
+        error::Error,
+        fs::File,
+        io::{BufRead, BufReader},
+        path::Path,
+        process::Stdio,
+        sync::{
+            mpsc::{channel, Receiver},
+            Arc, Mutex,
+        },
+        thread, time,
+    };
 
-    use tokio::io::{AsyncBufReadExt, BufReader as TokioBufReader};
-    use tokio::process::Command;
-    use tokio::runtime::Runtime;
+    use tokio::{
+        io::{AsyncBufReadExt, BufReader as TokioBufReader},
+        process::Command,
+        runtime::Runtime,
+    };
 
     use crate::constants::{cli::poll_rate::FASTEST, directories::home};
 

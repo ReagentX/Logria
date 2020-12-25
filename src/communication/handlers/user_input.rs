@@ -163,27 +163,6 @@ impl UserInputHandler {
         Ok(result)
     }
 
-    fn do_command(&mut self, window: &mut MainWindow, command: KeyCode) -> Result<()> {
-        match command {
-            // Remove data
-            KeyCode::Delete => self.delete(window)?,
-            KeyCode::Backspace => self.backspace(window)?,
-
-            // Move cursor
-            // TODO: Possibly opt+left to skip words/symbols
-            KeyCode::Left => self.move_left(window)?,
-            KeyCode::Right => self.move_right(window)?,
-
-            // TODO: History tape
-            KeyCode::Up => self.tape_back(window)?,
-            KeyCode::Down => self.tape_forward(window)?,
-
-            // Insert char
-            command => self.insert_char(window, command)?,
-        }
-        window.output.flush()?;
-        Ok(())
-    }
 }
 
 impl HanderMethods for UserInputHandler {
@@ -201,7 +180,24 @@ impl HanderMethods for UserInputHandler {
 
     fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
         queue!(window.output, cursor::Show)?;
-        self.do_command(window, key)?;
+        match key {
+            // Remove data
+            KeyCode::Delete => self.delete(window)?,
+            KeyCode::Backspace => self.backspace(window)?,
+
+            // Move cursor
+            // TODO: Possibly opt+left to skip words/symbols
+            KeyCode::Left => self.move_left(window)?,
+            KeyCode::Right => self.move_right(window)?,
+
+            // TODO: History tape
+            KeyCode::Up => self.tape_back(window)?,
+            KeyCode::Down => self.tape_forward(window)?,
+
+            // Insert char
+            command => self.insert_char(window, command)?,
+        }
+        window.output.flush()?;
         Ok(())
     }
 }

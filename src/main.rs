@@ -2,6 +2,7 @@ use crossterm::Result;
 
 mod communication;
 mod constants;
+mod extensions;
 mod ui;
 mod util;
 use std::sync::Arc;

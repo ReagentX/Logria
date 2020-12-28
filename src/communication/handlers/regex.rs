@@ -212,7 +212,7 @@ mod tests {
 
         assert!(handler.current_pattern.is_none());
         assert!(logria.config.regex_pattern.is_none());
-        assert_eq!(logria.config.matched_rows, vec![]);
+        assert_eq!(logria.config.matched_rows.len(), 0);
         assert_eq!(logria.config.last_index_regexed, 0);
     }
 

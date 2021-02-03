@@ -51,10 +51,12 @@ impl Session {
 #[cfg(test)]
 mod tests {
     use super::Session;
+    use crate::constants::directories::sessions;
 
     #[test]
     fn test_list() {
         let list = Session::list();
+        assert!(list.iter().any(|i| i==&format!("{}/{}", sessions(), "ls -la")))
     }
 
     #[test]

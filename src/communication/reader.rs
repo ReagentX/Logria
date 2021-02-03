@@ -29,6 +29,7 @@ pub mod main {
             },
         },
         constants::cli::{cli_chars, poll_rate::FASTEST},
+        extensions::{parser, session},
         ui::interface::build,
         util::sanitizers::length::LengthFinder,
     };
@@ -419,6 +420,7 @@ pub mod main {
 
         /// Overwrites the output window with empty space
         /// TODO: faster?
+        /// Unused currently because it is too slow and causes flickering
         fn reset_output(&mut self) -> Result<()> {
             execute!(self.output, cursor::SavePosition);
             queue!(
@@ -480,9 +482,14 @@ pub mod main {
             Ok(())
         }
 
-        pub fn start(&mut self, commands: Vec<String>) -> Result<()> {
+        pub fn start(&mut self, commands: Option<Vec<String>>) -> Result<()> {
             // Build the app
-            self.config.streams = build_streams(commands);
+            match commands {
+                Some(c) => { self.config.streams = build_streams(c) }
+                None => {
+                    // Setup streams from filesystem
+                }
+            }
 
             // Set UI Size
             self.update_dimensions()?;

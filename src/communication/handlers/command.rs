@@ -248,6 +248,6 @@ mod remove_tests {
     fn test_resolve_ranges_with_string() {
         let handler = CommandHandler::new();
         let resolved = handler.resolve_delete_command("r a-b,4").unwrap_or(vec![]);
-        assert_eq!(resolved, []);
+        assert_eq!(resolved.len(), 0);
     }
 }

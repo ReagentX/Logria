@@ -124,13 +124,13 @@ impl HanderMethods for RegexHandler {
                 // Build new regex
                 KeyCode::Char('/') => {
                     self.clear_matches(window)?;
+                    window.redraw()?;
                     window.set_cli_cursor(None)?;
                 }
 
                 // Toggle match highlight
                 KeyCode::Char('h') => {
                     window.config.highlight_match = !window.config.highlight_match;
-                    // Immediately re-render
                     window.redraw()?;
                 }
 
@@ -144,7 +144,6 @@ impl HanderMethods for RegexHandler {
                     if self.current_pattern.is_some() {
                         self.process_matches(window);
                     };
-                    // Immediately re-render
                     window.redraw()?;
                 }
                 KeyCode::Esc => self.return_to_normal(window)?,
@@ -213,7 +212,7 @@ mod tests {
 
         assert!(handler.current_pattern.is_none());
         assert!(logria.config.regex_pattern.is_none());
-        assert_eq!(logria.config.matched_rows, vec![]);
+        assert_eq!(logria.config.matched_rows.len(), 0);
         assert_eq!(logria.config.last_index_regexed, 0);
     }
 

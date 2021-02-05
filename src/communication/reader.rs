@@ -422,14 +422,14 @@ pub mod main {
         /// TODO: faster?
         /// Unused currently because it is too slow and causes flickering
         fn reset_output(&mut self) -> Result<()> {
-            execute!(self.output, cursor::SavePosition);
+            execute!(self.output, cursor::SavePosition)?;
             queue!(
                 self.output,
                 cursor::MoveTo(1, self.config.last_row - 1),
                 Clear(ClearType::CurrentLine),
                 Clear(ClearType::FromCursorUp),
             )?;
-            execute!(self.output, cursor::RestorePosition);
+            execute!(self.output, cursor::RestorePosition)?;
             Ok(())
         }
 

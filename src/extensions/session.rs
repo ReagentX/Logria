@@ -14,27 +14,35 @@ pub struct Session {
 }
 
 impl Session {
+    /// Create a Session struct
+    fn new(commands: Vec<String>, stream_type: String) -> Session {
+        Session {
+            commands: commands,
+            stream_type: stream_type
+        }
+    }
+
     /// Create session file from a Session struct
-    fn serialize(self) {
-        let config_json = serde_json::to_string_pretty(&self).unwrap();
+    fn save(self) {
+        let session_json = serde_json::to_string_pretty(&self).unwrap();
         let file_name = self.commands.join(" ");
         let path = format!("{}/{}", sessions(), file_name);
 
-        match write(format!("{}/{}", sessions(), file_name), config_json) {
+        match write(format!("{}/{}", sessions(), file_name), session_json) {
             Ok(_) => {}
             Err(why) => panic!("Couldn't write {:?}: {}", path, Error::to_string(&why)),
         }
     }
 
     /// Create Session struct from a session file
-    fn deserialize(file_name: &str) -> Session {
+    fn load(file_name: &str) -> Session {
         // Read file
         let path = format!("{}/{}", sessions(), file_name);
-        let config_json = match read_to_string(path) {
+        let session_json = match read_to_string(path) {
             Ok(json) => json,
             Err(why) => panic!("Couldn't open {:?}: {}", sessions(), Error::to_string(&why)),
         };
-        let session: Session = serde_json::from_str(&config_json).unwrap();
+        let session: Session = serde_json::from_str(&session_json).unwrap();
         session
     }
 
@@ -61,16 +69,13 @@ mod tests {
 
     #[test]
     fn serialize_session() {
-        let session = Session {
-            commands: vec![String::from("ls -la")],
-            stream_type: String::from("command"),
-        };
-        session.serialize()
+        let session = Session::new(vec![String::from("ls -la")], String::from("command"));
+        session.save()
     }
 
     #[test]
     fn deserialize_session() {
-        let read_session = Session::deserialize("ls -la");
+        let read_session = Session::load("ls -la copy");
         let expected_session = Session {
             commands: vec![String::from("ls -la")],
             stream_type: String::from("command"),

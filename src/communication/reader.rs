@@ -375,7 +375,7 @@ pub mod main {
                     self.output,
                     cursor::MoveTo(0, current_row),
                     style::Print(message)
-                );
+                )?;
             }
 
             // Overwrite any new blank lines
@@ -383,11 +383,12 @@ pub mod main {
             if current_row > 0 {
                 let clear_line = " ".repeat(width);
                 (0..current_row).for_each(|row| {
+                    // No `?` here becuase it is inside of a closure
                     queue!(
                         self.output,
                         cursor::MoveTo(0, row),
                         style::Print(&clear_line),
-                    );
+                    ).unwrap()
                 });
             }
 

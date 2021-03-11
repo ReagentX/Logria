@@ -46,6 +46,7 @@ impl Session {
         session
     }
 
+    /// Get a list of all available session configurations
     fn list() -> Vec<String> {
         let mut sessions: Vec<String> = read_dir(sessions())
             .unwrap()

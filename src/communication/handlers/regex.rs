@@ -14,7 +14,7 @@ use crate::{
 pub struct RegexHandler {
     color_pattern: Regex,
     current_pattern: Option<Regex>,
-    input_hander: UserInputHandler,
+    input_handler: UserInputHandler,
 }
 
 impl RegexHandler {
@@ -56,7 +56,7 @@ impl RegexHandler {
     }
 
     fn set_pattern(&mut self, window: &mut MainWindow) -> Result<()> {
-        let pattern = match self.input_hander.gather(window) {
+        let pattern = match self.input_handler.gather(window) {
             Ok(pattern) => pattern,
             Err(why) => panic!("Unable to gather text: {:?}", why),
         };
@@ -104,7 +104,7 @@ impl HanderMethods for RegexHandler {
         RegexHandler {
             color_pattern: Regex::new(ANSI_COLOR_PATTERN).unwrap(),
             current_pattern: None,
-            input_hander: UserInputHandler::new(),
+            input_handler: UserInputHandler::new(),
         }
     }
 
@@ -147,7 +147,7 @@ impl HanderMethods for RegexHandler {
                     window.redraw()?;
                 }
                 KeyCode::Esc => self.return_to_normal(window)?,
-                key => self.input_hander.recieve_input(window, key)?,
+                key => self.input_handler.recieve_input(window, key)?,
             },
         }
         Ok(())

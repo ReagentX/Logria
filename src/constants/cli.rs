@@ -34,7 +34,7 @@ pub mod messages {
         " ", // Blank line for printout
         "Enter `:r #` to remove session //.",
         "Enter `:q` to quit.",
-        " ", // Not an empty string so Curses knows to not use this line
+        " ", // Blank line for printout
     ];
 
     // Config messages

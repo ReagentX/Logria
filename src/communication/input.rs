@@ -223,6 +223,7 @@ pub mod input_type {
         Command,
         Regex,
         Parser,
+        Startup,
         MultipleChoice,
     }
 }
@@ -232,5 +233,6 @@ pub mod stream_type {
     pub enum StreamType {
         StdErr,
         StdOut,
+        Startup
     }
 }

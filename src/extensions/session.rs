@@ -6,13 +6,12 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::constants::{cli::excludes, directories::sessions};
+use crate::constants::{cli::excludes::SESSION_FILE_EXCLUDES, directories::sessions};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Session {
     pub commands: Vec<String>,
     pub stream_type: String, // Cannot use `type` for the name as it is reserved
-    // Build excludes set here from excludes constant
 }
 
 impl Session {
@@ -52,7 +51,9 @@ impl Session {
     pub fn list() -> Vec<String> {
         // Files to exclude from the session list
         let mut excluded = HashSet::new();
-        excluded.insert(format!("{}/.DS_Store", sessions()).to_string());
+        for &item in &SESSION_FILE_EXCLUDES {
+            excluded.insert(format!("{}/{}", sessions(), item));
+        }
 
         let mut sessions: Vec<String> = read_dir(sessions())
             .unwrap()

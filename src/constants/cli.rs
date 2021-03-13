@@ -14,6 +14,7 @@ pub mod patterns {
 pub mod excludes {
     // Text to exclude from message history
     pub const HISTORY_EXCLUDES: [&'static str; 2] = [":history", ":history off"];
+    pub const SESSION_FILE_EXCLUDES: [&'static str; 1] = [".DS_Store"];
 }
 
 pub mod cli_chars {

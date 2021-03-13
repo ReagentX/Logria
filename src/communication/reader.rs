@@ -72,7 +72,7 @@ pub mod main {
         pub stick_to_top: bool, // Whether we should stick to the top and not render new lines
         pub manually_controlled_line: bool, // Whether manual scroll is active
         pub current_end: usize, // Current last row we have rendered
-        streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
+        pub streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
     }
 
     pub struct MainWindow {
@@ -388,7 +388,8 @@ pub mod main {
                         self.output,
                         cursor::MoveTo(0, row),
                         style::Print(&clear_line),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 });
             }
 
@@ -486,7 +487,7 @@ pub mod main {
         pub fn start(&mut self, commands: Option<Vec<String>>) -> Result<()> {
             // Build the app
             match commands {
-                Some(c) => { self.config.streams = build_streams(c) }
+                Some(c) => self.config.streams = build_streams(c),
                 None => {
                     // Setup streams from filesystem
                 }

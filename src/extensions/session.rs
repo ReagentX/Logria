@@ -1,29 +1,31 @@
 use std::{
+    collections::HashSet,
     error::Error,
     fs::{read_dir, read_to_string, write},
 };
 
 use serde::{Deserialize, Serialize};
 
-use crate::constants::directories::sessions;
+use crate::constants::{cli::excludes, directories::sessions};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Session {
-    commands: Vec<String>,
-    stream_type: String, // Cannot use `type` for the name as it is reserved
+    pub commands: Vec<String>,
+    pub stream_type: String, // Cannot use `type` for the name as it is reserved
+    // Build excludes set here from excludes constant
 }
 
 impl Session {
     /// Create a Session struct
-    fn new(commands: Vec<String>, stream_type: String) -> Session {
+    pub fn new(commands: Vec<String>, stream_type: String) -> Session {
         Session {
             commands: commands,
-            stream_type: stream_type
+            stream_type: stream_type,
         }
     }
 
     /// Create session file from a Session struct
-    fn save(self) {
+    pub fn save(self) {
         let session_json = serde_json::to_string_pretty(&self).unwrap();
         let file_name = self.commands.join(" ");
         let path = format!("{}/{}", sessions(), file_name);
@@ -35,7 +37,7 @@ impl Session {
     }
 
     /// Create Session struct from a session file
-    fn load(file_name: &str) -> Session {
+    pub fn load(file_name: &str) -> Session {
         // Read file
         let path = format!("{}/{}", sessions(), file_name);
         let session_json = match read_to_string(path) {
@@ -47,10 +49,15 @@ impl Session {
     }
 
     /// Get a list of all available session configurations
-    fn list() -> Vec<String> {
+    pub fn list() -> Vec<String> {
+        // Files to exclude from the session list
+        let mut excluded = HashSet::new();
+        excluded.insert(format!("{}/.DS_Store", sessions()).to_string());
+
         let mut sessions: Vec<String> = read_dir(sessions())
             .unwrap()
             .map(|session| String::from(session.unwrap().path().to_str().unwrap()))
+            .filter(|item| !excluded.contains(item))
             .collect();
         sessions.sort();
         sessions
@@ -65,7 +72,9 @@ mod tests {
     #[test]
     fn test_list() {
         let list = Session::list();
-        assert!(list.iter().any(|i| i==&format!("{}/{}", sessions(), "ls -la")))
+        assert!(list
+            .iter()
+            .any(|i| i == &format!("{}/{}", sessions(), "ls -la")))
     }
 
     #[test]

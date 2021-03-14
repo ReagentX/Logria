@@ -20,22 +20,24 @@ pub struct StartupHandler {
 
 impl StartupHandler {
     /// Generate the startup message with available session configurations
-    fn get_startup_text(&mut self) -> Vec<String> {
+    pub fn get_startup_text() -> Vec<String> {
         let mut text: Vec<String> = Vec::new();
         let sessions = Session::list();
         START_MESSAGE.iter().for_each(|&s| text.push(s.to_string()));
         sessions.iter().enumerate().for_each(|(i, s)| {
             let value = s.to_string();
             text.push(format!("{}: {}", i, value));
-            self.session_data.insert(i, value);
         });
         text
     }
 
-    /// Load the window's startup text buffer
-    pub fn render_startup_text(&mut self, window: &mut MainWindow) -> Result<()> {
-        window.config.startup_messages = self.get_startup_text();
-        Ok(())
+    /// Load the session_data hashmap internally
+    fn initialize(&mut self) {
+        let sessions = Session::list();
+        sessions.iter().enumerate().for_each(|(i, s)| {
+            let value = s.to_string();
+            self.session_data.insert(i, value);
+        });
     }
 
     fn set_command_mode(&self, window: &mut MainWindow) -> Result<()> {
@@ -105,6 +107,8 @@ impl HanderMethods for StartupHandler {
 
             // Handle user input selection
             KeyCode::Enter => {
+                // Ensure the hashmap of files is updated
+                self.initialize();
                 let command = match self.input_handler.gather(window) {
                     Ok(command) => command,
                     Err(why) => panic!("Unable to gather text: {:?}", why),

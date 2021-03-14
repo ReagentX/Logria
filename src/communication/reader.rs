@@ -482,6 +482,13 @@ pub mod main {
             Ok(())
         }
 
+        /// Generate startup text from session list
+        pub fn render_startup_text(&mut self) -> Result<()> {
+            self.config.startup_messages = StartupHandler::get_startup_text();
+            self.redraw()?;
+            Ok(())
+        }
+
         /// Set dimensions
         fn update_dimensions(&mut self) -> Result<()> {
             let (w, h) = size()?;
@@ -570,7 +577,7 @@ pub mod main {
             let mut mc_handler = MultipleChoiceHandler::new(); // Possibly different path for building options
 
             // Setup startup messages
-            startup_handler.render_startup_text(self)?;
+            self.render_startup_text()?;
 
             // Initial message collection
             self.recieve_streams();

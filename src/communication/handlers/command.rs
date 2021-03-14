@@ -1,11 +1,14 @@
 use std::io::Write;
 
-use crossterm::{ErrorKind, event::KeyCode};
 use crossterm::Result;
+use crossterm::{event::KeyCode, ErrorKind};
 
 use super::handler::HanderMethods;
 use crate::communication::handlers::user_input::UserInputHandler;
-use crate::communication::input::input_type::InputType::Normal;
+use crate::communication::input::{
+    input_type::InputType::{Normal, Startup},
+    stream_type::StreamType,
+};
 use crate::communication::reader::main::MainWindow;
 
 pub struct CommandHandler {
@@ -14,7 +17,11 @@ pub struct CommandHandler {
 
 impl CommandHandler {
     fn return_to_prev_state(&mut self, window: &mut MainWindow) -> Result<()> {
-        window.input_type = Normal;
+        // If we are in startup mode, go back to that, otherwise go to normal mode
+        window.input_type = match window.config.stream_type {
+            StreamType::Startup => Startup,
+            _ => Normal,
+        };
         window.set_cli_cursor(None)?;
         window.output.flush()?;
         Ok(())
@@ -110,12 +117,8 @@ impl CommandHandler {
         }
         // Go back to start screen
         else if command.starts_with("restart") {
-        }
-        else {
-            window.write_to_command_line(&format!(
-                "Invalid command: {:?}",
-                command
-            ))?;
+        } else {
+            window.write_to_command_line(&format!("Invalid command: {:?}", command))?;
         }
         self.return_to_prev_state(window)?;
         Ok(())
@@ -269,6 +272,4 @@ mod remove_tests {
         let resolved = handler.resolve_delete_command("r ").unwrap_or(vec![]);
         assert_eq!(resolved.len(), 0);
     }
-
-
 }

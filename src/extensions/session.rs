@@ -1,7 +1,7 @@
 use std::{
     collections::HashSet,
     error::Error,
-    fs::{read_dir, read_to_string, write},
+    fs::{read_dir, read_to_string, remove_file, write},
 };
 
 use serde::{Deserialize, Serialize};
@@ -43,7 +43,23 @@ impl Session {
         let session = serde_json::from_str(&session_json);
         match session {
             Ok(s) => Ok(s),
-            Err(e) => Err(e)
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Delete the path for a fully qualified session filename
+    pub fn del(items: &Vec<usize>) {
+        // Iterate through each `i` in `items` and remove the item at list index `i`
+        let files = Session::list();
+        for i in items {
+            if i >= &files.len() {
+                break;
+            }
+            let file_name = &files[*i];
+            match remove_file(file_name) {
+                Ok(_) => {}
+                Err(why) => panic!("Couldn't remove {:?}: {}", file_name, Error::to_string(&why)),
+            }
         }
     }
 

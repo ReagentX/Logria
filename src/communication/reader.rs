@@ -105,7 +105,7 @@ pub mod main {
         pub fn new(history: bool, smart_poll_rate: bool) -> MainWindow {
             // Build streams here
             MainWindow {
-                input_type: InputType::Normal,
+                input_type: InputType::Startup,
                 output: stdout(),
                 length_finder: LengthFinder::new(),
                 config: LogiraConfig {
@@ -500,6 +500,9 @@ pub mod main {
 
                     // Set to display stderr by default
                     self.config.stream_type = StreamType::StdErr;
+
+                    // Send input to normal handler
+                    self.input_type = InputType::Normal;
                 }
                 None => {}
             }

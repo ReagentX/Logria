@@ -9,6 +9,7 @@ use crate::communication::input::{
     stream_type::StreamType,
 };
 use crate::communication::reader::main::MainWindow;
+use crate::extensions::session::Session;
 
 pub struct CommandHandler {
     input_hander: UserInputHandler,
@@ -101,16 +102,25 @@ impl CommandHandler {
         }
         // Remove saved sessions from the main screen
         else if command.starts_with("r") {
-            match self.resolve_delete_command(command) {
-                Ok(items) => {
-                    // Do the deletion here
-                    window.write_to_command_line(&format!("Deleting items: {:?}", items))?;
-                }
-                Err(_) => {
-                    window.write_to_command_line(&format!(
-                        "Failed to parse remove command: {:?} is invalid.",
-                        command
-                    ))?;
+            match window.config.stream_type {
+                StreamType::Startup => {
+                    match self.resolve_delete_command(command) {
+                        Ok(items) => {
+                            // TODO: Do the deletion here
+                            // Also, handle screen re-render!
+                            Session::del(&items);
+                            window.write_to_command_line(&format!("Deleting items: {:?}", items))?;
+                        }
+                        Err(_) => {
+                            window.write_to_command_line(&format!(
+                                "Failed to parse remove command: {:?} is invalid.",
+                                command
+                            ))?;
+                        }
+                    }
+                },
+                _ => {
+                    window.write_to_command_line("Cannot remove files outside of startup mode.")?;
                 }
             }
         }

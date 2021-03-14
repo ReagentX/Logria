@@ -24,30 +24,27 @@ impl Session {
     }
 
     /// Create session file from a Session struct
-    pub fn save(self) {
+    pub fn save(self, file_name: &str) {
         let session_json = serde_json::to_string_pretty(&self).unwrap();
-        let file_name = self.commands.join(" ");
         let path = format!("{}/{}", sessions(), file_name);
-
-        match write(format!("{}/{}", sessions(), file_name), session_json) {
+        match write(&path, session_json) {
             Ok(_) => {}
             Err(why) => panic!("Couldn't write {:?}: {}", path, Error::to_string(&why)),
         }
     }
 
     /// Create Session struct from a session file
-    pub fn load(file_name: &str) -> Session {
+    pub fn load(file_name: &str) -> Result<Session, serde_json::error::Error> {
         // Read file
         let session_json = match read_to_string(file_name) {
             Ok(json) => json,
-            Err(why) => panic!(
-                "Couldn't open {:?}: {}",
-                file_name,
-                Error::to_string(&why)
-            ),
+            Err(why) => panic!("Couldn't open {:?}: {}", file_name, Error::to_string(&why)),
         };
-        let session: Session = serde_json::from_str(&session_json).unwrap();
-        session
+        let session = serde_json::from_str(&session_json);
+        match session {
+            Ok(s) => Ok(s),
+            Err(e) => Err(e)
+        }
     }
 
     /// Get a list of all available session configurations
@@ -84,12 +81,12 @@ mod tests {
     #[test]
     fn serialize_session() {
         let session = Session::new(vec![String::from("ls -la")], String::from("command"));
-        session.save()
+        session.save("ls -la")
     }
 
     #[test]
     fn deserialize_session() {
-        let read_session = Session::load(&format!("{}/{}", sessions(), "ls -la copy"));
+        let read_session = Session::load(&format!("{}/{}", sessions(), "ls -la copy")).unwrap();
         let expected_session = Session {
             commands: vec![String::from("ls -la")],
             stream_type: String::from("command"),

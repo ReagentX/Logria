@@ -38,10 +38,13 @@ impl Session {
     /// Create Session struct from a session file
     pub fn load(file_name: &str) -> Session {
         // Read file
-        let path = format!("{}/{}", sessions(), file_name);
-        let session_json = match read_to_string(path) {
+        let session_json = match read_to_string(file_name) {
             Ok(json) => json,
-            Err(why) => panic!("Couldn't open {:?}: {}", sessions(), Error::to_string(&why)),
+            Err(why) => panic!(
+                "Couldn't open {:?}: {}",
+                file_name,
+                Error::to_string(&why)
+            ),
         };
         let session: Session = serde_json::from_str(&session_json).unwrap();
         session
@@ -86,7 +89,7 @@ mod tests {
 
     #[test]
     fn deserialize_session() {
-        let read_session = Session::load("ls -la copy");
+        let read_session = Session::load(&format!("{}/{}", sessions(), "ls -la copy"));
         let expected_session = Session {
             commands: vec![String::from("ls -la")],
             stream_type: String::from("command"),

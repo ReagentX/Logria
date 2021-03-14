@@ -22,8 +22,9 @@ fn main() -> Result<()> {
         
     // Start app
     let mut app = communication::reader::main::MainWindow::new(history, smart_poll_rate);
-    app.start(
-        Some(vec![exec.unwrap_or("python3 .logria/sample_streams/generate_test_logs_2.py").to_string()])
-    )?;
+    // app.start(
+    //     Some(vec![exec.unwrap_or("python3 .logria/sample_streams/generate_test_logs_2.py").to_string()])
+    // )?;
+    app.start(None)?;
     Ok(())
 }

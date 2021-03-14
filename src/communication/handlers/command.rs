@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use crossterm::event::KeyCode;
+use crossterm::{ErrorKind, event::KeyCode};
 use crossterm::Result;
 
 use super::handler::HanderMethods;
@@ -29,6 +29,11 @@ impl CommandHandler {
     }
 
     fn resolve_delete_command(&self, command: &str) -> Result<Vec<usize>> {
+        // Validate length
+        if command.len() < 3 {
+            return Err(ErrorKind::SettingTerminalTitleFailure);
+        }
+
         // Remove "r " from the string
         let parts = command[2..].split(',');
         let mut out_l: Vec<usize> = vec![];
@@ -95,10 +100,10 @@ impl CommandHandler {
                     // Do the deletion here
                     window.write_to_command_line(&format!("Deleting items: {:?}", items))?;
                 }
-                Err(why) => {
+                Err(_) => {
                     window.write_to_command_line(&format!(
-                        "Failed to parse remove command: {:?}",
-                        why
+                        "Failed to parse remove command: {:?} is invalid.",
+                        command
                     ))?;
                 }
             }
@@ -250,4 +255,20 @@ mod remove_tests {
         let resolved = handler.resolve_delete_command("r a-b,4").unwrap_or(vec![]);
         assert_eq!(resolved.len(), 0);
     }
+
+    #[test]
+    fn test_resolve_no_num() {
+        let handler = CommandHandler::new();
+        let resolved = handler.resolve_delete_command("r").unwrap_or(vec![]);
+        assert_eq!(resolved.len(), 0);
+    }
+
+    #[test]
+    fn test_resolve_no_num_space() {
+        let handler = CommandHandler::new();
+        let resolved = handler.resolve_delete_command("r ").unwrap_or(vec![]);
+        assert_eq!(resolved.len(), 0);
+    }
+
+
 }

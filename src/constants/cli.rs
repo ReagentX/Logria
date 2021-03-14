@@ -33,7 +33,7 @@ pub mod messages {
         "or enter a number to choose a saved session from the list,",
         "or enter `:config` to configure.",
         " ", // Blank line for printout
-        "Enter `:r #` to remove session //.",
+        "Enter `:r #` to remove session #.",
         "Enter `:q` to quit.",
         " ", // Blank line for printout
     ];

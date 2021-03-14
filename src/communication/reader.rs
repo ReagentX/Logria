@@ -566,6 +566,9 @@ pub mod main {
             let mut startup_handler = StartupHandler::new();
             let mut mc_handler = MultipleChoiceHandler::new(); // Possibly different path for building options
 
+            // Setup startup messages
+            startup_handler.render_startup_text(self)?;
+
             // Initial message collection
             self.recieve_streams();
 

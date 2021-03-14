@@ -1,7 +1,6 @@
 use std::io::Write;
 
-use crossterm::Result;
-use crossterm::{event::KeyCode, ErrorKind};
+use crossterm::{event::KeyCode, Result};
 
 use super::handler::HanderMethods;
 use crate::communication::handlers::user_input::UserInputHandler;
@@ -38,7 +37,7 @@ impl CommandHandler {
     fn resolve_delete_command(&self, command: &str) -> Result<Vec<usize>> {
         // Validate length
         if command.len() < 3 {
-            return Err(ErrorKind::SettingTerminalTitleFailure);
+            return Err(crossterm::ErrorKind::FmtError(std::fmt::Error));
         }
 
         // Remove "r " from the string

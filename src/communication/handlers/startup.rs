@@ -39,6 +39,7 @@ impl StartupHandler {
     }
 
     fn set_command_mode(&self, window: &mut MainWindow) -> Result<()> {
+        // Allow the user to input commands so they quit and delete sessions
         window.go_to_cli()?;
         window.input_type = InputType::Command;
         window.reset_command_line()?;

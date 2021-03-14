@@ -106,9 +106,8 @@ impl CommandHandler {
                 StreamType::Startup => {
                     match self.resolve_delete_command(command) {
                         Ok(items) => {
-                            // TODO: Do the deletion here
-                            // Also, handle screen re-render!
                             Session::del(&items);
+                            window.render_startup_text()?;
                             window.write_to_command_line(&format!("Deleting items: {:?}", items))?;
                         }
                         Err(_) => {

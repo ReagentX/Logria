@@ -5,7 +5,7 @@ use crossterm::{cursor, event::KeyCode, queue, Result};
 use super::{handler::HanderMethods, user_input::UserInputHandler};
 use crate::{
     communication::{
-        input::{input_type::InputType, stream::build_streams, stream_type::StreamType::StdErr},
+        input::{input_type::InputType, stream::build_streams_from_input, stream_type::StreamType::StdErr},
         reader::main::MainWindow,
     },
     constants::cli::messages::START_MESSAGE,
@@ -59,7 +59,7 @@ impl StartupHandler {
                         let session = Session::load(file_path);
                         match session {
                             Ok(session) => {
-                                window.config.streams = build_streams(session.commands);
+                                window.config.streams = build_streams_from_input(session.commands);
                                 window.config.stream_type = StdErr;
                                 window.input_type = InputType::Normal;
                             }

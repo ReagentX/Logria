@@ -24,7 +24,7 @@ pub mod main {
             },
             input::{
                 input_type::InputType,
-                stream::{build_streams, InputStream},
+                stream::{build_streams_from_input, InputStream},
                 stream_type::StreamType,
             },
         },
@@ -503,7 +503,7 @@ pub mod main {
             match commands {
                 Some(c) => {
                     // Build streams from the command used to launch Logria
-                    self.config.streams = build_streams(c);
+                    self.config.streams = build_streams_from_input(c);
 
                     // Set to display stderr by default
                     self.config.stream_type = StreamType::StdErr;

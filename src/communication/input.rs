@@ -151,7 +151,10 @@ pub mod stream {
         }
     }
 
-    pub fn build_streams(commands: Vec<String>) -> Vec<InputStream> {
+    pub fn build_streams_from_input(commands: Vec<String>) -> Vec<InputStream> {
+        // TODO:
+        // Check type whe constructed from a Session object
+        // If the type is not there then we detect it and save
         let mut streams: Vec<InputStream> = vec![];
         for command in commands {
             // Determine if command is a file, create FileInput if it is, CommandInput if not
@@ -175,26 +178,26 @@ pub mod stream {
 
     #[cfg(test)]
     mod tests {
-        use super::build_streams;
+        use super::build_streams_from_input;
 
         #[test]
         fn test_build_file_stream() {
             let commands = vec![String::from("README.md")];
-            let streams = build_streams(commands);
+            let streams = build_streams_from_input(commands);
             assert_eq!(streams[0]._type, "FileInput");
         }
 
         #[test]
         fn test_build_command_stream() {
             let commands = vec![String::from("ls -la ~")];
-            let streams = build_streams(commands);
+            let streams = build_streams_from_input(commands);
             assert_eq!(streams[0]._type, "CommandInput");
         }
 
         #[test]
         fn test_build_command_and_file_streams() {
             let commands = vec![String::from("ls -la ~"), String::from("README.md")];
-            let streams = build_streams(commands);
+            let streams = build_streams_from_input(commands);
             assert_eq!(streams[0]._type, "CommandInput");
             assert_eq!(streams[1]._type, "FileInput");
         }
@@ -202,7 +205,7 @@ pub mod stream {
         #[test]
         fn test_build_multiple_command_streams() {
             let commands = vec![String::from("ls -la ~"), String::from("ls /")];
-            let streams = build_streams(commands);
+            let streams = build_streams_from_input(commands);
             assert_eq!(streams[0]._type, "CommandInput");
             assert_eq!(streams[1]._type, "CommandInput");
         }
@@ -210,7 +213,7 @@ pub mod stream {
         #[test]
         fn test_build_multiple_file_streams() {
             let commands = vec![String::from("README.md"), String::from("Cargo.toml")];
-            let streams = build_streams(commands);
+            let streams = build_streams_from_input(commands);
             assert_eq!(streams[0]._type, "FileInput");
             assert_eq!(streams[1]._type, "FileInput");
         }

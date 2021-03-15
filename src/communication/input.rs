@@ -234,6 +234,6 @@ pub mod stream_type {
     pub enum StreamType {
         StdErr,
         StdOut,
-        Startup
+        Startup,
     }
 }

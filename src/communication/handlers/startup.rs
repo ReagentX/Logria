@@ -136,7 +136,7 @@ mod startup_tests {
             reader::main::MainWindow,
         },
         constants::cli::messages::START_MESSAGE,
-        extensions::session::Session
+        extensions::session::Session,
     };
 
     use super::StartupHandler;

@@ -43,6 +43,8 @@ impl NormalHandler {
         window.config.stream_type = match window.config.stream_type {
             StreamType::StdOut => StreamType::StdErr,
             StreamType::StdErr => StreamType::StdOut,
+            // Do not swap from startup stream
+            StreamType::Startup => StreamType::Startup,
         };
         window.input_type = InputType::Normal;
         window.set_cli_cursor(None)?;

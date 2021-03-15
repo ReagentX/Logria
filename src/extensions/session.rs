@@ -1,55 +1,84 @@
 use std::{
+    collections::HashSet,
     error::Error,
-    fs::{read_dir, read_to_string, write},
+    fs::{read_dir, read_to_string, remove_file, write},
 };
 
 use serde::{Deserialize, Serialize};
 
-use crate::constants::directories::sessions;
+use crate::constants::{cli::excludes::SESSION_FILE_EXCLUDES, directories::sessions};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Session {
-    commands: Vec<String>,
-    stream_type: String, // Cannot use `type` for the name as it is reserved
+    pub commands: Vec<String>,
+    pub stream_type: String, // Cannot use `type` for the name as it is reserved
 }
 
 impl Session {
     /// Create a Session struct
-    fn new(commands: Vec<String>, stream_type: String) -> Session {
+    pub fn new(commands: Vec<String>, stream_type: String) -> Session {
         Session {
             commands: commands,
-            stream_type: stream_type
+            stream_type: stream_type,
         }
     }
 
     /// Create session file from a Session struct
-    fn save(self) {
+    pub fn save(self, file_name: &str) {
         let session_json = serde_json::to_string_pretty(&self).unwrap();
-        let file_name = self.commands.join(" ");
         let path = format!("{}/{}", sessions(), file_name);
-
-        match write(format!("{}/{}", sessions(), file_name), session_json) {
+        match write(&path, session_json) {
             Ok(_) => {}
             Err(why) => panic!("Couldn't write {:?}: {}", path, Error::to_string(&why)),
         }
     }
 
     /// Create Session struct from a session file
-    fn load(file_name: &str) -> Session {
+    pub fn load(file_name: &str) -> Result<Session, serde_json::error::Error> {
         // Read file
-        let path = format!("{}/{}", sessions(), file_name);
-        let session_json = match read_to_string(path) {
+        let session_json = match read_to_string(file_name) {
             Ok(json) => json,
-            Err(why) => panic!("Couldn't open {:?}: {}", sessions(), Error::to_string(&why)),
+            Err(why) => panic!("Couldn't open {:?}: {}", file_name, Error::to_string(&why)),
         };
-        let session: Session = serde_json::from_str(&session_json).unwrap();
-        session
+        let session = serde_json::from_str(&session_json);
+        match session {
+            Ok(s) => Ok(s),
+            Err(e) => Err(e),
+        }
     }
 
-    fn list() -> Vec<String> {
+    /// Delete the path for a fully qualified session filename
+    pub fn del(items: &Vec<usize>) {
+        // Iterate through each `i` in `items` and remove the item at list index `i`
+        let files = Session::list();
+        for i in items {
+            if i >= &files.len() {
+                break;
+            }
+            let file_name = &files[*i];
+            match remove_file(file_name) {
+                Ok(_) => {}
+                Err(why) => panic!(
+                    "Couldn't remove {:?}: {}",
+                    file_name,
+                    Error::to_string(&why)
+                ),
+            }
+        }
+    }
+
+    /// Get a list of all available session configurations
+    pub fn list() -> Vec<String> {
+        // Files to exclude from the session list
+        let mut excluded = HashSet::new();
+        for &item in &SESSION_FILE_EXCLUDES {
+            excluded.insert(format!("{}/{}", sessions(), item));
+        }
+
         let mut sessions: Vec<String> = read_dir(sessions())
             .unwrap()
             .map(|session| String::from(session.unwrap().path().to_str().unwrap()))
+            .filter(|item| !excluded.contains(item))
             .collect();
         sessions.sort();
         sessions
@@ -64,23 +93,32 @@ mod tests {
     #[test]
     fn test_list() {
         let list = Session::list();
-        assert!(list.iter().any(|i| i==&format!("{}/{}", sessions(), "ls -la")))
+        assert!(list
+            .iter()
+            .any(|i| i == &format!("{}/{}", sessions(), "ls -la")))
     }
 
     #[test]
     fn serialize_session() {
         let session = Session::new(vec![String::from("ls -la")], String::from("command"));
-        session.save()
+        session.save("ls -la")
     }
 
     #[test]
     fn deserialize_session() {
-        let read_session = Session::load("ls -la copy");
+        let read_session = Session::load(&format!("{}/{}", sessions(), "ls -la copy")).unwrap();
         let expected_session = Session {
             commands: vec![String::from("ls -la")],
             stream_type: String::from("command"),
         };
         assert_eq!(read_session.commands, expected_session.commands);
         assert_eq!(read_session.stream_type, expected_session.stream_type);
+    }
+
+    #[test]
+    fn delete_session() {
+        let session = Session::new(vec![String::from("ls -la")], String::from("command"));
+        session.save("zzzfake_file_name");
+        Session::del(&vec![Session::list().len() - 1]);
     }
 }

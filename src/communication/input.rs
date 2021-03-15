@@ -218,11 +218,13 @@ pub mod stream {
 }
 
 pub mod input_type {
+    #[derive(Debug)]
     pub enum InputType {
         Normal,
         Command,
         Regex,
         Parser,
+        Startup,
         MultipleChoice,
     }
 }
@@ -232,5 +234,6 @@ pub mod stream_type {
     pub enum StreamType {
         StdErr,
         StdOut,
+        Startup,
     }
 }

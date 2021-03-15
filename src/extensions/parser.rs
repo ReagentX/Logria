@@ -6,7 +6,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::constants::{cli::patterns, directories::patterns};
+use crate::constants::directories::patterns;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Parser {
@@ -70,6 +70,7 @@ impl Parser {
         session
     }
 
+    /// Get a list of all available parser configurations
     fn list() -> Vec<String> {
         let mut parsers: Vec<String> = read_dir(patterns())
             .unwrap()

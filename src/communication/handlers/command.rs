@@ -1,12 +1,15 @@
 use std::io::Write;
 
-use crossterm::event::KeyCode;
-use crossterm::Result;
+use crossterm::{event::KeyCode, Result};
 
 use super::handler::HanderMethods;
 use crate::communication::handlers::user_input::UserInputHandler;
-use crate::communication::input::input_type::InputType::Normal;
+use crate::communication::input::{
+    input_type::InputType::{Normal, Startup},
+    stream_type::StreamType,
+};
 use crate::communication::reader::main::MainWindow;
+use crate::extensions::session::Session;
 
 pub struct CommandHandler {
     input_hander: UserInputHandler,
@@ -14,7 +17,11 @@ pub struct CommandHandler {
 
 impl CommandHandler {
     fn return_to_prev_state(&mut self, window: &mut MainWindow) -> Result<()> {
-        window.input_type = Normal;
+        // If we are in startup mode, go back to that, otherwise go to normal mode
+        window.input_type = match window.config.stream_type {
+            StreamType::Startup => Startup,
+            _ => Normal,
+        };
         window.set_cli_cursor(None)?;
         window.output.flush()?;
         Ok(())
@@ -29,6 +36,11 @@ impl CommandHandler {
     }
 
     fn resolve_delete_command(&self, command: &str) -> Result<Vec<usize>> {
+        // Validate length
+        if command.len() < 3 {
+            return Err(crossterm::ErrorKind::FmtError(std::fmt::Error));
+        }
+
         // Remove "r " from the string
         let parts = command[2..].split(',');
         let mut out_l: Vec<usize> = vec![];
@@ -90,27 +102,29 @@ impl CommandHandler {
         }
         // Remove saved sessions from the main screen
         else if command.starts_with("r") {
-            match self.resolve_delete_command(command) {
-                Ok(items) => {
-                    // Do the deletion here
-                    window.write_to_command_line(&format!("Deleting items: {:?}", items))?;
-                }
-                Err(why) => {
-                    window.write_to_command_line(&format!(
-                        "Failed to parse remove command: {:?}",
-                        why
-                    ))?;
+            match window.config.stream_type {
+                StreamType::Startup => match self.resolve_delete_command(command) {
+                    Ok(items) => {
+                        Session::del(&items);
+                        window.render_startup_text()?;
+                        window.write_to_command_line(&format!("Deleting items: {:?}", items))?;
+                    }
+                    Err(_) => {
+                        window.write_to_command_line(&format!(
+                            "Failed to parse remove command: {:?} is invalid.",
+                            command
+                        ))?;
+                    }
+                },
+                _ => {
+                    window.write_to_command_line("Cannot remove files outside of startup mode.")?;
                 }
             }
         }
         // Go back to start screen
         else if command.starts_with("restart") {
-        }
-        else {
-            window.write_to_command_line(&format!(
-                "Invalid command: {:?}",
-                command
-            ))?;
+        } else {
+            window.write_to_command_line(&format!("Invalid command: {:?}", command))?;
         }
         self.return_to_prev_state(window)?;
         Ok(())
@@ -248,6 +262,20 @@ mod remove_tests {
     fn test_resolve_ranges_with_string() {
         let handler = CommandHandler::new();
         let resolved = handler.resolve_delete_command("r a-b,4").unwrap_or(vec![]);
+        assert_eq!(resolved.len(), 0);
+    }
+
+    #[test]
+    fn test_resolve_no_num() {
+        let handler = CommandHandler::new();
+        let resolved = handler.resolve_delete_command("r").unwrap_or(vec![]);
+        assert_eq!(resolved.len(), 0);
+    }
+
+    #[test]
+    fn test_resolve_no_num_space() {
+        let handler = CommandHandler::new();
+        let resolved = handler.resolve_delete_command("r ").unwrap_or(vec![]);
         assert_eq!(resolved.len(), 0);
     }
 }

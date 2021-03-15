@@ -20,7 +20,7 @@ pub mod main {
             handlers::{
                 command::CommandHandler, handler::HanderMethods,
                 multiple_choice::MultipleChoiceHandler, normal::NormalHandler,
-                parser::ParserHandler, regex::RegexHandler,
+                parser::ParserHandler, regex::RegexHandler, startup::StartupHandler,
             },
             input::{
                 input_type::InputType,
@@ -51,6 +51,7 @@ pub mod main {
         // Message buffers
         stderr_messages: Vec<String>,
         stdout_messages: Vec<String>,
+        pub startup_messages: Vec<String>,
         pub stream_type: StreamType,
 
         // Regex settings
@@ -72,7 +73,7 @@ pub mod main {
         pub stick_to_top: bool, // Whether we should stick to the top and not render new lines
         pub manually_controlled_line: bool, // Whether manual scroll is active
         pub current_end: usize, // Current last row we have rendered
-        streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
+        pub streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
     }
 
     pub struct MainWindow {
@@ -90,6 +91,7 @@ pub mod main {
             // Set fake dimensions
             app.config.height = 10;
             app.config.width = 100;
+            app.config.stream_type = StreamType::StdErr;
 
             // Set fake previous render
             app.config.last_row = app.config.height - 3; // simulate the last row we can render to
@@ -103,7 +105,7 @@ pub mod main {
         pub fn new(history: bool, smart_poll_rate: bool) -> MainWindow {
             // Build streams here
             MainWindow {
-                input_type: InputType::Normal,
+                input_type: InputType::Startup,
                 output: stdout(),
                 length_finder: LengthFinder::new(),
                 config: LogiraConfig {
@@ -117,9 +119,10 @@ pub mod main {
                     previous_render: (0, 0),
                     previous_messages: None,
                     exit_val: 0,
-                    stderr_messages: vec![], // fix
-                    stdout_messages: vec![], // fix
-                    stream_type: StreamType::StdErr,
+                    stderr_messages: vec![],  // TODO: fix
+                    stdout_messages: vec![],  // TODO: fix
+                    startup_messages: vec![], // TODO: fix
+                    stream_type: StreamType::Startup,
                     regex_pattern: None,
                     matched_rows: vec![],
                     last_index_regexed: 0,
@@ -133,7 +136,7 @@ pub mod main {
                     analytics_enabled: false,
                     last_index_processed: 0,
                     insert_mode: false,
-                    current_status: String::from(""), // fix
+                    current_status: String::from(""), // TODO: fix
                     highlight_match: false,
                     last_row: 0,
                     stick_to_bottom: true,
@@ -147,9 +150,10 @@ pub mod main {
 
         pub fn number_of_messages(&self) -> usize {
             match self.input_type {
-                InputType::Normal | InputType::MultipleChoice | InputType::Command => {
-                    self.messages().len()
-                }
+                InputType::Normal
+                | InputType::MultipleChoice
+                | InputType::Command
+                | InputType::Startup => self.messages().len(),
                 InputType::Regex => {
                     if self.config.regex_pattern.is_none() {
                         self.messages().len()
@@ -187,9 +191,10 @@ pub mod main {
                 let mut current_index: usize = 0;
                 loop {
                     let message: &str = match self.input_type {
-                        InputType::Normal | InputType::MultipleChoice | InputType::Command => {
-                            &self.messages()[current_index]
-                        }
+                        InputType::Normal
+                        | InputType::MultipleChoice
+                        | InputType::Command
+                        | InputType::Startup => &self.messages()[current_index],
                         InputType::Regex => {
                             // If we have not activated regex or parser yet, render normal messages
                             if self.config.regex_pattern.is_none() {
@@ -260,9 +265,10 @@ pub mod main {
 
         fn get_message_at_index(&self, index: usize) -> String {
             match self.input_type {
-                InputType::Normal | InputType::MultipleChoice | InputType::Command => {
-                    self.messages()[index].to_string()
-                }
+                InputType::Normal
+                | InputType::MultipleChoice
+                | InputType::Command
+                | InputType::Startup => self.messages()[index].to_string(),
                 InputType::Regex => {
                     if self.config.regex_pattern.is_none() {
                         self.messages()[index].to_string()
@@ -388,7 +394,8 @@ pub mod main {
                         self.output,
                         cursor::MoveTo(0, row),
                         style::Print(&clear_line),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 });
             }
 
@@ -405,11 +412,12 @@ pub mod main {
             Ok(())
         }
 
-        /// Get the current messagep pointer
+        /// Get the current message pointer
         pub fn messages(&self) -> &Vec<String> {
             match self.config.stream_type {
                 StreamType::StdErr => &self.config.stderr_messages,
                 StreamType::StdOut => &self.config.stdout_messages,
+                StreamType::Startup => &self.config.startup_messages,
             }
         }
 
@@ -460,7 +468,7 @@ pub mod main {
         pub fn set_cli_cursor(&mut self, content: Option<&'static str>) -> Result<()> {
             self.go_to_cli()?;
             let first_char = match self.input_type {
-                InputType::Normal => content.unwrap_or(cli_chars::NORMAL_CHAR),
+                InputType::Normal | InputType::Startup => content.unwrap_or(cli_chars::NORMAL_CHAR),
                 InputType::MultipleChoice => content.unwrap_or(cli_chars::MC_CHAR),
                 InputType::Command => content.unwrap_or(cli_chars::COMMAND_CHAR),
                 InputType::Regex => content.unwrap_or(cli_chars::REGEX_CHAR),
@@ -471,6 +479,13 @@ pub mod main {
                 cursor::MoveTo(0, self.config.last_row + 1),
                 style::Print(first_char)
             )?;
+            Ok(())
+        }
+
+        /// Generate startup text from session list
+        pub fn render_startup_text(&mut self) -> Result<()> {
+            self.config.startup_messages = StartupHandler::get_startup_text();
+            self.redraw()?;
             Ok(())
         }
 
@@ -486,10 +501,17 @@ pub mod main {
         pub fn start(&mut self, commands: Option<Vec<String>>) -> Result<()> {
             // Build the app
             match commands {
-                Some(c) => { self.config.streams = build_streams(c) }
-                None => {
-                    // Setup streams from filesystem
+                Some(c) => {
+                    // Build streams from the command used to launch Logria
+                    self.config.streams = build_streams(c);
+
+                    // Set to display stderr by default
+                    self.config.stream_type = StreamType::StdErr;
+
+                    // Send input to normal handler
+                    self.input_type = InputType::Normal;
                 }
+                None => {}
             }
 
             // Set UI Size
@@ -551,7 +573,11 @@ pub mod main {
             let mut command_handler = CommandHandler::new();
             let mut regex_handler = RegexHandler::new();
             let mut parser_handler = ParserHandler::new();
+            let mut startup_handler = StartupHandler::new();
             let mut mc_handler = MultipleChoiceHandler::new(); // Possibly different path for building options
+
+            // Setup startup messages
+            self.render_startup_text()?;
 
             // Initial message collection
             self.recieve_streams();
@@ -594,6 +620,9 @@ pub mod main {
                                     InputType::Regex => regex_handler.recieve_input(self, input)?,
                                     InputType::Parser => {
                                         parser_handler.recieve_input(self, input)?
+                                    }
+                                    InputType::Startup => {
+                                        startup_handler.recieve_input(self, input)?
                                     }
                                     InputType::MultipleChoice => {
                                         mc_handler.recieve_input(self, input)?

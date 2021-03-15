@@ -14,6 +14,7 @@ pub mod patterns {
 pub mod excludes {
     // Text to exclude from message history
     pub const HISTORY_EXCLUDES: [&'static str; 2] = [":history", ":history off"];
+    pub const SESSION_FILE_EXCLUDES: [&'static str; 1] = [".DS_Store"];
 }
 
 pub mod cli_chars {
@@ -32,9 +33,9 @@ pub mod messages {
         "or enter a number to choose a saved session from the list,",
         "or enter `:config` to configure.",
         " ", // Blank line for printout
-        "Enter `:r #` to remove session //.",
+        "Enter `:r #` to remove session #.",
         "Enter `:q` to quit.",
-        " ", // Not an empty string so Curses knows to not use this line
+        " ", // Blank line for printout
     ];
 
     // Config messages

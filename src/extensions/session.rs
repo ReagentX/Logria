@@ -114,4 +114,11 @@ mod tests {
         assert_eq!(read_session.commands, expected_session.commands);
         assert_eq!(read_session.stream_type, expected_session.stream_type);
     }
+
+    #[test]
+    fn delete_session() {
+        let session = Session::new(vec![String::from("ls -la")], String::from("command"));
+        session.save("zzzfake_file_name");
+        Session::del(&vec![Session::list().len() - 1]);
+    }
 }

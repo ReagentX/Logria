@@ -126,3 +126,96 @@ impl HanderMethods for StartupHandler {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod startup_tests {
+    use crate::{
+        communication::{
+            handlers::handler::HanderMethods,
+            input::{input_type::InputType, stream_type::StreamType},
+            reader::main::MainWindow,
+        },
+        constants::cli::messages::START_MESSAGE,
+        extensions::session::Session
+    };
+
+    use super::StartupHandler;
+
+    #[test]
+    fn can_initialize() {
+        let mut handler = StartupHandler::new();
+        handler.initialize();
+    }
+
+    #[test]
+    fn can_get_startup_text() {
+        let text = StartupHandler::get_startup_text();
+        let sessions = Session::list();
+        assert_eq!(text.len(), sessions.len() + START_MESSAGE.len())
+    }
+
+    #[test]
+    fn can_load_session() {
+        // Setup dummy window
+        let mut window = MainWindow::_new_dummy();
+
+        // Setup handler
+        let mut handler = StartupHandler::new();
+        handler.initialize();
+
+        // Tests
+        assert!(handler.process_command(&mut window, "0").is_ok());
+        assert!(match window.input_type {
+            InputType::Normal => true,
+            _ => false,
+        });
+        assert!(match window.config.stream_type {
+            StreamType::StdErr => true,
+            _ => false,
+        });
+    }
+
+    #[test]
+    fn doesnt_crash_bad_index() {
+        // Setup dummy window
+        let mut window = MainWindow::_new_dummy();
+        window.config.stream_type = StreamType::Startup;
+
+        // Setup handler
+        let mut handler = StartupHandler::new();
+        handler.initialize();
+
+        // Tests
+        assert!(handler.process_command(&mut window, "999").is_ok());
+        assert!(match window.input_type {
+            InputType::Startup => true,
+            _ => false,
+        });
+        assert!(match window.config.stream_type {
+            StreamType::Startup => true,
+            _ => false,
+        });
+    }
+
+    #[test]
+    fn doesnt_crash_alpha_index() {
+        // Setup dummy window
+        let mut window = MainWindow::_new_dummy();
+        window.config.stream_type = StreamType::Startup;
+
+        // Setup handler
+        let mut handler = StartupHandler::new();
+        handler.initialize();
+
+        // Tests
+        assert!(handler.process_command(&mut window, "abc").is_ok());
+        assert!(match window.input_type {
+            InputType::Startup => true,
+            _ => false,
+        });
+        assert!(match window.config.stream_type {
+            StreamType::Startup => true,
+            _ => false,
+        });
+    }
+}

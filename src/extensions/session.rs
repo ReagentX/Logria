@@ -8,11 +8,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::constants::{cli::excludes::SESSION_FILE_EXCLUDES, directories::sessions};
 
-#[derive(PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Debug)]
 pub enum SessionType {
     File,
     Command,
-    Mixed
+    Mixed,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

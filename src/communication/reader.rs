@@ -503,7 +503,7 @@ pub mod main {
             match commands {
                 Some(c) => {
                     // Build streams from the command used to launch Logria
-                    self.config.streams = build_streams_from_input(c);
+                    self.config.streams = build_streams_from_input(&c);
 
                     // Set to display stderr by default
                     self.config.stream_type = StreamType::StdErr;

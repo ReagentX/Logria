@@ -218,6 +218,7 @@ pub mod stream {
 }
 
 pub mod input_type {
+    #[derive(Debug)]
     pub enum InputType {
         Normal,
         Command,

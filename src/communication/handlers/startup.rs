@@ -62,9 +62,12 @@ impl StartupHandler {
                                 window.config.streams = build_streams(session.commands);
                                 window.config.stream_type = StdErr;
                                 window.input_type = InputType::Normal;
-                            },
+                            }
                             Err(why) => {
-                                window.write_to_command_line(&format!("Unable to parse session: {:?}", why))?;
+                                window.write_to_command_line(&format!(
+                                    "Unable to parse session: {:?}",
+                                    why
+                                ))?;
                             }
                         }
                     }

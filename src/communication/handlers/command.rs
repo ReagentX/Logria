@@ -103,19 +103,17 @@ impl CommandHandler {
         // Remove saved sessions from the main screen
         else if command.starts_with("r") {
             match window.config.stream_type {
-                StreamType::Startup => {
-                    match self.resolve_delete_command(command) {
-                        Ok(items) => {
-                            Session::del(&items);
-                            window.render_startup_text()?;
-                            window.write_to_command_line(&format!("Deleting items: {:?}", items))?;
-                        }
-                        Err(_) => {
-                            window.write_to_command_line(&format!(
-                                "Failed to parse remove command: {:?} is invalid.",
-                                command
-                            ))?;
-                        }
+                StreamType::Startup => match self.resolve_delete_command(command) {
+                    Ok(items) => {
+                        Session::del(&items);
+                        window.render_startup_text()?;
+                        window.write_to_command_line(&format!("Deleting items: {:?}", items))?;
+                    }
+                    Err(_) => {
+                        window.write_to_command_line(&format!(
+                            "Failed to parse remove command: {:?} is invalid.",
+                            command
+                        ))?;
                     }
                 },
                 _ => {

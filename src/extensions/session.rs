@@ -8,15 +8,22 @@ use serde::{Deserialize, Serialize};
 
 use crate::constants::{cli::excludes::SESSION_FILE_EXCLUDES, directories::sessions};
 
+#[derive(PartialEq, Serialize, Deserialize, Debug)]
+pub enum SessionType {
+    File,
+    Command,
+    Mixed
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Session {
     pub commands: Vec<String>,
-    pub stream_type: String, // Cannot use `type` for the name as it is reserved
+    pub stream_type: SessionType, // Cannot use `type` for the name as it is reserved
 }
 
 impl Session {
     /// Create a Session struct
-    pub fn new(commands: Vec<String>, stream_type: String) -> Session {
+    pub fn new(commands: Vec<String>, stream_type: SessionType) -> Session {
         Session {
             commands: commands,
             stream_type: stream_type,
@@ -87,7 +94,7 @@ impl Session {
 
 #[cfg(test)]
 mod tests {
-    use super::Session;
+    use super::{Session, SessionType};
     use crate::constants::directories::sessions;
 
     #[test]
@@ -100,7 +107,7 @@ mod tests {
 
     #[test]
     fn serialize_session() {
-        let session = Session::new(vec![String::from("ls -la")], String::from("command"));
+        let session = Session::new(vec![String::from("ls -la")], SessionType::Command);
         session.save("ls -la")
     }
 
@@ -109,7 +116,7 @@ mod tests {
         let read_session = Session::load(&format!("{}/{}", sessions(), "ls -la copy")).unwrap();
         let expected_session = Session {
             commands: vec![String::from("ls -la")],
-            stream_type: String::from("command"),
+            stream_type: SessionType::Command,
         };
         assert_eq!(read_session.commands, expected_session.commands);
         assert_eq!(read_session.stream_type, expected_session.stream_type);
@@ -117,7 +124,7 @@ mod tests {
 
     #[test]
     fn delete_session() {
-        let session = Session::new(vec![String::from("ls -la")], String::from("command"));
+        let session = Session::new(vec![String::from("ls -la")], SessionType::Command);
         session.save("zzzfake_file_name");
         Session::del(&vec![Session::list().len() - 1]);
     }

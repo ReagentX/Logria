@@ -29,9 +29,9 @@ pub mod main {
             },
         },
         constants::cli::{cli_chars, messages::NO_MESSAGE_IN_BUFFER, poll_rate::FASTEST},
-        extensions::{parser, session},
+        extensions::{parser::Parser, session::Session},
         ui::interface::build,
-        util::sanitizers::length::LengthFinder,
+        util::{sanitizers::length::LengthFinder, history::Tape},
     };
 
     #[derive(Debug)]
@@ -525,6 +525,11 @@ pub mod main {
 
             // Set UI Size
             self.update_dimensions()?;
+
+            // Ensure the filepaths we use exist
+            Tape::verify_path();
+            Session::verify_path();
+            Parser::verify_path();
 
             // Build the UI
             build(self)?;

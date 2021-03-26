@@ -23,6 +23,7 @@ impl Tape {
     }
 
     pub fn new() -> Tape {
+        Tape::verify_path();
         let mut tape = Tape {
             history_tape: vec![],
             current_index: 0,

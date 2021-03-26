@@ -42,6 +42,7 @@ impl Parser {
         analytics_methods: HashMap<String, String>,
         num_to_print: Option<i32>,
     ) -> Parser {
+        Parser::verify_path();
         Parser {
             pattern: pattern,
             pattern_type: pattern_type,

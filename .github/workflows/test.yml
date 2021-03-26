@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  Test:
 
     runs-on: ubuntu-latest
 
@@ -19,9 +19,11 @@ jobs:
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
-    - name: Test
-      run: cargo test --verbose
-    - name: lint
+    - name: Lint
       uses: actions-rs/clippy-check@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
+    - name: test
+      uses: actions-rs/cargo@v1
+      with:
+        command: test

@@ -208,7 +208,7 @@ mod startup_tests {
     }
 
     #[test]
-    fn doesnt_crash_alpha_index() {
+    fn doesnt_crash_alpha() {
         // Setup dummy window
         let mut window = MainWindow::_new_dummy();
         window.config.stream_type = StreamType::Startup;
@@ -218,14 +218,15 @@ mod startup_tests {
         handler.initialize();
 
         // Tests
-        assert!(handler.process_command(&mut window, "abc").is_ok());
+        assert!(handler.process_command(&mut window, "zzzfake_file_name").is_ok());
         assert!(match window.input_type {
-            InputType::Startup => true,
+            InputType::Normal => true,
             _ => false,
         });
         assert!(match window.config.stream_type {
-            StreamType::Startup => true,
+            StreamType::StdErr => true,
             _ => false,
         });
+        Session::del(&vec![Session::list().len() - 1]);
     }
 }

@@ -23,9 +23,9 @@ pub struct Session {
 
 impl Session {
     /// Create a Session struct
-    pub fn new(commands: Vec<String>, stream_type: SessionType) -> Session {
+    pub fn new(commands: &Vec<String>, stream_type: SessionType) -> Session {
         Session {
-            commands: commands,
+            commands: commands.to_owned(),
             stream_type: stream_type,
         }
     }
@@ -107,7 +107,7 @@ mod tests {
 
     #[test]
     fn serialize_session() {
-        let session = Session::new(vec![String::from("ls -la")], SessionType::Command);
+        let session = Session::new(&vec![String::from("ls -la")], SessionType::Command);
         session.save("ls -la")
     }
 
@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn delete_session() {
-        let session = Session::new(vec![String::from("ls -la")], SessionType::Command);
+        let session = Session::new(&vec![String::from("ls -la")], SessionType::Command);
         session.save("zzzfake_file_name");
         Session::del(&vec![Session::list().len() - 1]);
     }

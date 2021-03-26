@@ -1,10 +1,10 @@
 name: Test
 
 on:
-  push:
-    branches: [ develop, main ]
   pull_request:
-    branches: [ develop, main ]
+    branches:
+        - main
+        - develop
 
 env:
   CARGO_TERM_COLOR: always

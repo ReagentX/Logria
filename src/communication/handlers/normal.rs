@@ -48,6 +48,8 @@ impl NormalHandler {
         };
         window.input_type = InputType::Normal;
         window.set_cli_cursor(None)?;
+        window.reset_command_line()?;
+        window.reset_output()?;
         window.redraw()?;
         Ok(())
     }

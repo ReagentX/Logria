@@ -24,11 +24,11 @@ pub mod main {
             },
             input::{
                 input_type::InputType,
-                stream::{build_streams, InputStream},
+                stream::{build_streams_from_input, InputStream},
                 stream_type::StreamType,
             },
         },
-        constants::cli::{cli_chars, poll_rate::FASTEST},
+        constants::cli::{cli_chars, messages::NO_MESSAGE_IN_BUFFER, poll_rate::FASTEST},
         extensions::{parser, session},
         ui::interface::build,
         util::sanitizers::length::LengthFinder,
@@ -330,6 +330,15 @@ pub mod main {
             // Determine the start and end position of the render
             let (start, end) = self.determine_render_position();
 
+            // If there are no messages in the buffer, tell the user
+            // This will only ever hit once, because this method is only called if there are new
+            // messages to render or a user action requires a full re-render
+            if self.messages().len() == 0 {
+                self.write_to_command_line(NO_MESSAGE_IN_BUFFER)?;
+                self.output.flush()?;
+                return Ok(());
+            }
+
             // Don't do anything if nothing changed; start at index 0
             if !self.config.analytics_enabled && self.config.previous_render == (max(0, start), end)
             {
@@ -430,7 +439,7 @@ pub mod main {
         /// Overwrites the output window with empty space
         /// TODO: faster?
         /// Unused currently because it is too slow and causes flickering
-        fn reset_output(&mut self) -> Result<()> {
+        pub fn reset_output(&mut self) -> Result<()> {
             execute!(self.output, cursor::SavePosition)?;
             queue!(
                 self.output,
@@ -503,7 +512,7 @@ pub mod main {
             match commands {
                 Some(c) => {
                     // Build streams from the command used to launch Logria
-                    self.config.streams = build_streams(c);
+                    self.config.streams = build_streams_from_input(&c, true);
 
                     // Set to display stderr by default
                     self.config.stream_type = StreamType::StdErr;

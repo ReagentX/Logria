@@ -27,7 +27,7 @@ pub mod cli_chars {
 
 pub mod messages {
 
-    // Messages
+    // Startup messages
     pub const START_MESSAGE: [&'static str; 7] = [
         "Enter a new command to open and save a new stream,",
         "or enter a number to choose a saved session from the list,",
@@ -37,6 +37,9 @@ pub mod messages {
         "Enter `:q` to quit.",
         " ", // Blank line for printout
     ];
+
+    // Error messages
+    pub const NO_MESSAGE_IN_BUFFER: &'static str = "No messages in current buffer; press s to swap buffers.";
 
     // Config messages
     pub const CONFIG_START_MESSAGES: [&'static str; 2] = [

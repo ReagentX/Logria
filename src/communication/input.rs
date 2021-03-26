@@ -1,5 +1,6 @@
 pub mod stream {
     use std::{
+        collections::HashSet,
         error::Error,
         fs::File,
         io::{BufRead, BufReader},
@@ -18,7 +19,10 @@ pub mod stream {
         runtime::Runtime,
     };
 
-    use crate::constants::{cli::poll_rate::FASTEST, directories::home};
+    use crate::{
+        constants::{cli::poll_rate::FASTEST, directories::home},
+        extensions::session::{Session, SessionType},
+    };
 
     #[derive(Debug)]
     pub struct InputStream {
@@ -151,50 +155,106 @@ pub mod stream {
         }
     }
 
-    pub fn build_streams(commands: Vec<String>) -> Vec<InputStream> {
+    fn determine_stream_type(command: &String) -> SessionType {
+        // TODO: Fix logic, doesnt work for  "ls -lga"
+        let path = Path::new(command);
+        match path.exists() {
+            true => SessionType::File,
+            false => SessionType::Command,
+        }
+    }
+
+    pub fn build_streams_from_input(commands: &Vec<String>, save: bool) -> Vec<InputStream> {
+        // TODO:
+        // Save session when we return
         let mut streams: Vec<InputStream> = vec![];
+        let mut stream_types: HashSet<SessionType> = HashSet::new();
         for command in commands {
             // Determine if command is a file, create FileInput if it is, CommandInput if not
-            let path = Path::new(&command);
-            match path.exists() {
-                true => {
-                    // Additional convetsion because file_name() generates OSString
+            match determine_stream_type(command) {
+                SessionType::Command => {
+                    // None indicates default poll rate
+                    streams.push(CommandInput::new(
+                        None,
+                        command.to_owned(), // Same as the command
+                        command.to_owned(),
+                    ));
+                    stream_types.insert(SessionType::File);
+                }
+                SessionType::File => {
+                    // None indicates default poll rate
+                    let path = Path::new(command);
                     let name = path.file_name().unwrap().to_str().unwrap().to_string();
-                    // None indicates default poll rate
-                    streams.push(FileInput::new(None, name, command));
+                    streams.push(FileInput::new(None, name, command.to_owned()));
+                    stream_types.insert(SessionType::File);
                 }
-                false => {
-                    let name = path.to_str().unwrap().to_string();
-                    // None indicates default poll rate
-                    streams.push(CommandInput::new(None, name, command));
-                }
+                _ => {}
             }
+        }
+        if save {
+            let stream_type = match stream_types.len() {
+                1 => {
+                    if stream_types.contains(&SessionType::File) {
+                        SessionType::File
+                    } else if stream_types.contains(&SessionType::Command) {
+                        SessionType::Command
+                    } else {
+                        SessionType::Mixed
+                    }
+                }
+                _ => SessionType::Mixed
+            };
+            Session::new(commands, stream_type).save(&commands[0]);
         }
         streams
     }
 
+    pub fn build_streams_from_session(session: Session) -> Vec<InputStream> {
+        match session.stream_type {
+            SessionType::Command => {
+                let mut streams: Vec<InputStream> = vec![];
+                &session.commands.iter().for_each(|command| {
+                    let name = command.to_string();
+                    streams.push(CommandInput::new(None, name, command.to_owned()))
+                });
+                streams
+            }
+            SessionType::File => {
+                let mut streams: Vec<InputStream> = vec![];
+                &session.commands.iter().for_each(|command| {
+                    let name = command.to_string();
+                    streams.push(FileInput::new(None, name, command.to_owned()))
+                });
+                streams
+            }
+            SessionType::Mixed => build_streams_from_input(&session.commands, false),
+        }
+    }
+
     #[cfg(test)]
     mod tests {
-        use super::build_streams;
+        use crate::extensions::session::{Session, SessionType};
+
+        use super::{build_streams_from_input, build_streams_from_session};
 
         #[test]
         fn test_build_file_stream() {
             let commands = vec![String::from("README.md")];
-            let streams = build_streams(commands);
+            let streams = build_streams_from_input(&commands, false);
             assert_eq!(streams[0]._type, "FileInput");
         }
 
         #[test]
         fn test_build_command_stream() {
             let commands = vec![String::from("ls -la ~")];
-            let streams = build_streams(commands);
+            let streams = build_streams_from_input(&commands, false);
             assert_eq!(streams[0]._type, "CommandInput");
         }
 
         #[test]
         fn test_build_command_and_file_streams() {
             let commands = vec![String::from("ls -la ~"), String::from("README.md")];
-            let streams = build_streams(commands);
+            let streams = build_streams_from_input(&commands, false);
             assert_eq!(streams[0]._type, "CommandInput");
             assert_eq!(streams[1]._type, "FileInput");
         }
@@ -202,7 +262,7 @@ pub mod stream {
         #[test]
         fn test_build_multiple_command_streams() {
             let commands = vec![String::from("ls -la ~"), String::from("ls /")];
-            let streams = build_streams(commands);
+            let streams = build_streams_from_input(&commands, false);
             assert_eq!(streams[0]._type, "CommandInput");
             assert_eq!(streams[1]._type, "CommandInput");
         }
@@ -210,8 +270,33 @@ pub mod stream {
         #[test]
         fn test_build_multiple_file_streams() {
             let commands = vec![String::from("README.md"), String::from("Cargo.toml")];
-            let streams = build_streams(commands);
+            let streams = build_streams_from_input(&commands, false);
             assert_eq!(streams[0]._type, "FileInput");
+            assert_eq!(streams[1]._type, "FileInput");
+        }
+
+        #[test]
+        fn test_build_file_stream_from_session() {
+            let session = Session::new(&vec![String::from("README.md")], SessionType::File);
+            let streams = build_streams_from_session(session);
+            assert_eq!(streams[0]._type, "FileInput");
+        }
+
+        #[test]
+        fn test_build_command_stream_from_session() {
+            let session = Session::new(&vec![String::from("ls -l")], SessionType::Command);
+            let streams = build_streams_from_session(session);
+            assert_eq!(streams[0]._type, "CommandInput");
+        }
+
+        #[test]
+        fn test_build_mixed_stream_from_session() {
+            let session = Session::new(
+                &vec![String::from("ls -l"), String::from("README.md")],
+                SessionType::Mixed,
+            );
+            let streams = build_streams_from_session(session);
+            assert_eq!(streams[0]._type, "CommandInput");
             assert_eq!(streams[1]._type, "FileInput");
         }
     }
@@ -225,7 +310,7 @@ pub mod input_type {
         Regex,
         Parser,
         Startup,
-        MultipleChoice,
+        MultipleChoice,  // TODO: Remove
     }
 }
 

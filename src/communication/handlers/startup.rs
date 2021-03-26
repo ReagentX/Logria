@@ -5,7 +5,11 @@ use crossterm::{cursor, event::KeyCode, queue, Result};
 use super::{handler::HanderMethods, user_input::UserInputHandler};
 use crate::{
     communication::{
-        input::{input_type::InputType, stream::build_streams, stream_type::StreamType::StdErr},
+        input::{
+            input_type::InputType,
+            stream::{build_streams_from_input, build_streams_from_session},
+            stream_type::StreamType::StdErr,
+        },
         reader::main::MainWindow,
     },
     constants::cli::messages::START_MESSAGE,
@@ -59,9 +63,11 @@ impl StartupHandler {
                         let session = Session::load(file_path);
                         match session {
                             Ok(session) => {
-                                window.config.streams = build_streams(session.commands);
+                                window.config.streams = build_streams_from_session(session);
                                 window.config.stream_type = StdErr;
                                 window.input_type = InputType::Normal;
+                                window.reset_output()?;
+                                window.redraw()?;
                             }
                             Err(why) => {
                                 window.write_to_command_line(&format!(
@@ -78,10 +84,14 @@ impl StartupHandler {
                 return Ok(());
             }
             Err(_) => {
-                window.write_to_command_line("Invalid selection!")?;
+                window.config.streams = build_streams_from_input(&vec![command.to_owned()], true);
+                window.config.stream_type = StdErr;
+                window.input_type = InputType::Normal;
+                window.reset_output()?;
+                window.redraw()?;
+                return Ok(());
             }
         }
-        Ok(())
     }
 }
 
@@ -198,7 +208,7 @@ mod startup_tests {
     }
 
     #[test]
-    fn doesnt_crash_alpha_index() {
+    fn doesnt_crash_alpha() {
         // Setup dummy window
         let mut window = MainWindow::_new_dummy();
         window.config.stream_type = StreamType::Startup;
@@ -208,14 +218,15 @@ mod startup_tests {
         handler.initialize();
 
         // Tests
-        assert!(handler.process_command(&mut window, "abc").is_ok());
+        assert!(handler.process_command(&mut window, "zzzfake_file_name").is_ok());
         assert!(match window.input_type {
-            InputType::Startup => true,
+            InputType::Normal => true,
             _ => false,
         });
         assert!(match window.config.stream_type {
-            StreamType::Startup => true,
+            StreamType::StdErr => true,
             _ => false,
         });
+        Session::del(&vec![Session::list().len() - 1]);
     }
 }

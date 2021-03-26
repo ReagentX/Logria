@@ -331,8 +331,12 @@ pub mod main {
             let (start, end) = self.determine_render_position();
 
             // If there are no messages in the buffer, tell the user
+            // This will only ever hit once, because this method is only called if there are new
+            // messages to render or a user action requires a full re-render
             if self.messages().len() == 0 {
                 self.write_to_command_line(NO_MESSAGE_IN_BUFFER)?;
+                self.output.flush()?;
+                return Ok(());
             }
 
             // Don't do anything if nothing changed; start at index 0

@@ -5,7 +5,11 @@ use crossterm::{cursor, event::KeyCode, queue, Result};
 use super::{handler::HanderMethods, user_input::UserInputHandler};
 use crate::{
     communication::{
-        input::{input_type::InputType, stream::build_streams_from_session, stream_type::StreamType::StdErr},
+        input::{
+            input_type::InputType,
+            stream::{build_streams_from_input, build_streams_from_session},
+            stream_type::StreamType::StdErr,
+        },
         reader::main::MainWindow,
     },
     constants::cli::messages::START_MESSAGE,
@@ -62,6 +66,8 @@ impl StartupHandler {
                                 window.config.streams = build_streams_from_session(session);
                                 window.config.stream_type = StdErr;
                                 window.input_type = InputType::Normal;
+                                window.reset_output()?;
+                                window.redraw()?;
                             }
                             Err(why) => {
                                 window.write_to_command_line(&format!(
@@ -78,10 +84,14 @@ impl StartupHandler {
                 return Ok(());
             }
             Err(_) => {
-                window.write_to_command_line("Invalid selection!")?;
+                window.config.streams = build_streams_from_input(&vec![command.to_owned()], true);
+                window.config.stream_type = StdErr;
+                window.input_type = InputType::Normal;
+                window.reset_output()?;
+                window.redraw()?;
+                return Ok(());
             }
         }
-        Ok(())
     }
 }
 

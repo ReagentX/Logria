@@ -1,12 +1,13 @@
 use std::{
     collections::HashMap,
     error::Error,
-    fs::{read_dir, read_to_string, write},
+    fs::{read_dir, read_to_string, write, create_dir_all},
+    path::Path,
 };
 
 use serde::{Deserialize, Serialize};
 
-use crate::constants::directories::patterns;
+use crate::constants::{directories::patterns};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Parser {
@@ -24,6 +25,14 @@ pub struct Parser {
 }
 
 impl Parser {
+    // Ensure the proper paths exist
+    pub fn verify_path() {
+        let tape_path = patterns();
+        if !Path::new(&tape_path).exists() {
+            create_dir_all(tape_path).unwrap();
+        } 
+    }
+
     /// Create an instance of a parser
     fn new(
         pattern: String,

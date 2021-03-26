@@ -1,7 +1,8 @@
 use std::cmp::min;
 use std::error::Error;
-use std::fs::OpenOptions;
+use std::fs::{OpenOptions, create_dir_all};
 use std::io::{BufRead, BufReader, Write};
+use std::path::Path;
 
 use crate::constants::cli::excludes::HISTORY_EXCLUDES;
 use crate::constants::directories::history_tape;
@@ -13,6 +14,14 @@ pub struct Tape {
 }
 
 impl Tape {
+    // Ensure the proper paths exist
+    pub fn verify_path() {
+        let tape_path = history_tape();
+        if !Path::new(&tape_path).exists() {
+            create_dir_all(tape_path).unwrap();
+        } 
+    }
+
     pub fn new() -> Tape {
         let mut tape = Tape {
             history_tape: vec![],

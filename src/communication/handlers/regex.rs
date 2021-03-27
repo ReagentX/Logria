@@ -93,7 +93,7 @@ impl ProcessorMethods for RegexHandler {
     fn clear_matches(&mut self, window: &mut MainWindow) -> Result<()> {
         self.current_pattern = None;
         window.config.regex_pattern = None;
-        window.config.matched_rows = vec![];
+        window.config.matched_rows.clear();
         window.config.last_index_regexed = 0;
         window.config.highlight_match = false;
         window.reset_command_line()?;

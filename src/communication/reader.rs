@@ -20,7 +20,8 @@ pub mod main {
             handlers::{
                 command::CommandHandler, handler::HanderMethods,
                 multiple_choice::MultipleChoiceHandler, normal::NormalHandler,
-                parser::ParserHandler, regex::RegexHandler, startup::StartupHandler,
+                parser::ParserHandler, processor::ProcessorMethods, regex::RegexHandler,
+                startup::StartupHandler,
             },
             input::{
                 input_type::InputType,

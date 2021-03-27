@@ -1,18 +1,24 @@
 use std::{
     collections::HashMap,
     error::Error,
-    fs::{read_dir, read_to_string, write, create_dir_all},
+    fs::{create_dir_all, read_dir, read_to_string, write},
     path::Path,
 };
 
 use serde::{Deserialize, Serialize};
 
-use crate::constants::{directories::patterns};
+use crate::constants::directories::patterns;
+
+#[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Debug)]
+pub enum PatternType {
+    Split,
+    Regex,
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Parser {
     pattern: String,
-    pattern_type: String, // Cannot use `type` for the name as it is reserved
+    pattern_type: PatternType, // Cannot use `type` for the name as it is reserved
     name: String,
     example: String,
     analytics_methods: HashMap<String, String>,
@@ -30,13 +36,13 @@ impl Parser {
         let tape_path = patterns();
         if !Path::new(&tape_path).exists() {
             create_dir_all(tape_path).unwrap();
-        } 
+        }
     }
 
     /// Create an instance of a parser
     fn new(
         pattern: String,
-        pattern_type: String,
+        pattern_type: PatternType,
         name: String,
         example: String,
         analytics_methods: HashMap<String, String>,
@@ -92,7 +98,7 @@ impl Parser {
 mod tests {
     use std::collections::HashMap;
 
-    use super::Parser;
+    use super::{Parser, PatternType};
     use crate::constants::directories::patterns;
 
     #[test]
@@ -112,7 +118,7 @@ mod tests {
         map.insert(String::from("Message"), String::from("sum"));
         let parser = Parser::new(
             String::from(" - "),
-            String::from("split"),
+            PatternType::Split,
             String::from("Hyphen Separated"),
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
             map,
@@ -131,7 +137,7 @@ mod tests {
         expected_map.insert(String::from("Message"), String::from("sum"));
         let expected_parser = Parser::new(
             String::from(" - "),
-            String::from("split"),
+            PatternType::Split,
             String::from("Hyphen Separated Copy"),
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
             expected_map,

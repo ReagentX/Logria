@@ -65,7 +65,7 @@ pub mod main {
         pub parser_index: usize,            // Index for the parser to look at
         pub parsed_messages: Vec<String>,   // List of parsed messages
         pub analytics_enabled: bool,        // Whether we are calcualting stats or not
-        last_index_processed: usize,        // The last index the parsing function saw
+        pub last_index_processed: usize,        // The last index the parsing function saw
         insert_mode: bool,                  // Default to insert mode (like vim) off
         current_status: String, // UNUSED Current status, aka what is in the command line
         pub highlight_match: bool, // Determines whether we highlight the match to the user

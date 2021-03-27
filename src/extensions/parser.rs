@@ -17,11 +17,11 @@ pub enum PatternType {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Parser {
-    pattern: String,
-    pattern_type: PatternType, // Cannot use `type` for the name as it is reserved
-    name: String,
-    example: String,
-    analytics_methods: HashMap<String, String>,
+    pub pattern: String,
+    pub pattern_type: PatternType, // Cannot use `type` for the name as it is reserved
+    pub name: String,
+    pub example: String,
+    pub analytics_methods: HashMap<String, String>,
     #[serde(skip_serializing, skip_deserializing)]
     analytics_map: HashMap<String, String>,
     #[serde(skip_serializing, skip_deserializing)]

@@ -26,7 +26,7 @@ pub struct Parser {
 
 impl Parser {
     // Ensure the proper paths exist
-    pub fn verify_path() {
+    fn verify_path() {
         let tape_path = patterns();
         if !Path::new(&tape_path).exists() {
             create_dir_all(tape_path).unwrap();
@@ -44,17 +44,14 @@ impl Parser {
     ) -> Parser {
         Parser::verify_path();
         Parser {
-            pattern: pattern,
-            pattern_type: pattern_type,
-            name: name,
-            example: example,
-            analytics_methods: analytics_methods,
+            pattern,
+            pattern_type,
+            name,
+            example,
+            analytics_methods,
             analytics_map: HashMap::new(),
             analytics: HashMap::new(),
-            num_to_print: match num_to_print {
-                Some(num) => num,
-                None => 5,
-            },
+            num_to_print: num_to_print.unwrap_or(5),
         }
     }
 

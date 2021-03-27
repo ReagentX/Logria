@@ -28,7 +28,7 @@ impl CommandHandler {
     }
 
     fn resolve_poll_rate(&self, command: &str) -> Result<u64> {
-        let parts: Vec<&str> = command.split(" ").collect(); // ["poll", "42", ...]
+        let parts: Vec<&str> = command.split(' ').collect(); // ["poll", "42", ...]
         if parts.len() < 2 {
             return Err(crossterm::ErrorKind::FmtError(std::fmt::Error));
         }
@@ -47,7 +47,7 @@ impl CommandHandler {
 
         // Not for_each because we may need to bail early
         for part in parts {
-            if part.contains("-") {
+            if part.contains('-') {
                 // Create range
                 let range: Vec<&str> = part.split('-').collect();
                 if range.len() != 2 {
@@ -63,13 +63,13 @@ impl CommandHandler {
                 (start..end + 1).for_each(|step| out_l.push(step));
             } else {
                 // Parse the value
-                if part.len() > 0 {
+                if !part.is_empty() {
                     let num = part.parse::<usize>()?;
                     out_l.push(num);
                 }
             }
         }
-        out_l.sort();
+        out_l.sort_unstable();
         Ok(out_l)
     }
 
@@ -91,17 +91,18 @@ impl CommandHandler {
         }
         // Enter configuration mode
         else if command.starts_with("config") {
+            window.write_to_command_line("Config mode")?
         }
         // Enter history mode
         else if command.starts_with("history") {
-            // Possibly to go to alternate screen?
+            window.write_to_command_line("History mode")?
         }
         // Exit history mode
         else if command.starts_with("history off") {
-            // Possibly unnecessary? Use esc to go back from alternate screen?
+            window.write_to_command_line("History off")?
         }
         // Remove saved sessions from the main screen
-        else if command.starts_with("r") {
+        else if command.starts_with('r') {
             match window.config.stream_type {
                 StreamType::Startup => match self.resolve_delete_command(command) {
                     Ok(items) => {
@@ -192,35 +193,39 @@ mod remove_tests {
     #[test]
     fn test_resolve_single_num() {
         let handler = CommandHandler::new();
-        let resolved = handler.resolve_delete_command("r 1").unwrap_or(vec![]);
+        let resolved = handler.resolve_delete_command("r 1").unwrap_or_default();
         assert_eq!(resolved, [1]);
     }
 
     #[test]
     fn test_resolve_double_num() {
         let handler = CommandHandler::new();
-        let resolved = handler.resolve_delete_command("r 1,2").unwrap_or(vec![]);
+        let resolved = handler.resolve_delete_command("r 1,2").unwrap_or_default();
         assert_eq!(resolved, [1, 2]);
     }
 
     #[test]
     fn test_resolve_triple_num() {
         let handler = CommandHandler::new();
-        let resolved = handler.resolve_delete_command("r 1,2,3").unwrap_or(vec![]);
+        let resolved = handler
+            .resolve_delete_command("r 1,2,3")
+            .unwrap_or_default();
         assert_eq!(resolved, [1, 2, 3]);
     }
 
     #[test]
     fn test_resolve_triple_num_trailing_comma() {
         let handler = CommandHandler::new();
-        let resolved = handler.resolve_delete_command("r 1,2,3,").unwrap_or(vec![]);
+        let resolved = handler
+            .resolve_delete_command("r 1,2,3,")
+            .unwrap_or_default();
         assert_eq!(resolved, [1, 2, 3]);
     }
 
     #[test]
     fn test_resolve_range() {
         let handler = CommandHandler::new();
-        let resolved = handler.resolve_delete_command("r 1-5").unwrap_or(vec![]);
+        let resolved = handler.resolve_delete_command("r 1-5").unwrap_or_default();
         assert_eq!(resolved, [1, 2, 3, 4, 5]);
     }
 
@@ -229,7 +234,7 @@ mod remove_tests {
         let handler = CommandHandler::new();
         let resolved = handler
             .resolve_delete_command("r 1-3,5-7")
-            .unwrap_or(vec![]);
+            .unwrap_or_default();
         assert_eq!(resolved, [1, 2, 3, 5, 6, 7]);
     }
 
@@ -238,7 +243,7 @@ mod remove_tests {
         let handler = CommandHandler::new();
         let resolved = handler
             .resolve_delete_command("r 1-3,5-7,9-11")
-            .unwrap_or(vec![]);
+            .unwrap_or_default();
         assert_eq!(resolved, [1, 2, 3, 5, 6, 7, 9, 10, 11]);
     }
 
@@ -247,35 +252,39 @@ mod remove_tests {
         let handler = CommandHandler::new();
         let resolved = handler
             .resolve_delete_command("r 1-3,5,9-11,15")
-            .unwrap_or(vec![]);
+            .unwrap_or_default();
         assert_eq!(resolved, [1, 2, 3, 5, 9, 10, 11, 15]);
     }
 
     #[test]
     fn test_resolve_ranges_multiple_dash() {
         let handler = CommandHandler::new();
-        let resolved = handler.resolve_delete_command("r 1--3,4").unwrap_or(vec![]);
+        let resolved = handler
+            .resolve_delete_command("r 1--3,4")
+            .unwrap_or_default();
         assert_eq!(resolved, [4]);
     }
 
     #[test]
     fn test_resolve_ranges_with_string() {
         let handler = CommandHandler::new();
-        let resolved = handler.resolve_delete_command("r a-b,4").unwrap_or(vec![]);
+        let resolved = handler
+            .resolve_delete_command("r a-b,4")
+            .unwrap_or_default();
         assert_eq!(resolved.len(), 0);
     }
 
     #[test]
     fn test_resolve_no_num() {
         let handler = CommandHandler::new();
-        let resolved = handler.resolve_delete_command("r").unwrap_or(vec![]);
+        let resolved = handler.resolve_delete_command("r").unwrap_or_default();
         assert_eq!(resolved.len(), 0);
     }
 
     #[test]
     fn test_resolve_no_num_space() {
         let handler = CommandHandler::new();
-        let resolved = handler.resolve_delete_command("r ").unwrap_or(vec![]);
+        let resolved = handler.resolve_delete_command("r ").unwrap_or_default();
         assert_eq!(resolved.len(), 0);
     }
 }

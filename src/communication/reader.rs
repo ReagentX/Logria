@@ -109,7 +109,7 @@ pub mod main {
                 length_finder: LengthFinder::new(),
                 config: LogiraConfig {
                     poll_rate: FASTEST,
-                    smart_poll_rate: smart_poll_rate,
+                    smart_poll_rate,
                     use_history: history,
                     first_run: true,
                     height: 0,
@@ -235,12 +235,11 @@ pub mod main {
                 if message_pointer_length < self.config.last_row as usize {
                     // If have fewer messages than lines, just render it all
                     end = message_pointer_length - 1;
-                } else if self.config.current_end < self.config.last_row as usize {
+                } else if (self.config.current_end < self.config.last_row as usize)
+                    | (self.config.current_end < message_pointer_length)
+                {
                     // If the last row we rendered comes before the last row we can render,
                     // use all of the available rows
-                    end = self.config.current_end;
-                } else if self.config.current_end < message_pointer_length {
-                    // If we are looking at a valid line, render ends there
                     end = self.config.current_end;
                 } else {
                     // If we have overscrolled, go back
@@ -332,7 +331,7 @@ pub mod main {
             // If there are no messages in the buffer, tell the user
             // This will only ever hit once, because this method is only called if there are new
             // messages to render or a user action requires a full re-render
-            if self.messages().len() == 0 {
+            if self.messages().is_empty() {
                 self.write_to_command_line(NO_MESSAGE_IN_BUFFER)?;
                 self.output.flush()?;
                 return Ok(());
@@ -508,18 +507,15 @@ pub mod main {
 
         pub fn start(&mut self, commands: Option<Vec<String>>) -> Result<()> {
             // Build the app
-            match commands {
-                Some(c) => {
-                    // Build streams from the command used to launch Logria
-                    self.config.streams = build_streams_from_input(&c, true);
+            if let Some(c) = commands {
+                // Build streams from the command used to launch Logria
+                self.config.streams = build_streams_from_input(&c, true);
 
-                    // Set to display stderr by default
-                    self.config.stream_type = StreamType::StdErr;
+                // Set to display stderr by default
+                self.config.stream_type = StreamType::StdErr;
 
-                    // Send input to normal handler
-                    self.input_type = InputType::Normal;
-                }
-                None => {}
+                // Send input to normal handler
+                self.input_type = InputType::Normal;
             }
 
             // Set UI Size
@@ -546,23 +542,13 @@ pub mod main {
             for stream in &self.config.streams {
                 // Read from streams until there is no more input
                 // May lock if logs come in too fast
-                loop {
-                    match stream.stderr.try_recv() {
-                        Ok(data) => {
-                            total_messages += 1;
-                            self.config.stderr_messages.push(data);
-                        }
-                        Err(_) => break,
-                    }
+                while let Ok(data) = stream.stderr.try_recv() {
+                    total_messages += 1;
+                    self.config.stderr_messages.push(data);
                 }
-                loop {
-                    match stream.stdout.try_recv() {
-                        Ok(data) => {
-                            total_messages += 1;
-                            self.config.stdout_messages.push(data);
-                        }
-                        Err(_) => break,
-                    }
+                while let Ok(data) = stream.stdout.try_recv() {
+                    total_messages += 1;
+                    self.config.stdout_messages.push(data);
                 }
             }
             total_messages
@@ -617,25 +603,25 @@ pub mod main {
                             }
 
                             // Otherwise, match input to action
-                            match input.code {
-                                input => match self.input_type {
-                                    InputType::Normal => {
-                                        normal_handler.recieve_input(self, input)?
-                                    }
-                                    InputType::Command => {
-                                        command_handler.recieve_input(self, input)?
-                                    }
-                                    InputType::Regex => regex_handler.recieve_input(self, input)?,
-                                    InputType::Parser => {
-                                        parser_handler.recieve_input(self, input)?
-                                    }
-                                    InputType::Startup => {
-                                        startup_handler.recieve_input(self, input)?
-                                    }
-                                    InputType::MultipleChoice => {
-                                        mc_handler.recieve_input(self, input)?
-                                    }
-                                },
+                            match self.input_type {
+                                InputType::Normal => {
+                                    normal_handler.recieve_input(self, input.code)?
+                                }
+                                InputType::Command => {
+                                    command_handler.recieve_input(self, input.code)?
+                                }
+                                InputType::Regex => {
+                                    regex_handler.recieve_input(self, input.code)?
+                                }
+                                InputType::Parser => {
+                                    parser_handler.recieve_input(self, input.code)?
+                                }
+                                InputType::Startup => {
+                                    startup_handler.recieve_input(self, input.code)?
+                                }
+                                InputType::MultipleChoice => {
+                                    mc_handler.recieve_input(self, input.code)?
+                                }
                             }
                         }
                         Event::Mouse(event) => {} // Probably remove

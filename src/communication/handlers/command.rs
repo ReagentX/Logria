@@ -3,13 +3,17 @@ use std::io::Write;
 use crossterm::{event::KeyCode, Result};
 
 use super::handler::HanderMethods;
-use crate::communication::handlers::user_input::UserInputHandler;
-use crate::communication::input::{
-    input_type::InputType::{Normal, Startup},
-    stream_type::StreamType,
+use crate::{
+    communication::{
+        handlers::user_input::UserInputHandler,
+        input::{
+            input_type::InputType::{Normal, Startup},
+            stream_type::StreamType,
+        },
+        reader::main::MainWindow,
+    },
+    extensions::session::Session,
 };
-use crate::communication::reader::main::MainWindow;
-use crate::extensions::session::Session;
 
 pub struct CommandHandler {
     input_hander: UserInputHandler,

@@ -6,3 +6,4 @@ pub mod parser;
 pub mod regex;
 pub mod user_input;
 pub mod startup;
+pub mod processor;

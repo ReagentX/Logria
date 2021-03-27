@@ -29,7 +29,6 @@ pub mod main {
             },
         },
         constants::cli::{cli_chars, messages::NO_MESSAGE_IN_BUFFER, poll_rate::FASTEST},
-        extensions::{parser, session},
         ui::interface::build,
         util::sanitizers::length::LengthFinder,
     };

@@ -1,7 +1,8 @@
 use std::{
     collections::HashSet,
     error::Error,
-    fs::{read_dir, read_to_string, remove_file, write},
+    fs::{read_dir, read_to_string, remove_file, write, create_dir_all},
+    path::Path,
 };
 
 use serde::{Deserialize, Serialize};
@@ -22,8 +23,17 @@ pub struct Session {
 }
 
 impl Session {
+    // Ensure the proper paths exist
+    pub fn verify_path() {
+        let tape_path = sessions();
+        if !Path::new(&tape_path).exists() {
+            create_dir_all(tape_path).unwrap();
+        } 
+    }
+
     /// Create a Session struct
     pub fn new(commands: &Vec<String>, stream_type: SessionType) -> Session {
+        Session::verify_path();
         Session {
             commands: commands.to_owned(),
             stream_type: stream_type,

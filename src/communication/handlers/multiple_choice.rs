@@ -10,7 +10,7 @@ pub struct MultipleChoiceHandler {
 
 impl MultipleChoiceHandler {
     fn new_with_choices(choices: Vec<&'static str>) -> MultipleChoiceHandler {
-        MultipleChoiceHandler { choices: choices }
+        MultipleChoiceHandler { choices }
     }
 }
 

@@ -222,7 +222,7 @@ mod tests {
         
         // Set state to regex mode
         logria.config.matched_rows = (0..5).collect();
-        logria.config.regex_pattern = Some(regex::bytes::Regex::new("").unwrap());
+        logria.config.regex_pattern = Some(regex::bytes::Regex::new("fa.ke").unwrap());
         logria.input_type = Regex;
 
         // Scroll action
@@ -247,7 +247,7 @@ mod tests {
 
         // Set state to regex mode
         logria.input_type = Regex;
-        logria.config.regex_pattern = Some(regex::bytes::Regex::new("").unwrap());
+        logria.config.regex_pattern = Some(regex::bytes::Regex::new("fa.ke").unwrap());
         logria.config.matched_rows = (0..20).collect();
         
         // Scroll action

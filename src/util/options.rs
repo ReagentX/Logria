@@ -28,5 +28,5 @@ pub fn from_command_line() -> ArgMatches {
                 .value_name("stream"),
         )
         .get_matches();
-    return matches;
+    matches
 }

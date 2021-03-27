@@ -48,14 +48,17 @@ impl Tape {
         let reader = BufReader::new(file);
         for line in reader.lines() {
             if line.is_ok() {
-                self.history_tape.push(line.unwrap());
+                self.history_tape.push(match line {
+                    Ok(a) => a,
+                    _ => unreachable!(),
+                });
             }
         }
 
         self.current_index = self.history_tape.len() - 1;
     }
 
-    pub fn add_item(&mut self, item: &String) {
+    pub fn add_item(&mut self, item: &str) {
         let clean_item = item.trim();
         if !HISTORY_EXCLUDES.contains(&clean_item) {
             // Write to internal buffer
@@ -79,7 +82,7 @@ impl Tape {
                 ),
                 Ok(file) => file,
             };
-            match writeln!(file, "{}", format!("{}", clean_item)) {
+            match writeln!(file, "{}", clean_item) {
                 Ok(_) => {}
                 Err(why) => panic!(
                     "Couldn't write to {:?}: {}",
@@ -94,7 +97,7 @@ impl Tape {
     fn scroll_back_n(&mut self, num_to_scroll: usize) {
         if !self.history_tape.is_empty() {
             if self.should_scroll_back {
-                self.current_index = self.current_index.checked_sub(num_to_scroll).unwrap_or(0);
+                self.current_index = self.current_index.checked_sub(num_to_scroll).unwrap_or_default();
             } else {
                 self.should_scroll_back = true
             }
@@ -103,15 +106,13 @@ impl Tape {
 
     /// Scroll the tape forward if possible
     fn scroll_forward_n(&mut self, num_to_scroll: usize) {
-        if self.current_index != self.history_tape.len() - 1 {
-            if !self.history_tape.is_empty() {
-                self.current_index = min(
-                    self.history_tape.len() - 1,
-                    self.current_index
-                        .checked_add(num_to_scroll)
-                        .unwrap_or(self.history_tape.len() - 1),
-                );
-            }
+        if self.current_index != self.history_tape.len() - 1 && !self.history_tape.is_empty() {
+            self.current_index = min(
+                self.history_tape.len() - 1,
+                self.current_index
+                    .checked_add(num_to_scroll)
+                    .unwrap_or(self.history_tape.len() - 1),
+            );
         }
     }
 

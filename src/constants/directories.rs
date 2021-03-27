@@ -7,9 +7,9 @@ pub fn home() -> String {
 
 pub fn app_root() -> String {
     let mut root = home();
-    root.push_str("/");
+    root.push('/');
     root.push_str(&get_env_var_or_default("LOGRIA_ROOT", ".logria"));
-    return root;
+    root
 }
 
 pub fn patterns() -> String {

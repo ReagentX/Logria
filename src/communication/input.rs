@@ -48,7 +48,7 @@ pub mod stream {
 
             // Start process
             let process = thread::Builder::new()
-                .name(String::from(format!("FileInput: {}", name)))
+                .name(format!("FileInput: {}", name))
                 .spawn(move || {
                     // Remove, as file input should be immediately buffered...
                     let path = Path::new(&command);
@@ -64,7 +64,12 @@ pub mod stream {
                     let reader = BufReader::new(file);
                     for line in reader.lines() {
                         if line.is_ok() {
-                            out_tx.send(line.unwrap()).unwrap();
+                            out_tx
+                                .send(match line {
+                                    Ok(a) => a,
+                                    _ => unreachable!(),
+                                })
+                                .unwrap();
                         }
                     }
                 });
@@ -73,7 +78,7 @@ pub mod stream {
                 stdout: out_rx,
                 stderr: err_rx,
                 proccess_name: name,
-                process: process,
+                process,
                 _type: String::from("FileInput"),
             }
         }
@@ -85,7 +90,7 @@ pub mod stream {
     impl CommandInput {
         /// Parse a command string to a list of parts for `subprocess`
         fn parse_command(command: &str) -> Vec<&str> {
-            command.split(" ").collect()
+            command.split(' ').collect()
         }
     }
 
@@ -101,7 +106,7 @@ pub mod stream {
 
             // Start reading from the queues
             let process = thread::Builder::new()
-                .name(String::from(format!("CommandInput: {}", name)))
+                .name(format!("CommandInput: {}", name))
                 .spawn(move || {
                     let runtime = Runtime::new().unwrap();
                     runtime.block_on(async {
@@ -129,16 +134,10 @@ pub mod stream {
 
                             tokio::select! {
                                 Ok(line) = stdout.next_line() => {
-                                    match line {
-                                        Some(l) =>  out_tx.send(l).unwrap(),
-                                        None => {},
-                                    }
+                                    if let Some(l) = line { out_tx.send(l).unwrap() }
                                 }
                                 Ok(line) = stderr.next_line() => {
-                                    match line {
-                                        Some(l) =>  err_tx.send(l).unwrap(),
-                                        None => {},
-                                    }
+                                    if let Some(l) = line { err_tx.send(l).unwrap() }
                                 }
                             }
                         }
@@ -149,13 +148,13 @@ pub mod stream {
                 stdout: out_rx,
                 stderr: err_rx,
                 proccess_name: name,
-                process: process,
+                process,
                 _type: String::from("CommandInput"),
             }
         }
     }
 
-    fn determine_stream_type(command: &String) -> SessionType {
+    fn determine_stream_type(command: &str) -> SessionType {
         // TODO: Fix logic, doesnt work for  "ls -lga"
         let path = Path::new(command);
         match path.exists() {
@@ -202,7 +201,7 @@ pub mod stream {
                         SessionType::Mixed
                     }
                 }
-                _ => SessionType::Mixed
+                _ => SessionType::Mixed,
             };
             Session::new(commands, stream_type).save(&commands[0]);
         }
@@ -213,7 +212,7 @@ pub mod stream {
         match session.stream_type {
             SessionType::Command => {
                 let mut streams: Vec<InputStream> = vec![];
-                &session.commands.iter().for_each(|command| {
+                session.commands.iter().for_each(|command| {
                     let name = command.to_string();
                     streams.push(CommandInput::new(None, name, command.to_owned()))
                 });
@@ -221,7 +220,7 @@ pub mod stream {
             }
             SessionType::File => {
                 let mut streams: Vec<InputStream> = vec![];
-                &session.commands.iter().for_each(|command| {
+                session.commands.iter().for_each(|command| {
                     let name = command.to_string();
                     streams.push(FileInput::new(None, name, command.to_owned()))
                 });
@@ -310,7 +309,7 @@ pub mod input_type {
         Regex,
         Parser,
         Startup,
-        MultipleChoice,  // TODO: Remove
+        MultipleChoice, // TODO: Remove
     }
 }
 

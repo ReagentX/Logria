@@ -36,7 +36,7 @@ impl Session {
         Session::verify_path();
         Session {
             commands: commands.to_owned(),
-            stream_type: stream_type,
+            stream_type,
         }
     }
 

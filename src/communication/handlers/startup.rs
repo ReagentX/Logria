@@ -81,7 +81,7 @@ impl StartupHandler {
                         window.write_to_command_line("Invalid selection!")?;
                     }
                 }
-                return Ok(());
+                Ok(())
             }
             Err(_) => {
                 window.config.streams = build_streams_from_input(&vec![command.to_owned()], true);
@@ -89,7 +89,7 @@ impl StartupHandler {
                 window.input_type = InputType::Normal;
                 window.reset_output()?;
                 window.redraw()?;
-                return Ok(());
+                Ok(())
             }
         }
     }
@@ -175,14 +175,8 @@ mod startup_tests {
 
         // Tests
         assert!(handler.process_command(&mut window, "0").is_ok());
-        assert!(match window.input_type {
-            InputType::Normal => true,
-            _ => false,
-        });
-        assert!(match window.config.stream_type {
-            StreamType::StdErr => true,
-            _ => false,
-        });
+        assert!(matches!(window.input_type, InputType::Normal));
+        assert!(matches!(window.config.stream_type, StreamType::StdErr));
     }
 
     #[test]
@@ -197,14 +191,8 @@ mod startup_tests {
 
         // Tests
         assert!(handler.process_command(&mut window, "999").is_ok());
-        assert!(match window.input_type {
-            InputType::Startup => true,
-            _ => false,
-        });
-        assert!(match window.config.stream_type {
-            StreamType::Startup => true,
-            _ => false,
-        });
+        assert!(matches!(window.input_type, InputType::Startup));
+        assert!(matches!(window.config.stream_type, StreamType::Startup));
     }
 
     #[test]
@@ -219,14 +207,8 @@ mod startup_tests {
 
         // Tests
         assert!(handler.process_command(&mut window, "zzzfake_file_name").is_ok());
-        assert!(match window.input_type {
-            InputType::Normal => true,
-            _ => false,
-        });
-        assert!(match window.config.stream_type {
-            StreamType::StdErr => true,
-            _ => false,
-        });
+        assert!(matches!(window.input_type, InputType::Normal));
+        assert!(matches!(window.config.stream_type, StreamType::StdErr));
         Session::del(&vec![Session::list().len() - 1]);
     }
 }

@@ -87,7 +87,7 @@ impl UserInputHandler {
 
     /// Remove char 1 to the left of the cursor
     fn backspace(&mut self, window: &mut MainWindow) -> Result<()> {
-        if self.last_write >= 1 && self.content.len() > 0 {
+        if self.last_write >= 1 && !self.content.is_empty() {
             self.content.remove(self.position_as_index() - 1);
             self.move_left(window)?;
             self.write(window)?;
@@ -97,7 +97,7 @@ impl UserInputHandler {
 
     /// Remove char 1 to the right of the cursor
     fn delete(&mut self, window: &mut MainWindow) -> Result<()> {
-        if self.last_write < self.x() && self.content.len() > 0 {
+        if self.last_write < self.x() && !self.content.is_empty() {
             self.content.remove(self.position_as_index());
             self.write(window)?;
         }

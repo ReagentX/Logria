@@ -77,20 +77,7 @@ Typing `/` and entering `100` will filter our stream down to only lines that mat
 └────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Typing `/` and entering `:q` will reset the filter:
-
-```log
-2020-02-23 16:56:10,786 - __main__.<module> - MainProcess - INFO - I am the first log in the list
-2020-02-23 16:56:10,997 - __main__.<module> - MainProcess - INFO - I am a first log! 21
-2020-02-23 16:56:10,997 - __main__.<module> - MainProcess - INFO - I am a second log! 71
-2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a first log! 43
-2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a second log! 87
-┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-│No filter applied
-└────────────────────────────────────────────────────────────────────────────────────────────────┘
-```
-
-Typing `/` and entering `:q` will reset the filter:
+Pressing `esc` will reset the filter:
 
 ```log
 2020-02-23 16:56:10,786 - __main__.<module> - MainProcess - INFO - I am the first log in the list

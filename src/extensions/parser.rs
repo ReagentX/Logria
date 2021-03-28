@@ -40,7 +40,7 @@ impl Parser {
     }
 
     /// Create an instance of a parser
-    fn new(
+    pub fn new(
         pattern: String,
         pattern_type: PatternType,
         name: String,
@@ -62,7 +62,7 @@ impl Parser {
     }
 
     /// Create parser file from a Parser struct
-    fn save(self) {
+    pub fn save(self) {
         let parser_json = serde_json::to_string_pretty(&self).unwrap();
         let path = format!("{}/{}", patterns(), self.name);
 
@@ -73,7 +73,7 @@ impl Parser {
     }
 
     /// Create Parser struct from a parser file
-    fn load(file_name: &str) -> Parser {
+    pub fn load(file_name: &str) -> Parser {
         let path = format!("{}/{}", patterns(), file_name);
         let parser_json = match read_to_string(path) {
             Ok(json) => json,
@@ -84,7 +84,7 @@ impl Parser {
     }
 
     /// Get a list of all available parser configurations
-    fn list() -> Vec<String> {
+    pub fn list() -> Vec<String> {
         let mut parsers: Vec<String> = read_dir(patterns())
             .unwrap()
             .map(|parser| String::from(parser.unwrap().path().to_str().unwrap()))

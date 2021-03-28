@@ -17,7 +17,7 @@ This folder contains the documentation on how to interact with Logria programmat
 
 ## Advanced Installation
 
-`pip install logria` is the best way to install the app for normal use.
+`cargo install logria` is the best way to install the app for normal use.
 
 ### Installing as a standalone app
 

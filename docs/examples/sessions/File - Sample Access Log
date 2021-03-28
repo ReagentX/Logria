@@ -1,12 +1,6 @@
 {
     "commands": [
-        [
-            "Users",
-            "me",
-            "Logria",
-            "sample_streams",
-            "accesslog"
-        ]
+            "/var/nginx/logs/accesslog"
     ],
-    "type": "file"
+    "stream_type": "File"
 }

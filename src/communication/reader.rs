@@ -30,6 +30,7 @@ pub mod main {
             },
         },
         constants::cli::{cli_chars, messages::NO_MESSAGE_IN_BUFFER, poll_rate::FASTEST},
+        extensions::parser::Parser,
         ui::interface::build,
         util::sanitizers::length::LengthFinder,
     };
@@ -61,18 +62,18 @@ pub mod main {
         color_replace_regex: Regex,   // A regex to remove ANSI color codes
 
         // Parser settings
-        pub parser: bool,                   // Reference to the current parser
-        pub parser_index: usize,            // Index for the parser to look at
-        pub parsed_messages: Vec<String>,   // List of parsed messages
-        pub analytics_enabled: bool,        // Whether we are calcualting stats or not
-        pub last_index_processed: usize,        // The last index the parsing function saw
-        insert_mode: bool,                  // Default to insert mode (like vim) off
-        current_status: String, // UNUSED Current status, aka what is in the command line
-        pub highlight_match: bool, // Determines whether we highlight the match to the user
-        pub stick_to_bottom: bool, // Whether we should follow the stream
-        pub stick_to_top: bool, // Whether we should stick to the top and not render new lines
+        pub parser: Option<Parser>, // Reference to the current parser
+        pub parser_index: usize,    // Index for the parser to look at
+        pub parsed_messages: Vec<String>, // List of parsed messages
+        pub analytics_enabled: bool, // Whether we are calcualting stats or not
+        pub last_index_processed: usize, // The last index the parsing function saw
+        insert_mode: bool,          // Default to insert mode (like vim) off
+        current_status: String,     // UNUSED Current status, aka what is in the command line
+        pub highlight_match: bool,  // Determines whether we highlight the match to the user
+        pub stick_to_bottom: bool,  // Whether we should follow the stream
+        pub stick_to_top: bool,     // Whether we should stick to the top and not render new lines
         pub manually_controlled_line: bool, // Whether manual scroll is active
-        pub current_end: usize, // Current last row we have rendered
+        pub current_end: usize,     // Current last row we have rendered
         pub streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
     }
 
@@ -130,7 +131,7 @@ pub mod main {
                         crate::constants::cli::patterns::ANSI_COLOR_PATTERN,
                     )
                     .unwrap(),
-                    parser: false,
+                    parser: None,
                     parser_index: 0,
                     parsed_messages: vec![],
                     analytics_enabled: false,
@@ -162,7 +163,7 @@ pub mod main {
                     }
                 }
                 InputType::Parser => {
-                    if self.config.parser {
+                    if self.config.parser.is_some() {
                         self.config.parsed_messages.len()
                     } else {
                         self.messages().len()

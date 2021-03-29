@@ -24,12 +24,6 @@ pub fn sessions() -> String {
     root
 }
 
-pub fn history() -> String {
-    let mut root = app_root();
-    root.push_str("/history");
-    root
-}
-
 pub fn history_tape() -> String {
     let mut root = app_root();
     root.push_str("/history/tape");
@@ -62,14 +56,6 @@ mod tests {
         let t = directories::sessions();
         let mut root = home_dir().expect("").to_str().expect("").to_string();
         root.push_str("/.logria/sessions");
-        assert_eq!(t, root)
-    }
-
-    #[test]
-    fn test_history() {
-        let t = directories::history();
-        let mut root = home_dir().expect("").to_str().expect("").to_string();
-        root.push_str("/.logria/history");
         assert_eq!(t, root)
     }
 

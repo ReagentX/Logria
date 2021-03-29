@@ -14,7 +14,7 @@
 
 ## Notes
 
-To use a command, simply `:` and enter a command. To exit without running the command, press `esc`.
+To use a command, simply type `:` and enter a command. To exit without running the command, press `esc`.
 
 ### Poll Rate
 

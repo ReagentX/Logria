@@ -31,7 +31,7 @@ pub struct Parser {
 }
 
 impl Parser {
-    // Ensure the proper paths exist
+    /// Ensure the proper paths exist
     fn verify_path() {
         let tape_path = patterns();
         if !Path::new(&tape_path).exists() {

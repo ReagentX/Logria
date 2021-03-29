@@ -149,6 +149,7 @@ pub mod main {
             }
         }
 
+        /// Get the number of messages in the current message buffer
         pub fn number_of_messages(&self) -> usize {
             match self.input_type {
                 InputType::Normal
@@ -172,6 +173,7 @@ pub mod main {
             }
         }
 
+        /// Determine the start and end indexes we need to render in the window
         pub fn determine_render_position(&mut self) -> (usize, usize) {
             let mut end: usize = 0;
             let mut rows: usize = 0;
@@ -263,6 +265,7 @@ pub mod main {
             (start, end)
         }
 
+        /// Get the message at a specific index in the current buffer
         fn get_message_at_index(&self, index: usize) -> String {
             match self.input_type {
                 InputType::Normal
@@ -283,6 +286,7 @@ pub mod main {
             }
         }
 
+        /// Highlight the regex matched text with an ASCII escape code
         fn highlight_match(&self, message: String) -> String {
             // Regex out any existing color codes
             // We use a bytes regex becasue we cannot compile the pattern using normal regex
@@ -317,6 +321,7 @@ pub mod main {
             String::from_utf8(new_msg).unwrap()
         }
 
+        /// Render the relevant part of the message buffer in the window
         fn render_text_in_output(&mut self) -> Result<()> {
             // Start the render from the last row
             let mut current_row = self.config.last_row;
@@ -451,6 +456,7 @@ pub mod main {
             Ok(())
         }
 
+        /// Empty the command line
         pub fn reset_command_line(&mut self) -> Result<()> {
             // Leave padding for surrounding rectangle, we cannot use deleteln because it destroys the rectangle
             let clear = " ".repeat((self.config.width - 3) as usize); // TODO: Store this string as a class attribute, recalc on resize
@@ -461,6 +467,7 @@ pub mod main {
             Ok(())
         }
 
+        /// Write text to the command line
         pub fn write_to_command_line(&mut self, content: &str) -> Result<()> {
             queue!(self.output, cursor::SavePosition)?;
             // Remove what used to be in the command line
@@ -507,6 +514,7 @@ pub mod main {
             Ok(())
         }
 
+        /// Initial application setup
         pub fn start(&mut self, commands: Option<Vec<String>>) -> Result<()> {
             // Build the app
             if let Some(c) = commands {

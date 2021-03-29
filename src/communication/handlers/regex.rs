@@ -30,6 +30,7 @@ impl RegexHandler {
         }
     }
 
+    /// Save the user input pattern to the main window conig
     fn set_pattern(&mut self, window: &mut MainWindow) -> Result<()> {
         let pattern = match self.input_handler.gather(window) {
             Ok(pattern) => pattern,
@@ -82,6 +83,7 @@ impl ProcessorMethods for RegexHandler {
         }
     }
 
+    /// Return the app to a normal input state
     fn return_to_normal(&mut self, window: &mut MainWindow) -> Result<()> {
         self.clear_matches(window)?;
         window.input_type = Normal;
@@ -90,6 +92,7 @@ impl ProcessorMethods for RegexHandler {
         Ok(())
     }
 
+    /// Clear the matched messages from the message buffer
     fn clear_matches(&mut self, window: &mut MainWindow) -> Result<()> {
         self.current_pattern = None;
         window.config.regex_pattern = None;

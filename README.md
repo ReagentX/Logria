@@ -81,10 +81,6 @@ See [session](/docs/sessions.md) docs.
 
 See [patterns](/docs/patterns.md) docs.
 
-## Acknowledgements
-
-This is the Rust edition of my [Python](https://github.com/ReagentX/Logria-py) proof-of-concept app.
-
 ## Special Thanks
 
 - [Voidsphere](https://voidsphere.bandcamp.com), for providing all the hacking music I could want.

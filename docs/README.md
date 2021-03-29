@@ -42,13 +42,15 @@ This will launch the app and show us the splash screen:
 Enter a new command to open and save a new stream,
 or enter a number to choose a saved session from the list,
 or enter `:config` to configure.
+
+Enter `:r #` to remove session #.
 Enter `:q` to quit.
 
 0: File - readme
 1: File - Sample Access Log
 2: Cmd - Generate Test Logs
 ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-│_
+│                                                                                                │
 └────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -61,7 +63,7 @@ Entering `2` will load and open handles to the commands in `Cmd - Generate Test 
 2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a first log! 43
 2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a second log! 87
 ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-│No filter applied
+│No filter applied                                                                               │
 └────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -71,7 +73,7 @@ Typing `/` and entering `100` will filter our stream down to only lines that mat
 2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a first log! 43
 2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a second log! 87
 ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-│Regex with pattern /100/
+│Regex with pattern /100/                                                                        │
 └────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -84,7 +86,7 @@ Pressing `esc` will reset the filter:
 2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a first log! 43
 2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a second log! 87
 ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-│No filter applied
+│No filter applied                                                                               │
 └────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 

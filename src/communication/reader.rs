@@ -639,10 +639,19 @@ pub mod main {
                     }
                 } else {
                     // possibly sleep, cleanup, etc
-                    if self.config.regex_pattern.is_some() {
-                        regex_handler.process_matches(self);
-                    } else if self.config.parser.is_some() {
-                        parser_handler.process_matches(self)
+                    // Process extension methods
+                    match self.input_type {
+                        InputType::Regex => {
+                            if self.config.regex_pattern.is_some() {
+                                regex_handler.process_matches(self);
+                            }
+                        }
+                        InputType::Parser => {
+                            if self.config.parser.is_some() {
+                                parser_handler.process_matches(self)
+                            }
+                        }
+                        _ => {}
                     }
                 }
 

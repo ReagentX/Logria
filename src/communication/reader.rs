@@ -37,29 +37,23 @@ pub mod main {
 
     #[derive(Debug)]
     pub struct LogiraConfig {
-        pub poll_rate: u64,    // The rate at which we check for new messages
-        pub height: u16,       // Window height
-        pub width: u16,        // Window width
-        pub last_row: u16,     // The last row we can render, aka number of lines visible in the tty
-        smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
-        pub use_history: bool,
-        first_run: bool, // Whether this is a first run or not
-        loop_time: f64,  // How long a loop of the main app takes
-        previous_render: (usize, usize),
-        previous_messages: Option<&'static Vec<String>>, // Pointer to the previous non-parsed message list, which is continuously updated
-        exit_val: i8,                                    // If exit_val is -1, the app dies
+        pub width: u16,         // Window width
+        pub height: u16,        // Window height
+        pub last_row: u16, // The last row we can render, aka number of lines visible in the tty
+        pub current_end: usize, // Current last row we have rendered
 
         // Message buffers
         stderr_messages: Vec<String>,
         stdout_messages: Vec<String>,
-        pub startup_messages: Vec<String>,
         pub stream_type: StreamType,
+        pub startup_messages: Vec<String>, // Messages displayed when the app is launched with no streams
 
         // Regex settings
         pub regex_pattern: Option<regex::bytes::Regex>, // Current regex pattern
         pub matched_rows: Vec<usize>, // List of index of matches when regex filtering is active
         pub last_index_regexed: usize, // The last index the filtering function saw
         color_replace_regex: Regex,   // A regex to remove ANSI color codes
+        pub highlight_match: bool, // Determines whether we highlight the matched text to the user
 
         // Parser settings
         pub parser: Option<Parser>, // Reference to the current parser
@@ -67,14 +61,24 @@ pub mod main {
         pub parsed_messages: Vec<String>, // List of parsed messages
         pub analytics_enabled: bool, // Whether we are calcualting stats or not
         pub last_index_processed: usize, // The last index the parsing function saw
-        insert_mode: bool,          // Default to insert mode (like vim) off
-        current_status: String,     // UNUSED Current status, aka what is in the command line
-        pub highlight_match: bool,  // Determines whether we highlight the match to the user
-        pub stick_to_bottom: bool,  // Whether we should follow the stream
-        pub stick_to_top: bool,     // Whether we should stick to the top and not render new lines
+
+        // App state
+        loop_time: f64,        // How long a loop of the main app takes
+        insert_mode: bool,     // Default to insert mode (like vim) off
+        pub poll_rate: u64,    // The rate at which we check for new messages
+        smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
+        pub use_history: bool, // Whether the app records user input to a history tape
+
+        // Scroll State
+        pub stick_to_bottom: bool, // Whether we should follow the stream
+        pub stick_to_top: bool,    // Whether we should stick to the top and not render new lines
         pub manually_controlled_line: bool, // Whether manual scroll is active
-        pub current_end: usize,     // Current last row we have rendered
+
+        // Render data
         pub streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
+        previous_render: (usize, usize), // Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
+        previous_messages: Option<&'static Vec<String>>, // Pointer to the previous non-parsed message list, which is continuously updated
+        exit_val: i8,                                    // If exit_val is -1, the app dies
     }
 
     pub struct MainWindow {
@@ -113,7 +117,6 @@ pub mod main {
                     poll_rate: FASTEST,
                     smart_poll_rate,
                     use_history: history,
-                    first_run: true,
                     height: 0,
                     width: 0,
                     loop_time: 0.0,
@@ -137,7 +140,6 @@ pub mod main {
                     analytics_enabled: false,
                     last_index_processed: 0,
                     insert_mode: false,
-                    current_status: String::from(""), // TODO: fix
                     highlight_match: false,
                     last_row: 0,
                     stick_to_bottom: true,

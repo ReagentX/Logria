@@ -165,7 +165,10 @@ mod regex_tests {
 
         handler.process_matches(&mut logria);
 
-        assert_eq!(logria.config.parsed_messages[0..10], vec!["1", "2", "3", "4", "5", "6", "7", "8", "9", "1"]);
+        assert_eq!(
+            logria.config.parsed_messages[0..10],
+            vec!["1", "2", "3", "4", "5", "6", "7", "8", "9", "1"]
+        );
     }
 
     #[test]
@@ -181,7 +184,10 @@ mod regex_tests {
 
         handler.process_matches(&mut logria);
 
-        assert_eq!(logria.config.parsed_messages[0..10], vec!["1", "2", "3", "4", "5", "6", "7", "8", "9", "1"]);
+        assert_eq!(
+            logria.config.parsed_messages[0..10],
+            vec!["1", "2", "3", "4", "5", "6", "7", "8", "9", "1"]
+        );
     }
 }
 
@@ -210,8 +216,14 @@ mod split_tests {
         logria.config.parser_index = 0;
 
         handler.process_matches(&mut logria);
-        assert_eq!(logria.config.parsed_messages[0..10], vec!["0", "", "2", "3", "4", "5", "6", "7", "8", "9"]);
-        assert_eq!(logria.config.parsed_messages[15..25], vec!["", "", "", "", "", "20", "2", "22", "23", "24"]);
+        assert_eq!(
+            logria.config.parsed_messages[0..10],
+            vec!["0", "", "2", "3", "4", "5", "6", "7", "8", "9"]
+        );
+        assert_eq!(
+            logria.config.parsed_messages[15..25],
+            vec!["", "", "", "", "", "20", "2", "22", "23", "24"]
+        );
     }
 
     #[test]
@@ -226,7 +238,10 @@ mod split_tests {
         logria.config.parser_index = 1;
 
         handler.process_matches(&mut logria);
-
-        assert_eq!(logria.config.parsed_messages[0..10], vec!["0", "", "2", "3", "4", "5", "6", "7", "8", "9"]);
+        assert_eq!(
+            logria.config.parsed_messages[0..10],
+            vec!["0", "", "2", "3", "4", "5", "6", "7", "8", "9"]
+        );
+        assert_eq!(logria.config.parsed_messages.len(), 10)
     }
 }

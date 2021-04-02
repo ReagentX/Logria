@@ -580,7 +580,6 @@ pub mod main {
             let mut regex_handler = RegexHandler::new();
             let mut parser_handler = ParserHandler::new();
             let mut startup_handler = StartupHandler::new();
-            let mut mc_handler = MultipleChoiceHandler::new(); // Possibly different path for building options
 
             // Setup startup messages
             self.render_startup_text()?;
@@ -596,9 +595,7 @@ pub mod main {
             // Render anything new in case the streams are already finished
             self.render_text_in_output()?;
 
-            // enum for input mode: {normal, command, regex, choice}
-            // if input mode is command or regex, draw/remove the character to the command line
-            // Otherwise, show status
+            // Handle directing input to the correct handlers during operation
             loop {
                 // Update streams here
                 let t_0 = Instant::now();
@@ -631,9 +628,7 @@ pub mod main {
                                 InputType::Startup => {
                                     startup_handler.recieve_input(self, input.code)?
                                 }
-                                InputType::MultipleChoice => {
-                                    mc_handler.recieve_input(self, input.code)?
-                                }
+                                _ => {} // No need to do anything for multiple choice handler
                             }
                         }
                         Event::Mouse(event) => {} // Probably remove
@@ -667,7 +662,7 @@ pub mod main {
     }
 
     #[cfg(test)]
-    mod tests {
+    mod render_tests {
         use super::MainWindow;
 
         #[test]

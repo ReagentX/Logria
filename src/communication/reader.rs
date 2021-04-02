@@ -85,6 +85,7 @@ pub mod main {
         pub config: LogiraConfig,
         pub input_type: InputType,
         pub output: Stdout,
+        pub mc_handler: MultipleChoiceHandler,
         length_finder: LengthFinder,
     }
 
@@ -113,6 +114,7 @@ pub mod main {
                 input_type: InputType::Startup,
                 output: stdout(),
                 length_finder: LengthFinder::new(),
+                mc_handler: MultipleChoiceHandler::new(),
                 config: LogiraConfig {
                     poll_rate: FASTEST,
                     smart_poll_rate,
@@ -154,10 +156,9 @@ pub mod main {
         /// Get the number of messages in the current message buffer
         pub fn number_of_messages(&self) -> usize {
             match self.input_type {
-                InputType::Normal
-                | InputType::MultipleChoice
-                | InputType::Command
-                | InputType::Startup => self.messages().len(),
+                InputType::Normal | InputType::Command | InputType::Startup => {
+                    self.messages().len()
+                }
                 InputType::Regex => {
                     if self.config.regex_pattern.is_none() {
                         self.messages().len()
@@ -196,10 +197,9 @@ pub mod main {
                 let mut current_index: usize = 0;
                 loop {
                     let message: &str = match self.input_type {
-                        InputType::Normal
-                        | InputType::MultipleChoice
-                        | InputType::Command
-                        | InputType::Startup => &self.messages()[current_index],
+                        InputType::Normal | InputType::Command | InputType::Startup => {
+                            &self.messages()[current_index]
+                        }
                         InputType::Regex => {
                             // If we have not activated regex or parser yet, render normal messages
                             if self.config.regex_pattern.is_none() {
@@ -270,10 +270,9 @@ pub mod main {
         /// Get the message at a specific index in the current buffer
         fn get_message_at_index(&self, index: usize) -> String {
             match self.input_type {
-                InputType::Normal
-                | InputType::MultipleChoice
-                | InputType::Command
-                | InputType::Startup => self.messages()[index].to_string(),
+                InputType::Normal | InputType::Command | InputType::Startup => {
+                    self.messages()[index].to_string()
+                }
                 InputType::Regex => {
                     if self.config.regex_pattern.is_none() {
                         self.messages()[index].to_string()
@@ -487,7 +486,6 @@ pub mod main {
             self.go_to_cli()?;
             let first_char = match self.input_type {
                 InputType::Normal | InputType::Startup => content.unwrap_or(cli_chars::NORMAL_CHAR),
-                InputType::MultipleChoice => content.unwrap_or(cli_chars::MC_CHAR),
                 InputType::Command => content.unwrap_or(cli_chars::COMMAND_CHAR),
                 InputType::Regex => content.unwrap_or(cli_chars::REGEX_CHAR),
                 InputType::Parser => content.unwrap_or(cli_chars::PARSER_CHAR),

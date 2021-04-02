@@ -312,7 +312,6 @@ pub mod input_type {
         Regex,
         Parser,
         Startup,
-        MultipleChoice, // TODO: Remove
     }
 }
 

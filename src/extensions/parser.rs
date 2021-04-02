@@ -116,7 +116,9 @@ impl Parser {
                     if let Some(captures) = regex.captures(&self.example) {
                         captures
                             .iter()
-                            .for_each(|x| example.push(x.unwrap().as_str().to_string()));
+                            .skip(1)
+                            .enumerate()
+                            .for_each(|(index, value)| example.push(format!("{}: {}", index, value.unwrap().as_str())));
                     } else {
                         {
                             return Err(format!(
@@ -135,7 +137,8 @@ impl Parser {
                     .split(&self.pattern)
                     .collect::<Vec<&str>>()
                     .iter()
-                    .for_each(|x| example.push(x.to_string()));
+                    .enumerate()
+                    .for_each(|(index, value)| example.push(format!("{}: {}", index, value)));
             }
         };
 
@@ -227,14 +230,13 @@ mod tests {
     fn can_get_example_regex() {
         let parser = Parser::load("Common Log Format");
         assert_eq!(parser.get_example(), 
-            Ok(vec![String::from("127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326"),
-                 String::from("127.0.0.1"),
-                 String::from("user-identifier"),
-                 String::from("frank"),
-                 String::from("10/Oct/2000:13:55:36 -0700"),
-                 String::from("GET /apache_pb.gif HTTP/1.0"),
-                 String::from("200"),
-                 String::from("2326")]
+            Ok(vec![String::from("0: 127.0.0.1"),
+                    String::from("1: user-identifier"),
+                    String::from("2: frank"),
+                    String::from("3: 10/Oct/2000:13:55:36 -0700"),
+                    String::from("4: GET /apache_pb.gif HTTP/1.0"),
+                    String::from("5: 200"),
+                    String::from("6: 2326")]
             )
         );
     }
@@ -243,10 +245,10 @@ mod tests {
     fn can_get_example_split() {
         let parser = Parser::load("Hyphen Separated Copy");
         assert_eq!(parser.get_example(),
-            Ok(vec![String::from("2005-03-19 15:10:26,773"),
-                    String::from("simple_example"),
-                    String::from("CRITICAL"),
-                    String::from("critical message")])
+            Ok(vec![String::from("0: 2005-03-19 15:10:26,773"),
+                    String::from("1: simple_example"),
+                    String::from("2: CRITICAL"),
+                    String::from("3: critical message")])
         );
     }
 }

@@ -1,10 +1,13 @@
 use crossterm::{event::KeyCode, Result};
 use regex::Regex;
 
-use super::{handler::HanderMethods, processor::ProcessorMethods};
 use crate::{
     communication::{
-        handlers::user_input::UserInputHandler, input::input_type::InputType::Normal,
+        handlers::{
+            handler::HanderMethods, multiple_choice::MultipleChoiceHandler,
+            processor::ProcessorMethods, user_input::UserInputHandler,
+        },
+        input::input_type::InputType::Normal,
         reader::main::MainWindow,
     },
     extensions::parser::{Parser, PatternType},
@@ -13,6 +16,7 @@ use crate::{
 
 pub struct ParserHandler {
     input_handler: UserInputHandler,
+    mc_handler: MultipleChoiceHandler,
 }
 
 impl ParserHandler {
@@ -20,6 +24,10 @@ impl ParserHandler {
     fn setup_parser(&self, window: &mut MainWindow) {
         // TODO: Make this work
         window.config.parser = Some(Parser::load("fake_name"));
+    }
+
+    fn select_index(&self, window: &mut MainWindow) {
+        window.config.parser_index = 0;
     }
 
     /// Parse a message with the current parser rules
@@ -106,6 +114,7 @@ impl HanderMethods for ParserHandler {
     fn new() -> ParserHandler {
         ParserHandler {
             input_handler: UserInputHandler::new(),
+            mc_handler: MultipleChoiceHandler::new(),
         }
     }
 

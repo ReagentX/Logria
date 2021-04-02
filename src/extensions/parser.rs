@@ -3,8 +3,10 @@ use std::{
     error::Error,
     fs::{create_dir_all, read_dir, read_to_string, write},
     path::Path,
+    result::Result,
 };
 
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::constants::directories::patterns;
@@ -92,6 +94,61 @@ impl Parser {
         parsers.sort();
         parsers
     }
+
+    pub fn get_regex(&self) -> Result<Regex, String> {
+        if self.pattern_type == PatternType::Regex {
+            match Regex::new(&self.pattern) {
+                Ok(pattern) => Ok(pattern),
+                Err(why) => Err(format!("Invalid regex: /{}/: {}", self.pattern, why)),
+            }
+        } else {
+            Err(String::from(
+                "Cannot construct regex for a Split type parser.",
+            ))
+        }
+    }
+
+    pub fn get_example(&self) -> std::result::Result<Vec<String>, String> {
+        let mut example: Vec<String> = vec![];
+        match self.pattern_type {
+            PatternType::Regex => match self.get_regex() {
+                Ok(regex) => {
+                    if let Some(captures) = regex.captures(&self.example) {
+                        captures
+                            .iter()
+                            .for_each(|x| example.push(x.unwrap().as_str().to_string()));
+                    } else {
+                        {
+                            return Err(format!(
+                                "Invalid example: /{}/ has no captures.",
+                                self.pattern
+                            ));
+                        }
+                    }
+                }
+                Err(why) => {
+                    return Err(why);
+                }
+            },
+            PatternType::Split => {
+                self.example
+                    .split(&self.pattern)
+                    .collect::<Vec<&str>>()
+                    .iter()
+                    .for_each(|x| example.push(x.to_string()));
+            }
+        };
+
+        // Validate the size of the generated text
+        if example.len() != self.analytics_methods.len() {
+            return Err(format!(
+                "Invalid example provided: {} matches for {:?} methods",
+                example.len(),
+                self.analytics_methods.len()
+            ));
+        }
+        Ok(example)
+    }
 }
 
 #[cfg(test)]
@@ -149,6 +206,47 @@ mod tests {
         assert_eq!(
             read_parser.analytics_methods,
             expected_parser.analytics_methods
+        );
+    }
+
+    #[test]
+    fn can_get_regex() {
+        let parser = Parser::load("Common Log Format");
+        let regex = parser.get_regex();
+        assert!(regex.is_ok());
+    }
+
+    #[test]
+    fn cannot_get_regex() {
+        let parser = Parser::load("Hyphen Separated Copy");
+        let regex = parser.get_regex();
+        assert!(regex.is_err());
+    }
+
+    #[test]
+    fn can_get_example_regex() {
+        let parser = Parser::load("Common Log Format");
+        assert_eq!(parser.get_example(), 
+            Ok(vec![String::from("127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326"),
+                 String::from("127.0.0.1"),
+                 String::from("user-identifier"),
+                 String::from("frank"),
+                 String::from("10/Oct/2000:13:55:36 -0700"),
+                 String::from("GET /apache_pb.gif HTTP/1.0"),
+                 String::from("200"),
+                 String::from("2326")]
+            )
+        );
+    }
+
+    #[test]
+    fn can_get_example_split() {
+        let parser = Parser::load("Hyphen Separated Copy");
+        assert_eq!(parser.get_example(),
+            Ok(vec![String::from("2005-03-19 15:10:26,773"),
+                    String::from("simple_example"),
+                    String::from("CRITICAL"),
+                    String::from("critical message")])
         );
     }
 }

@@ -19,7 +19,6 @@ pub mod excludes {
 
 pub mod cli_chars {
     pub const NORMAL_CHAR: &'static str = "│";
-    pub const MC_CHAR: &'static str = "?";
     pub const COMMAND_CHAR: &'static str = ":";
     pub const REGEX_CHAR: &'static str = "/";
     pub const PARSER_CHAR: &'static str = "+";

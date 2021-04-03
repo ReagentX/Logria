@@ -59,7 +59,7 @@ impl RegexHandler {
 
 impl ProcessorMethods for RegexHandler {
     /// Process matches, loading the buffer of indexes to matched messages in the main buffer
-    fn process_matches(&self, window: &mut MainWindow) {
+    fn process_matches(&self, window: &mut MainWindow) -> Result<()> {
         // TODO: Possibly async? Possibly loading indicator for large jobs?
         match &self.current_pattern {
             Some(_) => {
@@ -80,7 +80,8 @@ impl ProcessorMethods for RegexHandler {
             None => {
                 panic!("Called process with no regex!");
             }
-        }
+        };
+        Ok(())
     }
 
     /// Return the app to a normal input state

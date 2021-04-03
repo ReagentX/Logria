@@ -366,7 +366,7 @@ pub mod main {
 
                 // Get some metadata we need to render the message
                 let message_length = self.length_finder.get_real_length(&message);
-                let message_rows = max(1, ((message_length) + (width - 2)) / width);
+                let message_rows = max(1, ((message_length) + (width - 1)) / width);
 
                 // Update the current row, stop writing if there is no more space
                 current_row = match current_row.checked_sub(max(1, message_rows as u16)) {
@@ -632,8 +632,10 @@ pub mod main {
                         Event::Mouse(event) => {} // Probably remove
                         Event::Resize(width, height) => {} // Call self.dimensions() and some other stuff
                     }
-                } else {
-                    // possibly sleep, cleanup, etc
+                }
+
+                // possibly sleep, cleanup, etc
+                if num_new_messages > 0 {
                     // Process extension methods
                     match self.input_type {
                         InputType::Regex => {
@@ -648,11 +650,9 @@ pub mod main {
                         }
                         _ => {}
                     }
-                }
-
-                if num_new_messages > 0 {
                     self.render_text_in_output()?;
                 }
+
                 let sleep = time::Duration::from_millis(self.config.poll_rate);
                 thread::sleep(sleep);
             }

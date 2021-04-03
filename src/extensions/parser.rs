@@ -9,7 +9,7 @@ use std::{
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::constants::directories::patterns;
+use crate::{constants::directories::patterns, util::error::LogriaError};
 
 #[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Debug)]
 pub enum PatternType {
@@ -64,25 +64,27 @@ impl Parser {
     }
 
     /// Create parser file from a Parser struct
-    pub fn save(self) {
+    pub fn save(self) -> Result<(), LogriaError> {
         let parser_json = serde_json::to_string_pretty(&self).unwrap();
         let path = format!("{}/{}", patterns(), self.name);
 
         match write(format!("{}/{}", patterns(), self.name), parser_json) {
-            Ok(_) => {}
-            Err(why) => panic!("Couldn't write {:?}: {}", path, Error::to_string(&why)),
+            Ok(_) => Ok(()),
+            Err(why) => Err(LogriaError::CannotWrite(path, Error::to_string(&why))),
         }
     }
 
     /// Create Parser struct from a parser file
-    pub fn load(file_name: &str) -> Parser {
+    pub fn load(file_name: &str) -> Result<Parser, LogriaError> {
         let path = format!("{}/{}", patterns(), file_name);
         let parser_json = match read_to_string(path) {
             Ok(json) => json,
-            Err(why) => panic!("Couldn't open {:?}: {}", patterns(), Error::to_string(&why)),
+            Err(why) => {
+                return Err(LogriaError::CannotRead(file_name.to_owned(), Error::to_string(&why)))
+            },
         };
         let session: Parser = serde_json::from_str(&parser_json).unwrap();
-        session
+        Ok(session)
     }
 
     /// Get a list of all available parser configurations
@@ -95,20 +97,18 @@ impl Parser {
         parsers
     }
 
-    pub fn get_regex(&self) -> Result<Regex, String> {
+    pub fn get_regex(&self) -> Result<Regex, LogriaError> {
         if self.pattern_type == PatternType::Regex {
             match Regex::new(&self.pattern) {
                 Ok(pattern) => Ok(pattern),
-                Err(why) => Err(format!("Invalid regex: /{}/: {}", self.pattern, why)),
+                Err(why) => Err(LogriaError::InvalidRegex(self.pattern)),
             }
         } else {
-            Err(String::from(
-                "Cannot construct regex for a Split type parser.",
-            ))
+            Err(LogriaError::WrongParserType)
         }
     }
 
-    pub fn get_example(&self) -> std::result::Result<Vec<String>, String> {
+    pub fn get_example(&self) -> std::result::Result<Vec<String>, LogriaError> {
         let mut example: Vec<String> = vec![];
         match self.pattern_type {
             PatternType::Regex => match self.get_regex() {
@@ -118,13 +118,12 @@ impl Parser {
                             .iter()
                             .skip(1)
                             .enumerate()
-                            .for_each(|(index, value)| example.push(format!("{}: {}", index, value.unwrap().as_str())));
+                            .for_each(|(index, value)| {
+                                example.push(format!("{}: {}", index, value.unwrap().as_str()))
+                            });
                     } else {
                         {
-                            return Err(format!(
-                                "Invalid example: /{}/ has no captures.",
-                                self.pattern
-                            ));
+                            return Err(LogriaError::InvalidExampleRegex(self.pattern));
                         }
                     }
                 }
@@ -144,10 +143,9 @@ impl Parser {
 
         // Validate the size of the generated text
         if example.len() != self.analytics_methods.len() {
-            return Err(format!(
-                "Invalid example provided: {} matches for {:?} methods",
+            return Err(LogriaError::InvalidExampleSplit(
                 example.len(),
-                self.analytics_methods.len()
+                self.analytics_methods.len(),
             ));
         }
         Ok(example)
@@ -184,12 +182,12 @@ mod tests {
             map,
             None,
         );
-        parser.save()
+        parser.save().unwrap()
     }
 
     #[test]
     fn deserialize_session() {
-        let read_parser = Parser::load("Hyphen Separated Copy");
+        let read_parser = Parser::load("Hyphen Separated Copy").unwrap();
         let mut expected_map = HashMap::new();
         expected_map.insert(String::from("Date"), String::from("date"));
         expected_map.insert(String::from("Caller"), String::from("count"));
@@ -215,40 +213,45 @@ mod tests {
     #[test]
     fn can_get_regex() {
         let parser = Parser::load("Common Log Format");
-        let regex = parser.get_regex();
+        let regex = parser.unwrap().get_regex();
         assert!(regex.is_ok());
     }
 
     #[test]
     fn cannot_get_regex() {
         let parser = Parser::load("Hyphen Separated Copy");
-        let regex = parser.get_regex();
+        let regex = parser.unwrap().get_regex();
         assert!(regex.is_err());
     }
 
     #[test]
     fn can_get_example_regex() {
         let parser = Parser::load("Common Log Format");
-        assert_eq!(parser.get_example(), 
-            Ok(vec![String::from("0: 127.0.0.1"),
-                    String::from("1: user-identifier"),
-                    String::from("2: frank"),
-                    String::from("3: 10/Oct/2000:13:55:36 -0700"),
-                    String::from("4: GET /apache_pb.gif HTTP/1.0"),
-                    String::from("5: 200"),
-                    String::from("6: 2326")]
-            )
+        assert_eq!(
+            parser.unwrap().get_example().unwrap(),
+            vec![
+                String::from("0: 127.0.0.1"),
+                String::from("1: user-identifier"),
+                String::from("2: frank"),
+                String::from("3: 10/Oct/2000:13:55:36 -0700"),
+                String::from("4: GET /apache_pb.gif HTTP/1.0"),
+                String::from("5: 200"),
+                String::from("6: 2326")
+            ]
         );
     }
 
     #[test]
     fn can_get_example_split() {
         let parser = Parser::load("Hyphen Separated Copy");
-        assert_eq!(parser.get_example(),
-            Ok(vec![String::from("0: 2005-03-19 15:10:26,773"),
-                    String::from("1: simple_example"),
-                    String::from("2: CRITICAL"),
-                    String::from("3: critical message")])
+        assert_eq!(
+            parser.unwrap().get_example().unwrap(),
+            vec![
+                String::from("0: 2005-03-19 15:10:26,773"),
+                String::from("1: simple_example"),
+                String::from("2: CRITICAL"),
+                String::from("3: critical message")
+            ]
         );
     }
 }

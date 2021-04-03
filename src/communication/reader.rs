@@ -640,12 +640,12 @@ pub mod main {
                     match self.input_type {
                         InputType::Regex => {
                             if self.config.regex_pattern.is_some() {
-                                regex_handler.process_matches(self);
+                                regex_handler.process_matches(self)?;
                             }
                         }
                         InputType::Parser => {
                             if self.config.parser.is_some() {
-                                parser_handler.process_matches(self)
+                                parser_handler.process_matches(self)?;
                             }
                         }
                         _ => {}

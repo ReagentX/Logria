@@ -80,8 +80,11 @@ impl Parser {
         let parser_json = match read_to_string(path) {
             Ok(json) => json,
             Err(why) => {
-                return Err(LogriaError::CannotRead(file_name.to_owned(), Error::to_string(&why)))
-            },
+                return Err(LogriaError::CannotRead(
+                    file_name.to_owned(),
+                    Error::to_string(&why),
+                ))
+            }
         };
         let session: Parser = serde_json::from_str(&parser_json).unwrap();
         Ok(session)
@@ -101,7 +104,7 @@ impl Parser {
         if self.pattern_type == PatternType::Regex {
             match Regex::new(&self.pattern) {
                 Ok(pattern) => Ok(pattern),
-                Err(why) => Err(LogriaError::InvalidRegex(self.pattern)),
+                Err(why) => Err(LogriaError::InvalidRegex(self.pattern.to_owned())),
             }
         } else {
             Err(LogriaError::WrongParserType)
@@ -123,7 +126,7 @@ impl Parser {
                             });
                     } else {
                         {
-                            return Err(LogriaError::InvalidExampleRegex(self.pattern));
+                            return Err(LogriaError::InvalidExampleRegex(self.pattern.to_owned()));
                         }
                     }
                 }

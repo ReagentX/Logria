@@ -18,9 +18,13 @@ pub mod main {
     use crate::{
         communication::{
             handlers::{
-                command::CommandHandler, handler::HanderMethods,
-                multiple_choice::MultipleChoiceHandler, normal::NormalHandler,
-                parser::ParserHandler, processor::ProcessorMethods, regex::RegexHandler,
+                command::CommandHandler,
+                handler::HanderMethods,
+                multiple_choice::MultipleChoiceHandler,
+                normal::NormalHandler,
+                parser::{ParserHandler, ParserState},
+                processor::ProcessorMethods,
+                regex::RegexHandler,
                 startup::StartupHandler,
             },
             input::{
@@ -56,10 +60,11 @@ pub mod main {
         pub highlight_match: bool, // Determines whether we highlight the matched text to the user
 
         // Parser settings
-        pub parser: Option<Parser>, // Reference to the current parser
-        pub parser_index: usize,    // Index for the parser to look at
+        pub parser: Option<Parser>,    // Reference to the current parser
+        pub parser_index: usize,       // Index for the parser to look at
+        pub parser_state: ParserState, // The state of the current parser
         pub parsed_messages: Vec<String>, // List of parsed messages
-        pub analytics_enabled: bool, // Whether we are calcualting stats or not
+        pub analytics_enabled: bool,   // Whether we are calcualting stats or not
         pub last_index_processed: usize, // The last index the parsing function saw
 
         // App state
@@ -138,6 +143,7 @@ pub mod main {
                     .unwrap(),
                     parser: None,
                     parser_index: 0,
+                    parser_state: ParserState::NeedsParser,
                     parsed_messages: vec![],
                     analytics_enabled: false,
                     last_index_processed: 0,

@@ -4,40 +4,65 @@ use regex::Regex;
 use crate::{
     communication::{
         handlers::{
-            handler::HanderMethods, multiple_choice::MultipleChoiceHandler,
-            processor::ProcessorMethods, user_input::UserInputHandler,
+            handler::HanderMethods, processor::ProcessorMethods, user_input::UserInputHandler,
         },
         input::input_type::InputType::Normal,
         reader::main::MainWindow,
     },
     extensions::parser::{Parser, PatternType},
     ui::scroll,
+    util::error::LogriaError,
 };
+
+#[derive(Debug)]
+pub enum ParserState {
+    NeedsParser,
+    NeedsIndex,
+    Full,
+}
 
 pub struct ParserHandler {
     input_handler: UserInputHandler,
-    mc_handler: MultipleChoiceHandler,
 }
 
 impl ParserHandler {
     /// Setup the parser instance on the main window
-    fn setup_parser(&self, window: &mut MainWindow) {
-        // TODO: Make this work
-        window.config.parser = Some(Parser::load("fake_name"));
+    fn select_parser(&self, window: &mut MainWindow) -> Result<()> {
+        let parsers = Parser::list();
+        window.mc_handler.set_choices(&parsers);
+        window.write_to_command_line("why")?;
+        window.config.parser_state = ParserState::NeedsIndex;
+        Ok(())
     }
 
-    fn select_index(&self, window: &mut MainWindow) {
+    /// Set which index of the parsed message to render
+    fn select_index(&self, window: &mut MainWindow) -> Result<()> {
+        if let Some(parser) = &window.config.parser {
+            match parser.get_example() {
+                Ok(examples) => {
+                    window.mc_handler.set_choices(&examples);
+                }
+                Err(why) => window.write_to_command_line(&why.to_string())?,
+            }
+        }
+        window.config.parser_state = ParserState::Full;
         window.config.parser_index = 0;
+        Ok(())
     }
 
     /// Parse a message with the current parser rules
-    fn parse(&self, parser: &Parser, index: usize, message: &str) -> Option<String> {
+    fn parse(
+        &self,
+        parser: &Parser,
+        index: usize,
+        message: &str,
+    ) -> std::result::Result<Option<String>, LogriaError> {
         match parser.pattern_type {
-            PatternType::Regex => match Regex::new(&parser.pattern) {
-                Ok(pattern) => self.regex_handle(message, index, pattern),
-                Err(_) => None,
+            PatternType::Regex => match parser.get_regex() {
+                Ok(pattern) => Ok(self.regex_handle(message, index, pattern)),
+                Err(why) => Err(why),
             },
-            PatternType::Split => self.split_handle(message, index, &parser.pattern),
+            PatternType::Split => Ok(self.split_handle(message, index, &parser.pattern)),
         }
     }
 
@@ -81,7 +106,7 @@ impl ProcessorMethods for ParserHandler {
     }
 
     /// Parse messages, loading the buffer of parsed messages in the main window
-    fn process_matches(&self, window: &mut MainWindow) {
+    fn process_matches(&self, window: &mut MainWindow) -> Result<()> {
         // TODO: Possibly async? Possibly loading indicator for large jobs?
         match &window.config.parser {
             Some(parser) => {
@@ -91,7 +116,7 @@ impl ProcessorMethods for ParserHandler {
                 // Iterate "forever", skipping to the start and taking up till end-start
                 // TODO: Something to indicate progress
                 for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
-                    if let Some(message) = self.parse(
+                    if let Ok(Some(message)) = self.parse(
                         parser,
                         window.config.parser_index,
                         &window.messages()[index],
@@ -103,18 +128,29 @@ impl ProcessorMethods for ParserHandler {
                     window.config.last_index_processed = index + 1;
                 }
             }
-            None => {
-                self.setup_parser(window);
-            }
-        }
+            None => match window.config.parser_state {
+                // TODO: Error handling
+                ParserState::NeedsParser => {
+                    if let Err(why) = self.select_parser(window) {
+                        window.write_to_command_line(&format!("{:?}", why))?;
+                    }
+                }
+                ParserState::NeedsIndex => {
+                    if let Err(why) = self.select_index(window) {
+                        window.write_to_command_line(&format!("{:?}", why))?;
+                    }
+                }
+                ParserState::Full => {}
+            },
+        };
+        Ok(())
     }
 }
 
 impl HanderMethods for ParserHandler {
     fn new() -> ParserHandler {
         ParserHandler {
-            input_handler: UserInputHandler::new(),
-            mc_handler: MultipleChoiceHandler::new(),
+            input_handler: UserInputHandler::new()
         }
     }
 
@@ -133,7 +169,10 @@ impl HanderMethods for ParserHandler {
 
             // Build new parser
             KeyCode::Char('p') => {
-                self.setup_parser(window);
+                window.config.parser_state = ParserState::NeedsParser;
+                window.config.parsed_messages.clear();
+                window.config.parser = None;
+                window.config.parser_index = 0;
             }
 
             KeyCode::Char('z') => {
@@ -143,7 +182,7 @@ impl HanderMethods for ParserHandler {
             // Return to normal
             KeyCode::Esc => self.return_to_normal(window)?,
             key => self.input_handler.recieve_input(window, key)?,
-        }
+        };
         Ok(())
     }
 }
@@ -166,13 +205,13 @@ mod regex_tests {
         // Update window config
         let mut logria = MainWindow::_new_dummy();
         let handler = ParserHandler::new();
-        let parser = Parser::load("Digit Test");
+        let parser = Parser::load("Digit Test").unwrap();
 
         logria.config.parser = Some(parser);
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 0;
 
-        handler.process_matches(&mut logria);
+        handler.process_matches(&mut logria).unwrap();
 
         assert_eq!(
             logria.config.parsed_messages[0..10],
@@ -184,14 +223,14 @@ mod regex_tests {
     fn test_can_setup_with_session_second_index() {
         let mut logria = MainWindow::_new_dummy();
         let handler = ParserHandler::new();
-        let parser = Parser::load("Digit Test");
+        let parser = Parser::load("Digit Test").unwrap();
 
         // Update window config
         logria.config.parser = Some(parser);
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 1;
 
-        handler.process_matches(&mut logria);
+        handler.process_matches(&mut logria).unwrap();
 
         assert_eq!(
             logria.config.parsed_messages[0..10],
@@ -218,13 +257,13 @@ mod split_tests {
         // Update window config
         let mut logria = MainWindow::_new_dummy();
         let handler = ParserHandler::new();
-        let parser = Parser::load("Char Test");
+        let parser = Parser::load("Char Test").unwrap();
 
         logria.config.parser = Some(parser);
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 0;
 
-        handler.process_matches(&mut logria);
+        handler.process_matches(&mut logria).unwrap();
         assert_eq!(
             logria.config.parsed_messages[0..10],
             vec!["0", "", "2", "3", "4", "5", "6", "7", "8", "9"]
@@ -239,14 +278,14 @@ mod split_tests {
     fn test_can_setup_with_session_second_index() {
         let mut logria = MainWindow::_new_dummy();
         let handler = ParserHandler::new();
-        let parser = Parser::load("Char Test");
+        let parser = Parser::load("Char Test").unwrap();
 
         // Update window config
         logria.config.parser = Some(parser);
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 1;
 
-        handler.process_matches(&mut logria);
+        handler.process_matches(&mut logria).unwrap();
         assert_eq!(
             logria.config.parsed_messages[0..10],
             vec!["0", "", "2", "3", "4", "5", "6", "7", "8", "9"]

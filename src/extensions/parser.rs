@@ -225,7 +225,6 @@ mod tests {
         );
         parser.save().unwrap();
 
-
         let read_parser = Parser::load("Common Log Format Test 2");
         let regex = read_parser.unwrap().get_regex();
         assert!(regex.is_ok());

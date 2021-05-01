@@ -171,7 +171,7 @@ mod tests {
     }
 
     #[test]
-    fn serialize_session() {
+    fn serialize_deserialize_session() {
         let mut map = HashMap::new();
         map.insert(String::from("Date"), String::from("date"));
         map.insert(String::from("Caller"), String::from("count"));
@@ -180,28 +180,20 @@ mod tests {
         let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
-            String::from("Hyphen Separated"),
+            String::from("Hyphen Separated Copy"),
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
-            map,
+            map.to_owned(),
             None,
         );
-        parser.save().unwrap()
-    }
+        parser.save().unwrap();
 
-    #[test]
-    fn deserialize_session() {
         let read_parser = Parser::load("Hyphen Separated Copy").unwrap();
-        let mut expected_map = HashMap::new();
-        expected_map.insert(String::from("Date"), String::from("date"));
-        expected_map.insert(String::from("Caller"), String::from("count"));
-        expected_map.insert(String::from("Level"), String::from("count"));
-        expected_map.insert(String::from("Message"), String::from("sum"));
         let expected_parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
             String::from("Hyphen Separated Copy"),
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
-            expected_map,
+            map.to_owned(),
             None,
         );
         assert_eq!(read_parser.pattern, expected_parser.pattern);
@@ -215,21 +207,73 @@ mod tests {
 
     #[test]
     fn can_get_regex() {
-        let parser = Parser::load("Common Log Format");
-        let regex = parser.unwrap().get_regex();
+        let mut map = HashMap::new();
+        map.insert(String::from("Remote Host"), String::from("count"));
+        map.insert(String::from("User ID"), String::from("count"));
+        map.insert(String::from("Username"), String::from("count"));
+        map.insert(String::from("Date"), String::from("count"));
+        map.insert(String::from("Request"), String::from("count"));
+        map.insert(String::from("Status"), String::from("count"));
+        map.insert(String::from("Size"), String::from("count"));
+        let parser = Parser::new(
+            String::from("([^ ]*) ([^ ]*) ([^ ]*) \\[([^]]*)\\] \"([^\"]*)\" ([^ ]*) ([^ ]*)"),
+            PatternType::Regex,
+            String::from("Common Log Format Test 2"),
+            String::from("127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326"),
+            map.to_owned(),
+            None
+        );
+        parser.save().unwrap();
+
+
+        let read_parser = Parser::load("Common Log Format Test 2");
+        let regex = read_parser.unwrap().get_regex();
         assert!(regex.is_ok());
     }
 
     #[test]
     fn cannot_get_regex() {
-        let parser = Parser::load("Hyphen Separated Copy");
+        let mut map = HashMap::new();
+        map.insert(String::from("Date"), String::from("date"));
+        map.insert(String::from("Caller"), String::from("count"));
+        map.insert(String::from("Level"), String::from("count"));
+        map.insert(String::from("Message"), String::from("sum"));
+        let parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from("Hyphen Separated Test 1"),
+            String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            map.to_owned(),
+            None,
+        );
+        parser.save().unwrap();
+
+        let parser = Parser::load("Hyphen Separated Test 1");
         let regex = parser.unwrap().get_regex();
         assert!(regex.is_err());
     }
 
     #[test]
     fn can_get_example_regex() {
-        let parser = Parser::load("Common Log Format");
+        let mut map = HashMap::new();
+        map.insert(String::from("Remote Host"), String::from("count"));
+        map.insert(String::from("User ID"), String::from("count"));
+        map.insert(String::from("Username"), String::from("count"));
+        map.insert(String::from("Date"), String::from("count"));
+        map.insert(String::from("Request"), String::from("count"));
+        map.insert(String::from("Status"), String::from("count"));
+        map.insert(String::from("Size"), String::from("count"));
+        let parser = Parser::new(
+            String::from("([^ ]*) ([^ ]*) ([^ ]*) \\[([^]]*)\\] \"([^\"]*)\" ([^ ]*) ([^ ]*)"),
+            PatternType::Regex,
+            String::from("Common Log Format Test 1"),
+            String::from("127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326"),
+            map.to_owned(),
+            None
+        );
+        parser.save().unwrap();
+
+        let parser = Parser::load("Common Log Format Test 1");
         assert_eq!(
             parser.unwrap().get_example().unwrap(),
             vec![
@@ -246,7 +290,22 @@ mod tests {
 
     #[test]
     fn can_get_example_split() {
-        let parser = Parser::load("Hyphen Separated Copy");
+        let mut map = HashMap::new();
+        map.insert(String::from("Date"), String::from("date"));
+        map.insert(String::from("Caller"), String::from("count"));
+        map.insert(String::from("Level"), String::from("count"));
+        map.insert(String::from("Message"), String::from("sum"));
+        let parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from("Hyphen Separated Test 2"),
+            String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            map.to_owned(),
+            None,
+        );
+        parser.save().unwrap();
+
+        let parser = Parser::load("Hyphen Separated Test 2");
         assert_eq!(
             parser.unwrap().get_example().unwrap(),
             vec![

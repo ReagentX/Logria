@@ -3,9 +3,10 @@ use std::error::Error;
 use std::fs::{create_dir_all, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
+use std::fs::File;
 
 use crate::constants::cli::excludes::HISTORY_EXCLUDES;
-use crate::constants::directories::history_tape;
+use crate::constants::directories::{history_tape, history};
 
 pub struct Tape {
     history_tape: Vec<String>,
@@ -16,9 +17,13 @@ pub struct Tape {
 impl Tape {
     /// Ensure the proper paths exist
     pub fn verify_path() {
+        let history_path = history();
+        if !Path::new(&history_path).exists() {
+            create_dir_all(history_path).unwrap();
+        }
         let tape_path = history_tape();
         if !Path::new(&tape_path).exists() {
-            create_dir_all(tape_path).unwrap();
+            File::create(&tape_path).unwrap();
         }
     }
 
@@ -53,6 +58,8 @@ impl Tape {
                     Ok(a) => a,
                     _ => unreachable!(),
                 });
+            } else {
+                break;
             }
         }
 

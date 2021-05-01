@@ -104,6 +104,7 @@ impl Session {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
     use super::{Session, SessionType};
     use crate::constants::directories::sessions;
 
@@ -118,12 +119,19 @@ mod tests {
     #[test]
     fn serialize_session() {
         let session = Session::new(&vec![String::from("ls -la")], SessionType::Command);
-        session.save("ls -la")
+        session.save("ls -la");
+
+        assert!(Path::new(&format!("{}/{}", sessions(), "ls -la")).exists());
     }
 
     #[test]
     fn deserialize_session() {
-        let read_session = Session::load(&format!("{}/{}", sessions(), "ls -la copy")).unwrap();
+        let session = Session::new(&vec![String::from("ls -la")], SessionType::Command);
+        session.save("ls -la copy");
+        assert!(Path::new(&format!("{}/{}", sessions(), "ls -la copy")).exists());
+
+        let file_name = format!("{}/{}", sessions(), "ls -la copy");
+        let read_session = Session::load(&file_name).unwrap();
         let expected_session = Session {
             commands: vec![String::from("ls -la")],
             stream_type: SessionType::Command,

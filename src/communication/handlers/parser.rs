@@ -150,7 +150,7 @@ impl ProcessorMethods for ParserHandler {
 impl HanderMethods for ParserHandler {
     fn new() -> ParserHandler {
         ParserHandler {
-            input_handler: UserInputHandler::new()
+            input_handler: UserInputHandler::new(),
         }
     }
 
@@ -189,6 +189,8 @@ impl HanderMethods for ParserHandler {
 
 #[cfg(test)]
 mod regex_tests {
+    use std::collections::HashMap;
+
     use super::ParserHandler;
 
     use crate::{
@@ -197,7 +199,7 @@ mod regex_tests {
             input::input_type::InputType,
             reader::main::MainWindow,
         },
-        extensions::parser::Parser,
+        extensions::parser::{Parser, PatternType},
     };
 
     #[test]
@@ -205,7 +207,18 @@ mod regex_tests {
         // Update window config
         let mut logria = MainWindow::_new_dummy();
         let handler = ParserHandler::new();
-        let parser = Parser::load("Digit Test").unwrap();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("1"), String::from("count"));
+        let parser = Parser::new(
+            String::from("([1-9])"),
+            PatternType::Regex,
+            String::from("Name Test"),
+            String::from("1"),
+            map.to_owned(),
+            None,
+        );
 
         logria.config.parser = Some(parser);
         logria.input_type = InputType::Parser;
@@ -223,7 +236,18 @@ mod regex_tests {
     fn test_can_setup_with_session_second_index() {
         let mut logria = MainWindow::_new_dummy();
         let handler = ParserHandler::new();
-        let parser = Parser::load("Digit Test").unwrap();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("1"), String::from("count"));
+        let parser = Parser::new(
+            String::from("([1-9])"),
+            PatternType::Regex,
+            String::from("Name Test"),
+            String::from("1"),
+            map.to_owned(),
+            None,
+        );
 
         // Update window config
         logria.config.parser = Some(parser);
@@ -242,6 +266,7 @@ mod regex_tests {
 #[cfg(test)]
 mod split_tests {
     use super::ParserHandler;
+    use std::collections::HashMap;
 
     use crate::{
         communication::{
@@ -249,7 +274,7 @@ mod split_tests {
             input::input_type::InputType,
             reader::main::MainWindow,
         },
-        extensions::parser::Parser,
+        extensions::parser::{Parser, PatternType},
     };
 
     #[test]
@@ -257,7 +282,18 @@ mod split_tests {
         // Update window config
         let mut logria = MainWindow::_new_dummy();
         let handler = ParserHandler::new();
-        let parser = Parser::load("Char Test").unwrap();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("1"), String::from("count"));
+        let parser = Parser::new(
+            String::from("1"),
+            PatternType::Split,
+            String::from("Char Test"),
+            String::from("1"),
+            map.to_owned(),
+            None,
+        );
 
         logria.config.parser = Some(parser);
         logria.input_type = InputType::Parser;
@@ -278,7 +314,18 @@ mod split_tests {
     fn test_can_setup_with_session_second_index() {
         let mut logria = MainWindow::_new_dummy();
         let handler = ParserHandler::new();
-        let parser = Parser::load("Char Test").unwrap();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("1"), String::from("count"));
+        let parser = Parser::new(
+            String::from("1"),
+            PatternType::Split,
+            String::from("Char Test"),
+            String::from("1"),
+            map.to_owned(),
+            None,
+        );
 
         // Update window config
         logria.config.parser = Some(parser);

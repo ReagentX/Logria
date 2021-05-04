@@ -95,8 +95,8 @@ Typing `:` and entering `:q` will exit the app.
 ## Guidelines
 
 - "Brand" colors
-  - Letters: ![#e63462](https://via.placeholder.com/15/e63462/000000?text=+)`#e63462`
-  - Accent: ![#333745](https://via.placeholder.com/15/333745/000000?text=+)`#333745`
+  - Letters: ![#e63462](https://via.placeholder.com/15/e63462/000000?text=+) `#e63462`
+  - Accent: ![#333745](https://via.placeholder.com/15/333745/000000?text=+) `#333745`
 - Contributing
   - No pull request shall be behind develop
   - First come, first served

@@ -216,7 +216,7 @@ mod regex_tests {
             PatternType::Regex,
             String::from("Name Test"),
             String::from("1"),
-            map.to_owned(),
+            map,
             None,
         );
 
@@ -245,7 +245,7 @@ mod regex_tests {
             PatternType::Regex,
             String::from("Name Test"),
             String::from("1"),
-            map.to_owned(),
+            map,
             None,
         );
 
@@ -291,7 +291,7 @@ mod split_tests {
             PatternType::Split,
             String::from("Char Test"),
             String::from("1"),
-            map.to_owned(),
+            map,
             None,
         );
 
@@ -323,7 +323,7 @@ mod split_tests {
             PatternType::Split,
             String::from("Char Test"),
             String::from("1"),
-            map.to_owned(),
+            map,
             None,
         );
 

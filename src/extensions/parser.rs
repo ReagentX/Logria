@@ -104,7 +104,7 @@ impl Parser {
         if self.pattern_type == PatternType::Regex {
             match Regex::new(&self.pattern) {
                 Ok(pattern) => Ok(pattern),
-                Err(why) => Err(LogriaError::InvalidRegex(self.pattern.to_owned())),
+                Err(why) => Err(LogriaError::InvalidRegex(why, self.pattern.to_owned())),
             }
         } else {
             Err(LogriaError::WrongParserType)
@@ -193,7 +193,7 @@ mod tests {
             PatternType::Split,
             String::from("Hyphen Separated Copy"),
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
-            map.to_owned(),
+            map,
             None,
         );
         assert_eq!(read_parser.pattern, expected_parser.pattern);
@@ -220,7 +220,7 @@ mod tests {
             PatternType::Regex,
             String::from("Common Log Format Test 2"),
             String::from("127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326"),
-            map.to_owned(),
+            map,
             None
         );
         parser.save().unwrap();
@@ -242,7 +242,7 @@ mod tests {
             PatternType::Split,
             String::from("Hyphen Separated Test 1"),
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
-            map.to_owned(),
+            map,
             None,
         );
         parser.save().unwrap();
@@ -267,7 +267,7 @@ mod tests {
             PatternType::Regex,
             String::from("Common Log Format Test 1"),
             String::from("127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326"),
-            map.to_owned(),
+            map,
             None
         );
         parser.save().unwrap();
@@ -299,7 +299,7 @@ mod tests {
             PatternType::Split,
             String::from("Hyphen Separated Test 2"),
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
-            map.to_owned(),
+            map,
             None,
         );
         parser.save().unwrap();

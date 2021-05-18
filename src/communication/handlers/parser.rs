@@ -42,7 +42,9 @@ impl ParserHandler {
                 Ok(examples) => {
                     window.mc_handler.set_choices(&examples);
                 }
-                Err(why) => window.write_to_command_line(&why.to_string())?,
+                Err(why) => {
+                    window.write_to_command_line(&why.to_string())?;
+                }
             }
         }
         window.config.parser_state = ParserState::Full;

@@ -95,7 +95,7 @@ mod kc_tests {
     use std::collections::HashMap;
 
     use super::MultipleChoiceHandler;
-    use crate::communication::{handlers::handler::HanderMethods, reader::main::MainWindow};
+    use crate::communication::handlers::handler::HanderMethods;
 
     #[test]
     fn can_create() {

@@ -505,8 +505,8 @@ pub mod main {
         }
 
         /// Generate startup text from session list
-        pub fn render_startup_text(&mut self) -> Result<()> {
-            self.config.auxiliary_messages = StartupHandler::get_startup_text();
+        pub fn render_auxiliary_text(&mut self, text: Vec<String>) -> Result<()> {
+            self.config.auxiliary_messages = text;
             self.redraw()?;
             Ok(())
         }
@@ -586,7 +586,7 @@ pub mod main {
             let mut startup_handler = StartupHandler::new();
 
             // Setup startup messages
-            self.render_startup_text()?;
+            self.render_auxiliary_text(StartupHandler::get_startup_text())?;
 
             // Initial message collection
             self.recieve_streams();

@@ -30,7 +30,7 @@ impl ParserHandler {
     fn select_parser(&self, window: &mut MainWindow) -> Result<()> {
         let parsers = Parser::list();
         window.mc_handler.set_choices(&parsers);
-        window.write_to_command_line("why")?;
+        window.config.auxiliary_messages = window.mc_handler.get_body_text(None);
         window.config.parser_state = ParserState::NeedsIndex;
         Ok(())
     }
@@ -47,6 +47,7 @@ impl ParserHandler {
                 }
             }
         }
+        window.config.auxiliary_messages = window.mc_handler.get_body_text(None);
         window.config.parser_state = ParserState::Full;
         window.config.parser_index = 0;
         Ok(())

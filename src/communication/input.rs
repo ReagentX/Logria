@@ -311,7 +311,7 @@ pub mod input_type {
         Command,
         Regex,
         Parser,
-        Auxiliary,
+        Startup,
     }
 }
 

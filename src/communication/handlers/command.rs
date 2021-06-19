@@ -7,7 +7,7 @@ use crate::{
     communication::{
         handlers::{startup::StartupHandler, user_input::UserInputHandler},
         input::{
-            input_type::InputType::{Auxiliary, Normal},
+            input_type::InputType,
             stream_type::StreamType,
         },
         reader::main::MainWindow,
@@ -23,8 +23,8 @@ impl CommandHandler {
     fn return_to_prev_state(&mut self, window: &mut MainWindow) -> Result<()> {
         // If we are in auxiliary mode, go back to that, otherwise go to normal mode
         window.input_type = match window.config.stream_type {
-            StreamType::Auxiliary => Auxiliary,
-            _ => Normal,
+            StreamType::Auxiliary => InputType::Startup,
+            _ => InputType::Normal,
         };
         window.set_cli_cursor(None)?;
         window.output.flush()?;

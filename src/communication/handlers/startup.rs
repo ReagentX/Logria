@@ -191,7 +191,7 @@ mod startup_tests {
 
         // Tests
         assert!(handler.process_command(&mut window, "999").is_ok());
-        assert!(matches!(window.input_type, InputType::Auxiliary));
+        assert!(matches!(window.input_type, InputType::Startup));
         assert!(matches!(window.config.stream_type, StreamType::Auxiliary));
     }
 

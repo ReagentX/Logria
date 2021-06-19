@@ -130,8 +130,8 @@ pub mod main {
                     previous_render: (0, 0),
                     previous_messages: None,
                     exit_val: 0,
-                    stderr_messages: vec![],  // TODO: fix
-                    stdout_messages: vec![],  // TODO: fix
+                    stderr_messages: vec![],    // TODO: fix
+                    stdout_messages: vec![],    // TODO: fix
                     auxiliary_messages: vec![], // TODO: fix
                     stream_type: StreamType::Auxiliary,
                     regex_pattern: None,
@@ -632,7 +632,6 @@ pub mod main {
                                 InputType::Startup => {
                                     startup_handler.recieve_input(self, input.code)?
                                 }
-                                _ => {} // No need to do anything for multiple choice handler
                             }
                         }
                         Event::Mouse(event) => {} // Probably remove

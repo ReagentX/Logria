@@ -70,20 +70,15 @@ impl ParserHandler {
 
     /// Parse message with regex logic
     fn regex_handle(&self, message: &str, index: usize, pattern: Regex) -> Option<String> {
-        if let Some(captures) = pattern.captures(message) {
-            Some(captures.get(index).unwrap().as_str().to_owned())
-        } else {
-            None
-        }
+        pattern
+            .captures(message)
+            .map(|captures| captures.get(index).unwrap().as_str().to_owned())
     }
 
     /// Parse message with split logic
     fn split_handle(&self, message: &str, index: usize, pattern: &str) -> Option<String> {
         let result: Vec<&str> = message.split_terminator(pattern).collect();
-        match result.get(index) {
-            Some(part) => Some(String::from(*part)),
-            None => None,
-        }
+        result.get(index).map(|part| String::from(*part))
     }
 }
 

@@ -7,7 +7,7 @@ use crate::{
     communication::{
         handlers::user_input::UserInputHandler,
         input::{
-            input_type::InputType::{Normal, Startup},
+            input_type::InputType::{Normal, Auxiliary},
             stream_type::StreamType,
         },
         reader::main::MainWindow,
@@ -21,9 +21,9 @@ pub struct CommandHandler {
 
 impl CommandHandler {
     fn return_to_prev_state(&mut self, window: &mut MainWindow) -> Result<()> {
-        // If we are in startup mode, go back to that, otherwise go to normal mode
+        // If we are in auxiliary mode, go back to that, otherwise go to normal mode
         window.input_type = match window.config.stream_type {
-            StreamType::Startup => Startup,
+            StreamType::Auxiliary => Auxiliary,
             _ => Normal,
         };
         window.set_cli_cursor(None)?;
@@ -108,7 +108,7 @@ impl CommandHandler {
         // Remove saved sessions from the main screen
         else if command.starts_with('r') {
             match window.config.stream_type {
-                StreamType::Startup => match self.resolve_delete_command(command) {
+                StreamType::Auxiliary => match self.resolve_delete_command(command) {
                     Ok(items) => {
                         Session::del(&items);
                         window.render_startup_text()?;

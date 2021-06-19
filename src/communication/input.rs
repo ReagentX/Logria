@@ -311,7 +311,7 @@ pub mod input_type {
         Command,
         Regex,
         Parser,
-        Startup,
+        Auxiliary,
     }
 }
 
@@ -320,6 +320,6 @@ pub mod stream_type {
     pub enum StreamType {
         StdErr,
         StdOut,
-        Startup,
+        Auxiliary,
     }
 }

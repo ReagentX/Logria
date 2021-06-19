@@ -50,7 +50,7 @@ pub mod main {
         stderr_messages: Vec<String>,
         stdout_messages: Vec<String>,
         pub stream_type: StreamType,
-        pub startup_messages: Vec<String>, // Messages displayed when the app is launched with no streams
+        pub auxiliary_messages: Vec<String>, // Messages displayed by extensions
 
         // Regex settings
         pub regex_pattern: Option<regex::bytes::Regex>, // Current regex pattern
@@ -116,7 +116,7 @@ pub mod main {
         pub fn new(history: bool, smart_poll_rate: bool) -> MainWindow {
             // Build streams here
             MainWindow {
-                input_type: InputType::Startup,
+                input_type: InputType::Auxiliary,
                 output: stdout(),
                 length_finder: LengthFinder::new(),
                 mc_handler: MultipleChoiceHandler::new(),
@@ -132,8 +132,8 @@ pub mod main {
                     exit_val: 0,
                     stderr_messages: vec![],  // TODO: fix
                     stdout_messages: vec![],  // TODO: fix
-                    startup_messages: vec![], // TODO: fix
-                    stream_type: StreamType::Startup,
+                    auxiliary_messages: vec![], // TODO: fix
+                    stream_type: StreamType::Auxiliary,
                     regex_pattern: None,
                     matched_rows: vec![],
                     last_index_regexed: 0,
@@ -162,7 +162,7 @@ pub mod main {
         /// Get the number of messages in the current message buffer
         pub fn number_of_messages(&self) -> usize {
             match self.input_type {
-                InputType::Normal | InputType::Command | InputType::Startup => {
+                InputType::Normal | InputType::Command | InputType::Auxiliary => {
                     self.messages().len()
                 }
                 InputType::Regex => {
@@ -203,7 +203,7 @@ pub mod main {
                 let mut current_index: usize = 0;
                 loop {
                     let message: &str = match self.input_type {
-                        InputType::Normal | InputType::Command | InputType::Startup => {
+                        InputType::Normal | InputType::Command | InputType::Auxiliary => {
                             &self.messages()[current_index]
                         }
                         InputType::Regex => {
@@ -276,7 +276,7 @@ pub mod main {
         /// Get the message at a specific index in the current buffer
         fn get_message_at_index(&self, index: usize) -> String {
             match self.input_type {
-                InputType::Normal | InputType::Command | InputType::Startup => {
+                InputType::Normal | InputType::Command | InputType::Auxiliary => {
                     self.messages()[index].to_string()
                 }
                 InputType::Regex => {
@@ -438,7 +438,7 @@ pub mod main {
             match self.config.stream_type {
                 StreamType::StdErr => &self.config.stderr_messages,
                 StreamType::StdOut => &self.config.stdout_messages,
-                StreamType::Startup => &self.config.startup_messages,
+                StreamType::Auxiliary => &self.config.auxiliary_messages,
             }
         }
 
@@ -491,7 +491,7 @@ pub mod main {
         pub fn set_cli_cursor(&mut self, content: Option<&'static str>) -> Result<()> {
             self.go_to_cli()?;
             let first_char = match self.input_type {
-                InputType::Normal | InputType::Startup => content.unwrap_or(cli_chars::NORMAL_CHAR),
+                InputType::Normal | InputType::Auxiliary => content.unwrap_or(cli_chars::NORMAL_CHAR),
                 InputType::Command => content.unwrap_or(cli_chars::COMMAND_CHAR),
                 InputType::Regex => content.unwrap_or(cli_chars::REGEX_CHAR),
                 InputType::Parser => content.unwrap_or(cli_chars::PARSER_CHAR),
@@ -506,7 +506,7 @@ pub mod main {
 
         /// Generate startup text from session list
         pub fn render_startup_text(&mut self) -> Result<()> {
-            self.config.startup_messages = StartupHandler::get_startup_text();
+            self.config.auxiliary_messages = StartupHandler::get_startup_text();
             self.redraw()?;
             Ok(())
         }
@@ -629,7 +629,7 @@ pub mod main {
                                 InputType::Parser => {
                                     parser_handler.recieve_input(self, input.code)?
                                 }
-                                InputType::Startup => {
+                                InputType::Auxiliary => {
                                     startup_handler.recieve_input(self, input.code)?
                                 }
                                 _ => {} // No need to do anything for multiple choice handler

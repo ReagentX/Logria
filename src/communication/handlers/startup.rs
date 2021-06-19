@@ -183,7 +183,7 @@ mod startup_tests {
     fn doesnt_crash_bad_index() {
         // Setup dummy window
         let mut window = MainWindow::_new_dummy();
-        window.config.stream_type = StreamType::Startup;
+        window.config.stream_type = StreamType::Auxiliary;
 
         // Setup handler
         let mut handler = StartupHandler::new();
@@ -191,15 +191,15 @@ mod startup_tests {
 
         // Tests
         assert!(handler.process_command(&mut window, "999").is_ok());
-        assert!(matches!(window.input_type, InputType::Startup));
-        assert!(matches!(window.config.stream_type, StreamType::Startup));
+        assert!(matches!(window.input_type, InputType::Auxiliary));
+        assert!(matches!(window.config.stream_type, StreamType::Auxiliary));
     }
 
     #[test]
     fn doesnt_crash_alpha() {
         // Setup dummy window
         let mut window = MainWindow::_new_dummy();
-        window.config.stream_type = StreamType::Startup;
+        window.config.stream_type = StreamType::Auxiliary;
 
         // Setup handler
         let mut handler = StartupHandler::new();

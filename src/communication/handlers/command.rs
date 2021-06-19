@@ -5,9 +5,9 @@ use crossterm::{event::KeyCode, Result};
 use super::handler::HanderMethods;
 use crate::{
     communication::{
-        handlers::user_input::UserInputHandler,
+        handlers::{startup::StartupHandler, user_input::UserInputHandler},
         input::{
-            input_type::InputType::{Normal, Auxiliary},
+            input_type::InputType::{Auxiliary, Normal},
             stream_type::StreamType,
         },
         reader::main::MainWindow,
@@ -111,7 +111,8 @@ impl CommandHandler {
                 StreamType::Auxiliary => match self.resolve_delete_command(command) {
                     Ok(items) => {
                         Session::del(&items);
-                        window.render_startup_text()?;
+                        // TODO: Support parsers / arbitrary method calls
+                        window.render_auxiliary_text(StartupHandler::get_startup_text())?;
                         window.write_to_command_line(&format!("Deleting items: {:?}", items))?;
                     }
                     Err(_) => {

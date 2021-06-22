@@ -70,19 +70,18 @@ impl Parser {
 
         match write(format!("{}/{}", patterns(), self.name), parser_json) {
             Ok(_) => Ok(()),
-            Err(why) => Err(LogriaError::CannotWrite(path, Error::to_string(&why))),
+            Err(why) => Err(LogriaError::CannotWrite(path, <dyn Error>::to_string(&why))),
         }
     }
 
     /// Create Parser struct from a parser file
     pub fn load(file_name: &str) -> Result<Parser, LogriaError> {
-        let path = format!("{}/{}", patterns(), file_name);
-        let parser_json = match read_to_string(path) {
+        let parser_json = match read_to_string(file_name) {
             Ok(json) => json,
             Err(why) => {
                 return Err(LogriaError::CannotRead(
                     file_name.to_owned(),
-                    Error::to_string(&why),
+                    <dyn Error>::to_string(&why),
                 ))
             }
         };
@@ -187,7 +186,8 @@ mod tests {
         );
         parser.save().unwrap();
 
-        let read_parser = Parser::load("Hyphen Separated Copy").unwrap();
+        let file_name = format!("{}/{}", patterns(), "Hyphen Separated Copy");
+        let read_parser = Parser::load(&file_name).unwrap();
         let expected_parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
@@ -225,7 +225,8 @@ mod tests {
         );
         parser.save().unwrap();
 
-        let read_parser = Parser::load("Common Log Format Test 2");
+        let file_name = format!("{}/{}", patterns(), "Common Log Format Test 2");
+        let read_parser = Parser::load(&file_name);
         let regex = read_parser.unwrap().get_regex();
         assert!(regex.is_ok());
     }
@@ -247,7 +248,8 @@ mod tests {
         );
         parser.save().unwrap();
 
-        let parser = Parser::load("Hyphen Separated Test 1");
+        let file_name = format!("{}/{}", patterns(), "Hyphen Separated Test 1");
+        let parser = Parser::load(&file_name);
         let regex = parser.unwrap().get_regex();
         assert!(regex.is_err());
     }
@@ -272,7 +274,8 @@ mod tests {
         );
         parser.save().unwrap();
 
-        let parser = Parser::load("Common Log Format Test 1");
+        let file_name = format!("{}/{}", patterns(), "Common Log Format Test 1");
+        let parser = Parser::load(&file_name);
         assert_eq!(
             parser.unwrap().get_example().unwrap(),
             vec![
@@ -304,7 +307,8 @@ mod tests {
         );
         parser.save().unwrap();
 
-        let parser = Parser::load("Hyphen Separated Test 2");
+        let file_name = format!("{}/{}", patterns(), "Hyphen Separated Test 2");
+        let parser = Parser::load(&file_name);
         assert_eq!(
             parser.unwrap().get_example().unwrap(),
             vec![

@@ -316,7 +316,7 @@ pub mod input_type {
 }
 
 pub mod stream_type {
-    #[derive(Debug)]
+    #[derive(Debug, Clone, Copy)]
     pub enum StreamType {
         StdErr,
         StdOut,

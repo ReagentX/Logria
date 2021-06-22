@@ -50,7 +50,8 @@ pub mod main {
         stderr_messages: Vec<String>,
         stdout_messages: Vec<String>,
         pub stream_type: StreamType,
-        pub auxiliary_messages: Vec<String>, // Messages displayed by extensions
+        pub previous_stream_type: StreamType, // The previous stream the user was looking at
+        pub auxiliary_messages: Vec<String>,  // Messages displayed by extensions
 
         // Regex settings
         pub regex_pattern: Option<regex::bytes::Regex>, // Current regex pattern
@@ -60,11 +61,10 @@ pub mod main {
         pub highlight_match: bool, // Determines whether we highlight the matched text to the user
 
         // Parser settings
-        pub parser: Option<Parser>,    // Reference to the current parser
-        pub parser_index: usize,       // Index for the parser to look at
-        pub parser_state: ParserState, // The state of the current parser
-        pub parsed_messages: Vec<String>, // List of parsed messages
-        pub analytics_enabled: bool,   // Whether we are calcualting stats or not
+        pub parser: Option<Parser>,      // Reference to the current parser
+        pub parser_index: usize,         // Index for the parser to look at
+        pub parser_state: ParserState,   // The state of the current parser
+        pub analytics_enabled: bool,     // Whether we are calcualting stats or not
         pub last_index_processed: usize, // The last index the parsing function saw
 
         // App state
@@ -134,6 +134,7 @@ pub mod main {
                     stdout_messages: vec![],    // TODO: fix
                     auxiliary_messages: vec![], // TODO: fix
                     stream_type: StreamType::Auxiliary,
+                    previous_stream_type: StreamType::Auxiliary,
                     regex_pattern: None,
                     matched_rows: vec![],
                     last_index_regexed: 0,
@@ -144,7 +145,6 @@ pub mod main {
                     parser: None,
                     parser_index: 0,
                     parser_state: ParserState::NeedsParser,
-                    parsed_messages: vec![],
                     analytics_enabled: false,
                     last_index_processed: 0,
                     insert_mode: false,
@@ -174,7 +174,7 @@ pub mod main {
                 }
                 InputType::Parser => {
                     if self.config.parser.is_some() {
-                        self.config.parsed_messages.len()
+                        self.config.auxiliary_messages.len()
                     } else {
                         self.messages().len()
                     }
@@ -214,9 +214,7 @@ pub mod main {
                                 &self.messages()[self.config.matched_rows[current_index]]
                             }
                         }
-                        InputType::Parser => {
-                            &self.messages()[current_index] // Fix
-                        }
+                        InputType::Parser => &self.config.auxiliary_messages[current_index],
                     };
 
                     // Determine if we can fit the next message
@@ -433,6 +431,15 @@ pub mod main {
             Ok(())
         }
 
+        /// Get the previous message pointer
+        pub fn previous_messages(&self) -> &Vec<String> {
+            match self.config.previous_stream_type {
+                StreamType::StdErr => &self.config.stderr_messages,
+                StreamType::StdOut => &self.config.stdout_messages,
+                StreamType::Auxiliary => &self.config.auxiliary_messages,
+            }
+        }
+
         /// Get the current message pointer
         pub fn messages(&self) -> &Vec<String> {
             match self.config.stream_type {
@@ -528,6 +535,7 @@ pub mod main {
                 self.config.streams = build_streams_from_input(&c, true);
 
                 // Set to display stderr by default
+                self.config.previous_stream_type = StreamType::StdOut;
                 self.config.stream_type = StreamType::StdErr;
 
                 // Send input to normal handler
@@ -602,9 +610,9 @@ pub mod main {
             // Handle directing input to the correct handlers during operation
             loop {
                 // Update streams here
-                let t_0 = Instant::now();
+                // let t_0 = Instant::now();
                 let num_new_messages = self.recieve_streams();
-                let t_1 = t_0.elapsed();
+                // let t_1 = t_0.elapsed();
                 // self.write_to_command_line(&format!("{} in {:?}", num_new_messages, t_1))?;
 
                 if poll(time::Duration::from_millis(self.config.poll_rate))? {
@@ -636,6 +644,7 @@ pub mod main {
                         }
                         Event::Mouse(event) => {} // Probably remove
                         Event::Resize(width, height) => {} // Call self.dimensions() and some other stuff
+                        _ => {}
                     }
                 }
 

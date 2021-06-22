@@ -4,9 +4,10 @@ use regex::Regex;
 use crate::{
     communication::{
         handlers::{
-            handler::HanderMethods, processor::ProcessorMethods, user_input::UserInputHandler,
+            handler::HanderMethods, multiple_choice::MultipleChoiceHandler,
+            processor::ProcessorMethods,
         },
-        input::input_type::InputType::Normal,
+        input::{input_type::InputType::Normal, stream_type::StreamType},
         reader::main::MainWindow,
     },
     extensions::parser::{Parser, PatternType},
@@ -22,34 +23,40 @@ pub enum ParserState {
 }
 
 pub struct ParserHandler {
-    input_handler: UserInputHandler,
+    mc_handler: MultipleChoiceHandler,
+    redraw: bool, // True if we should redraw the choices in the window
 }
 
 impl ParserHandler {
     /// Setup the parser instance on the main window
-    fn select_parser(&self, window: &mut MainWindow) -> Result<()> {
+    fn select_parser(&mut self, window: &mut MainWindow) -> Result<()> {
         let parsers = Parser::list();
-        window.mc_handler.set_choices(&parsers);
-        window.config.auxiliary_messages = window.mc_handler.get_body_text(None);
-        window.config.parser_state = ParserState::NeedsIndex;
+        self.mc_handler.set_choices(&parsers);
+        window.config.auxiliary_messages.clear();
+        window
+            .config
+            .auxiliary_messages
+            .extend(self.mc_handler.get_body_text(None));
         Ok(())
     }
 
     /// Set which index of the parsed message to render
-    fn select_index(&self, window: &mut MainWindow) -> Result<()> {
+    fn select_index(&mut self, window: &mut MainWindow) -> Result<()> {
         if let Some(parser) = &window.config.parser {
             match parser.get_example() {
                 Ok(examples) => {
-                    window.mc_handler.set_choices(&examples);
+                    self.mc_handler.set_choices(&examples);
                 }
                 Err(why) => {
                     window.write_to_command_line(&why.to_string())?;
                 }
             }
         }
-        window.config.auxiliary_messages = window.mc_handler.get_body_text(None);
-        window.config.parser_state = ParserState::Full;
-        window.config.parser_index = 0;
+        window.config.auxiliary_messages.clear();
+        window
+            .config
+            .auxiliary_messages
+            .extend(self.mc_handler.get_body_text(None));
         Ok(())
     }
 
@@ -81,6 +88,14 @@ impl ParserHandler {
         let result: Vec<&str> = message.split_terminator(pattern).collect();
         result.get(index).map(|part| String::from(*part))
     }
+
+    /// Reset parser
+    fn reset(&self, window: &mut MainWindow) {
+        window.config.parser_state = ParserState::NeedsParser;
+        window.config.auxiliary_messages.clear();
+        window.config.parser = None;
+        window.config.parser_index = 0;
+    }
 }
 
 impl ProcessorMethods for ParserHandler {
@@ -89,6 +104,7 @@ impl ProcessorMethods for ParserHandler {
         self.clear_matches(window)?;
         window.input_type = Normal;
         window.set_cli_cursor(None)?;
+        window.config.stream_type = window.config.previous_stream_type;
         window.redraw()?;
         Ok(())
     }
@@ -97,7 +113,7 @@ impl ProcessorMethods for ParserHandler {
     fn clear_matches(&mut self, window: &mut MainWindow) -> Result<()> {
         // TODO: Determine if regex while parsing still works after parser deactivation
         window.config.parser = None;
-        window.config.parsed_messages.clear();
+        window.config.auxiliary_messages.clear();
         window.config.last_index_processed = 0;
         window.reset_command_line()?;
         Ok(())
@@ -105,42 +121,39 @@ impl ProcessorMethods for ParserHandler {
 
     /// Parse messages, loading the buffer of parsed messages in the main window
     fn process_matches(&self, window: &mut MainWindow) -> Result<()> {
-        // TODO: Possibly async? Possibly loading indicator for large jobs?
-        match &window.config.parser {
-            Some(parser) => {
-                // Start from where we left off to the most recent message
-                let buf_range = (window.config.last_index_processed, window.messages().len());
+        // Only process if the parser is set up properly
+        if let ParserState::Full = window.config.parser_state {
+            // TODO: Possibly async? Possibly loading indicator for large jobs?
+            match &window.config.parser {
+                Some(parser) => {
+                    // Start from where we left off to the most recent message
+                    let buf_range = (
+                        window.config.last_index_processed,
+                        window.previous_messages().len(),
+                    );
 
-                // Iterate "forever", skipping to the start and taking up till end-start
-                // TODO: Something to indicate progress
-                for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
-                    if let Ok(Some(message)) = self.parse(
-                        parser,
-                        window.config.parser_index,
-                        &window.messages()[index],
-                    ) {
-                        window.config.parsed_messages.push(message);
-                    }
+                    // Iterate "forever", skipping to the start and taking up till end-start
+                    // TODO: Something to indicate progress
+                    // TODO: Overflow subtraction
+                    for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
+                        if let Ok(Some(message)) = self.parse(
+                            parser,
+                            window.config.parser_index,
+                            &window.previous_messages()[index],
+                        ) {
+                            // panic!("{:?}", &window.messages()[index]);
+                            window.config.auxiliary_messages.push(message);
+                        }
 
-                    // Update the last spot so we know where to start next time
-                    window.config.last_index_processed = index + 1;
-                }
-            }
-            None => match window.config.parser_state {
-                // TODO: Error handling
-                ParserState::NeedsParser => {
-                    if let Err(why) = self.select_parser(window) {
-                        window.write_to_command_line(&format!("{:?}", why))?;
+                        // Update the last spot so we know where to start next time
+                        window.config.last_index_processed = index + 1;
                     }
                 }
-                ParserState::NeedsIndex => {
-                    if let Err(why) = self.select_index(window) {
-                        window.write_to_command_line(&format!("{:?}", why))?;
-                    }
+                None => {
+                    panic!("Parser state is Full but there is no Parser!");
                 }
-                ParserState::Full => {}
-            },
-        };
+            };
+        }
         Ok(())
     }
 }
@@ -148,39 +161,82 @@ impl ProcessorMethods for ParserHandler {
 impl HanderMethods for ParserHandler {
     fn new() -> ParserHandler {
         ParserHandler {
-            input_handler: UserInputHandler::new(),
+            mc_handler: MultipleChoiceHandler::new(),
+            redraw: true,
         }
     }
 
     fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
-        window.write_to_command_line("got data in ParserHandler")?;
-        match key {
-            // Scroll
-            KeyCode::Down => scroll::down(window),
-            KeyCode::Up => scroll::up(window),
-            KeyCode::Left => scroll::top(window),
-            KeyCode::Right => scroll::bottom(window),
-            KeyCode::Home => scroll::top(window),
-            KeyCode::End => scroll::bottom(window),
-            KeyCode::PageUp => scroll::pg_down(window),
-            KeyCode::PageDown => scroll::pg_up(window),
-
-            // Build new parser
-            KeyCode::Char('p') => {
-                window.config.parser_state = ParserState::NeedsParser;
-                window.config.parsed_messages.clear();
-                window.config.parser = None;
-                window.config.parser_index = 0;
+        // Handle special cases for setup
+        match window.config.parser_state {
+            ParserState::NeedsParser => match self.mc_handler.get_choice() {
+                Some(item) => match Parser::load(item) {
+                    Ok(parser) => {
+                        self.redraw = true;
+                        window.config.parser = Some(parser);
+                        window.config.parser_state = ParserState::NeedsIndex;
+                        // TODO: This wont render for some reason
+                        self.select_index(window)?;
+                        window.reset_output()?;
+                        window.redraw()?;
+                    }
+                    Err(why) => {
+                        window.write_to_command_line(&why.to_string())?;
+                    }
+                },
+                None => {
+                    if self.redraw {
+                        window.config.stream_type = StreamType::Auxiliary;
+                        self.redraw = false;
+                        self.select_parser(window)?;
+                        window.redraw()?;
+                    }
+                    self.mc_handler.recieve_input(window, key)?;
+                }
+            },
+            ParserState::NeedsIndex => {
+                match self.mc_handler.result {
+                    Some(item) => {
+                        self.redraw = true;
+                        // TODO: More graceful clearing of the mc handler value
+                        // get_choice() clears the item from the mc handler)
+                        self.mc_handler.get_choice();
+                        window.config.parser_index = item;
+                        window.config.parser_state = ParserState::Full;
+                        window.config.auxiliary_messages.clear();
+                        window.reset_output()?;
+                        window.redraw()?;
+                    }
+                    None => {
+                        self.mc_handler.recieve_input(window, key)?;
+                    }
+                }
             }
+            ParserState::Full => {
+                // Handle user input selection
+                match key {
+                    // Scroll
+                    KeyCode::Down => scroll::down(window),
+                    KeyCode::Up => scroll::up(window),
+                    KeyCode::Left => scroll::top(window),
+                    KeyCode::Right => scroll::bottom(window),
+                    KeyCode::Home => scroll::top(window),
+                    KeyCode::End => scroll::bottom(window),
+                    KeyCode::PageUp => scroll::pg_down(window),
+                    KeyCode::PageDown => scroll::pg_up(window),
 
-            KeyCode::Char('z') => {
-                self.return_to_normal(window)?;
+                    // Build new parser
+                    KeyCode::Char('p') => {
+                        self.reset(window);
+                    }
+
+                    // Return to normal
+                    KeyCode::Char('z') | KeyCode::Esc => self.return_to_normal(window)?,
+
+                    _ => {}
+                };
             }
-
-            // Return to normal
-            KeyCode::Esc => self.return_to_normal(window)?,
-            key => self.input_handler.recieve_input(window, key)?,
-        };
+        }
         Ok(())
     }
 }
@@ -193,8 +249,8 @@ mod regex_tests {
 
     use crate::{
         communication::{
-            handlers::{handler::HanderMethods, processor::ProcessorMethods},
-            input::input_type::InputType,
+            handlers::{handler::HanderMethods, parser::ParserState, processor::ProcessorMethods},
+            input::{input_type::InputType, stream_type::StreamType},
             reader::main::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
@@ -219,13 +275,15 @@ mod regex_tests {
         );
 
         logria.config.parser = Some(parser);
+        logria.config.parser_state = ParserState::Full;
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 0;
+        logria.config.previous_stream_type = StreamType::StdErr;
 
         handler.process_matches(&mut logria).unwrap();
 
         assert_eq!(
-            logria.config.parsed_messages[0..10],
+            logria.config.auxiliary_messages[0..10],
             vec!["1", "2", "3", "4", "5", "6", "7", "8", "9", "1"]
         );
     }
@@ -249,13 +307,15 @@ mod regex_tests {
 
         // Update window config
         logria.config.parser = Some(parser);
+        logria.config.parser_state = ParserState::Full;
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 1;
+        logria.config.previous_stream_type = StreamType::StdErr;
 
         handler.process_matches(&mut logria).unwrap();
 
         assert_eq!(
-            logria.config.parsed_messages[0..10],
+            logria.config.auxiliary_messages[0..10],
             vec!["1", "2", "3", "4", "5", "6", "7", "8", "9", "1"]
         );
     }
@@ -268,8 +328,8 @@ mod split_tests {
 
     use crate::{
         communication::{
-            handlers::{handler::HanderMethods, processor::ProcessorMethods},
-            input::input_type::InputType,
+            handlers::{handler::HanderMethods, parser::ParserState, processor::ProcessorMethods},
+            input::{input_type::InputType, stream_type::StreamType},
             reader::main::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
@@ -294,16 +354,18 @@ mod split_tests {
         );
 
         logria.config.parser = Some(parser);
+        logria.config.parser_state = ParserState::Full;
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 0;
+        logria.config.previous_stream_type = StreamType::StdErr;
 
         handler.process_matches(&mut logria).unwrap();
         assert_eq!(
-            logria.config.parsed_messages[0..10],
+            logria.config.auxiliary_messages[0..10],
             vec!["0", "", "2", "3", "4", "5", "6", "7", "8", "9"]
         );
         assert_eq!(
-            logria.config.parsed_messages[15..25],
+            logria.config.auxiliary_messages[15..25],
             vec!["", "", "", "", "", "20", "2", "22", "23", "24"]
         );
     }
@@ -327,14 +389,16 @@ mod split_tests {
 
         // Update window config
         logria.config.parser = Some(parser);
+        logria.config.parser_state = ParserState::Full;
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 1;
+        logria.config.previous_stream_type = StreamType::StdErr;
 
         handler.process_matches(&mut logria).unwrap();
         assert_eq!(
-            logria.config.parsed_messages[0..10],
+            logria.config.auxiliary_messages[0..10],
             vec!["0", "", "2", "3", "4", "5", "6", "7", "8", "9"]
         );
-        assert_eq!(logria.config.parsed_messages.len(), 10)
+        assert_eq!(logria.config.auxiliary_messages.len(), 10)
     }
 }

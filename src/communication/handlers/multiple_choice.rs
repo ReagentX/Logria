@@ -35,7 +35,7 @@ impl MultipleChoiceHandler {
     }
 
     /// Determine if the choice is valid
-    fn select_choice(&mut self, window: &mut MainWindow, choice: &str) -> Result<()> {
+    pub fn validate_choice(&mut self, window: &mut MainWindow, choice: &str) -> Result<()> {
         match choice.parse::<usize>() {
             Ok(res) => {
                 if self.choices_map.contains_key(&res) {
@@ -50,6 +50,17 @@ impl MultipleChoiceHandler {
             }
         }
         Ok(())
+    }
+
+    /// Extract the choice value from the hashmap
+    pub fn get_choice(&mut self) -> Option<&String> {
+        match self.result {
+            Some(index) => {
+                self.result = None;
+                self.choices_map.get(&index)
+            }
+            None => None,
+        }
     }
 }
 
@@ -80,10 +91,10 @@ impl HanderMethods for MultipleChoiceHandler {
                     Ok(pattern) => pattern,
                     Err(why) => panic!("Unable to gather text: {:?}", why),
                 };
-                self.select_choice(window, &choice)?;
+                self.validate_choice(window, &choice)?;
             }
 
-            //
+            // User text input
             key => self.input_handler.recieve_input(window, key)?,
         }
         Ok(())
@@ -95,7 +106,7 @@ mod kc_tests {
     use std::collections::HashMap;
 
     use super::MultipleChoiceHandler;
-    use crate::communication::handlers::handler::HanderMethods;
+    use crate::communication::{handlers::handler::HanderMethods, reader::main::MainWindow};
 
     #[test]
     fn can_create() {
@@ -140,5 +151,35 @@ mod kc_tests {
         let expected = vec!["x", "y", "z", "", "0: a", "1: b", "2: c"];
 
         assert_eq!(mc.get_body_text(Some(desc)), expected);
+    }
+
+    #[test]
+    fn can_validate_choice() {
+        // Setup Logria
+        let mut logria = MainWindow::_new_dummy();
+
+        // Setup handler
+        let mut mc = MultipleChoiceHandler::new();
+        mc.set_choices(&vec!["a".to_string(), "b".to_string(), "c".to_string()]);
+
+        // Generate expected result
+        mc.validate_choice(&mut logria, "1").unwrap();
+
+        assert_eq!(Some(1), mc.result);
+    }
+
+    #[test]
+    fn can_get_choice() {
+        // Setup Logria
+        let mut logria = MainWindow::_new_dummy();
+
+        // Setup handler
+        let mut mc = MultipleChoiceHandler::new();
+        mc.set_choices(&vec!["a".to_string(), "b".to_string(), "c".to_string()]);
+
+        // Generate expected result
+        mc.validate_choice(&mut logria, "1").unwrap();
+
+        assert_eq!("b", mc.get_choice().unwrap());
     }
 }

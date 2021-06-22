@@ -25,9 +25,13 @@ impl NormalHandler {
 
     fn set_parser_mode(&self, window: &mut MainWindow) -> Result<()> {
         window.input_type = InputType::Parser;
-        // Select parser here
         window.reset_command_line()?;
         window.set_cli_cursor(None)?;
+        window.config.previous_stream_type = window.config.stream_type;
+        window.config.stream_type = StreamType::Auxiliary;
+        // Call something to start parser setup
+        // TODO:
+        // Need to make a call into the parser handler somehow
         Ok(())
     }
 
@@ -42,6 +46,7 @@ impl NormalHandler {
     }
 
     fn swap_streams(&self, window: &mut MainWindow) -> Result<()> {
+        window.config.previous_stream_type = window.config.stream_type;
         window.config.stream_type = match window.config.stream_type {
             StreamType::StdOut => StreamType::StdErr,
             StreamType::StdErr => StreamType::StdOut,

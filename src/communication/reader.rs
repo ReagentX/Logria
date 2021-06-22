@@ -103,6 +103,7 @@ pub mod main {
             app.config.height = 10;
             app.config.width = 100;
             app.config.stream_type = StreamType::StdErr;
+            app.config.previous_stream_type = StreamType::StdOut;
 
             // Set fake previous render
             app.config.last_row = app.config.height - 3; // simulate the last row we can render to

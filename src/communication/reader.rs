@@ -516,7 +516,8 @@ pub mod main {
 
         /// Generate startup text from session list
         pub fn render_auxiliary_text(&mut self, text: Vec<String>) -> Result<()> {
-            self.config.auxiliary_messages = text;
+            self.config.auxiliary_messages.clear();
+            self.config.auxiliary_messages.extend(text);
             self.redraw()?;
             Ok(())
         }

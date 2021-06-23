@@ -32,11 +32,7 @@ impl ParserHandler {
     fn select_parser(&mut self, window: &mut MainWindow) -> Result<()> {
         let parsers = Parser::list();
         self.mc_handler.set_choices(&parsers);
-        window.config.auxiliary_messages.clear();
-        window
-            .config
-            .auxiliary_messages
-            .extend(self.mc_handler.get_body_text(None));
+        window.render_auxiliary_text(self.mc_handler.get_body_text(None))?;
         Ok(())
     }
 
@@ -52,11 +48,7 @@ impl ParserHandler {
                 }
             }
         }
-        window.config.auxiliary_messages.clear();
-        window
-            .config
-            .auxiliary_messages
-            .extend(self.mc_handler.get_body_text(None));
+        window.render_auxiliary_text(self.mc_handler.get_body_text(None))?;
         Ok(())
     }
 

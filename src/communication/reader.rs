@@ -84,6 +84,7 @@ pub mod main {
         previous_render: (usize, usize), // Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
         previous_messages: Option<&'static Vec<String>>, // Pointer to the previous non-parsed message list, which is continuously updated
         exit_val: i8,                                    // If exit_val is -1, the app dies
+        pub did_switch: bool, // True if we just swapped input types, False otherwise
     }
 
     pub struct MainWindow {
@@ -156,6 +157,7 @@ pub mod main {
                     manually_controlled_line: false,
                     current_end: 0,
                     streams: vec![],
+                    did_switch: false,
                 },
             }
         }
@@ -524,7 +526,7 @@ pub mod main {
             let (w, h) = size()?;
             self.config.height = h;
             self.config.width = w;
-            self.config.last_row = self.config.height - 3;
+            self.config.last_row = self.config.height.checked_sub(3).unwrap_or(h);
             Ok(())
         }
 
@@ -586,6 +588,7 @@ pub mod main {
                 modifiers: KeyModifiers::CONTROL,
                 code: KeyCode::Char('c'),
             };
+            let refresh_key = KeyCode::F(5);
 
             // Instantiate handlers
             let mut normal_handler = NormalHandler::new();
@@ -645,22 +648,30 @@ pub mod main {
                         }
                         Event::Mouse(event) => {} // Probably remove
                         Event::Resize(width, height) => {} // Call self.dimensions() and some other stuff
-                        _ => {}
                     }
                 }
 
                 // possibly sleep, cleanup, etc
-                if num_new_messages > 0 {
+                // Process matches if we just switched or if there are new messages
+                if num_new_messages > 0 || self.config.did_switch {
                     // Process extension methods
                     match self.input_type {
                         InputType::Regex => {
                             if self.config.regex_pattern.is_some() {
                                 regex_handler.process_matches(self)?;
+                            } else if self.config.did_switch {
+                                self.config.did_switch = false;
                             }
                         }
                         InputType::Parser => {
                             if self.config.parser.is_some() {
                                 parser_handler.process_matches(self)?;
+                            }
+                            if self.config.did_switch {
+                                // 2 ticks, one to process the current input and another to refresh
+                                parser_handler.recieve_input(self, refresh_key)?;
+                                parser_handler.recieve_input(self, refresh_key)?;
+                                self.config.did_switch = false;
                             }
                         }
                         _ => {}

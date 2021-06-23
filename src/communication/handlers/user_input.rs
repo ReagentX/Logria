@@ -18,7 +18,7 @@ pub struct UserInputHandler {
 impl UserInputHandler {
     /// Get the useable area of the textbox container
     fn update_dimensions(&mut self) {
-        let (w, h) = size().unwrap();
+        let (w, h) = size().unwrap_or((0, 0));
         self.y = h;
         self.x = w;
     }

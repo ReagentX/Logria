@@ -275,13 +275,13 @@ mod tests {
         assert_eq!(
             parser.unwrap().get_example().unwrap(),
             vec![
-                String::from("0: 127.0.0.1"),
-                String::from("1: user-identifier"),
-                String::from("2: frank"),
-                String::from("3: 10/Oct/2000:13:55:36 -0700"),
-                String::from("4: GET /apache_pb.gif HTTP/1.0"),
-                String::from("5: 200"),
-                String::from("6: 2326")
+                String::from("127.0.0.1"),
+                String::from("user-identifier"),
+                String::from("frank"),
+                String::from("10/Oct/2000:13:55:36 -0700"),
+                String::from("GET /apache_pb.gif HTTP/1.0"),
+                String::from("200"),
+                String::from("2326")
             ]
         );
     }
@@ -308,10 +308,10 @@ mod tests {
         assert_eq!(
             parser.unwrap().get_example().unwrap(),
             vec![
-                String::from("0: 2005-03-19 15:10:26,773"),
-                String::from("1: simple_example"),
-                String::from("2: CRITICAL"),
-                String::from("3: critical message")
+                String::from("2005-03-19 15:10:26,773"),
+                String::from("simple_example"),
+                String::from("CRITICAL"),
+                String::from("critical message")
             ]
         );
     }

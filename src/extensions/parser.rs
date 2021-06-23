@@ -119,10 +119,7 @@ impl Parser {
                         captures
                             .iter()
                             .skip(1)
-                            .enumerate()
-                            .for_each(|(index, value)| {
-                                example.push(format!("{}: {}", index, value.unwrap().as_str()))
-                            });
+                            .for_each(|value| example.push(format!("{}", value.unwrap().as_str())));
                     } else {
                         {
                             return Err(LogriaError::InvalidExampleRegex(self.pattern.to_owned()));
@@ -138,8 +135,7 @@ impl Parser {
                     .split(&self.pattern)
                     .collect::<Vec<&str>>()
                     .iter()
-                    .enumerate()
-                    .for_each(|(index, value)| example.push(format!("{}: {}", index, value)));
+                    .for_each(|value| example.push(format!("{}", value)));
             }
         };
 

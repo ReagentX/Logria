@@ -102,6 +102,7 @@ impl ProcessorMethods for ParserHandler {
     /// Return the app to a normal input state
     fn return_to_normal(&mut self, window: &mut MainWindow) -> Result<()> {
         self.clear_matches(window)?;
+        self.redraw = true;
         window.input_type = Normal;
         window.set_cli_cursor(None)?;
         window.config.stream_type = window.config.previous_stream_type;
@@ -141,7 +142,6 @@ impl ProcessorMethods for ParserHandler {
                             window.config.parser_index,
                             &window.previous_messages()[index],
                         ) {
-                            // panic!("{:?}", &window.messages()[index]);
                             window.config.auxiliary_messages.push(message);
                         }
 
@@ -172,11 +172,17 @@ impl HanderMethods for ParserHandler {
             ParserState::NeedsParser => match self.mc_handler.get_choice() {
                 Some(item) => match Parser::load(item) {
                     Ok(parser) => {
+                        // Tell the parser to redraw on the next tick
                         self.redraw = true;
+
+                        // Set the new parser and parser state
                         window.config.parser = Some(parser);
                         window.config.parser_state = ParserState::NeedsIndex;
-                        // TODO: This wont render for some reason
+
+                        // Update the auxilery messages for the second setup step
                         self.select_index(window)?;
+
+                        // Aggressively redraw the screen
                         window.reset_output()?;
                         window.redraw()?;
                     }
@@ -197,13 +203,20 @@ impl HanderMethods for ParserHandler {
             ParserState::NeedsIndex => {
                 match self.mc_handler.result {
                     Some(item) => {
+                        // Tell the parser to redraw on the next tick
                         self.redraw = true;
                         // TODO: More graceful clearing of the mc handler value
                         // get_choice() clears the item from the mc handler)
                         self.mc_handler.get_choice();
+
+                        // Set the new parser index and parser state
                         window.config.parser_index = item;
                         window.config.parser_state = ParserState::Full;
+
+                        // Clear auxilery messages for next use
                         window.config.auxiliary_messages.clear();
+
+                        // Aggressively redraw the screen
                         window.reset_output()?;
                         window.redraw()?;
                     }

@@ -92,6 +92,8 @@ impl HanderMethods for MultipleChoiceHandler {
                     Err(why) => panic!("Unable to gather text: {:?}", why),
                 };
                 self.validate_choice(window, &choice)?;
+                // Send 2 new refresh ticks from the main app loop when this method returns
+                window.config.did_switch = true;
             }
 
             // User text input

@@ -29,9 +29,8 @@ impl NormalHandler {
         window.set_cli_cursor(None)?;
         window.config.previous_stream_type = window.config.stream_type;
         window.config.stream_type = StreamType::Auxiliary;
-        // Call something to start parser setup
-        // TODO:
-        // Need to make a call into the parser handler somehow
+        // Send 2 new refresh ticks from the main app loop when this method returns
+        window.config.did_switch = true;
         Ok(())
     }
 
@@ -42,6 +41,8 @@ impl NormalHandler {
         window.reset_command_line()?;
         window.set_cli_cursor(None)?;
         queue!(window.output, cursor::Show)?;
+        // Send 2 new refresh ticks from the main app loop when this method returns
+        window.config.did_switch = true;
         Ok(())
     }
 

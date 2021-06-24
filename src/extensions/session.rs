@@ -86,6 +86,7 @@ impl Session {
 
     /// Get a list of all available session configurations
     pub fn list() -> Vec<String> {
+        Session::verify_path();
         // Files to exclude from the session list
         let mut excluded = HashSet::new();
         for &item in &SESSION_FILE_EXCLUDES {
@@ -110,7 +111,6 @@ mod tests {
 
     #[test]
     fn test_list() {
-        Session::verify_path();
         let list = Session::list();
         assert!(list
             .iter()

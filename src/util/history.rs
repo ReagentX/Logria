@@ -128,7 +128,7 @@ impl Tape {
                 self.history_tape.len().checked_sub(1).unwrap_or_default(),
                 self.current_index
                     .checked_add(num_to_scroll)
-                    .unwrap_or(self.history_tape.len().checked_sub(1).unwrap_or_default()),
+                    .unwrap_or_else(|| self.history_tape.len().checked_sub(1).unwrap_or_default()),
             );
         }
     }
@@ -216,7 +216,7 @@ mod tests {
         let mut tape = Tape::new();
 
         // Create some dummy data
-        (0..5)
+        (0..25)
             .into_iter()
             .for_each(|_| tape.history_tape.push("".to_owned()));
         tape.current_index = tape.history_tape.len().checked_sub(1).unwrap_or_default();

@@ -235,7 +235,7 @@ mod tests {
         // Set regex pattern
         let pattern = "0";
         handler.current_pattern = Some(Regex::new(pattern).unwrap());
-        handler.process_matches(&mut logria);
+        handler.process_matches(&mut logria).unwrap();
         assert_eq!(100, logria.config.last_index_regexed);
     }
 
@@ -247,7 +247,7 @@ mod tests {
 
         // Set state to regex mode
         logria.input_type = InputType::Regex;
-        handler.process_matches(&mut logria);
+        handler.process_matches(&mut logria).unwrap();
     }
 
     #[test]

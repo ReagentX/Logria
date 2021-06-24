@@ -32,11 +32,11 @@ impl Session {
     }
 
     /// Create a Session struct
-    pub fn new(commands: &Vec<String>, stream_type: SessionType) -> Session {
+    pub fn new(commands: &Vec<String>, session_type: SessionType) -> Session {
         Session::verify_path();
         Session {
             commands: commands.to_owned(),
-            stream_type,
+            stream_type: session_type,
         }
     }
 

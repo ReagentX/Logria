@@ -146,7 +146,7 @@ mod startup_tests {
             reader::main::MainWindow,
         },
         constants::cli::messages::START_MESSAGE,
-        extensions::session::Session,
+        extensions::session::{Session, SessionType::Command},
     };
 
     use super::StartupHandler;
@@ -166,6 +166,10 @@ mod startup_tests {
 
     #[test]
     fn can_load_session() {
+        // Create a new dummy session
+        let session = Session::new(&vec![String::from("ls -la")], Command);
+        session.save("ls -la");
+
         // Setup dummy window
         let mut window = MainWindow::_new_dummy();
 
@@ -206,7 +210,9 @@ mod startup_tests {
         handler.initialize();
 
         // Tests
-        assert!(handler.process_command(&mut window, "zzzfake_file_name").is_ok());
+        assert!(handler
+            .process_command(&mut window, "zzzfake_file_name")
+            .is_ok());
         assert!(matches!(window.input_type, InputType::Normal));
         assert!(matches!(window.config.stream_type, StreamType::StdErr));
         Session::del(&vec![Session::list().len() - 1]);

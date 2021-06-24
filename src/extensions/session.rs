@@ -110,6 +110,7 @@ mod tests {
 
     #[test]
     fn test_list() {
+        Session::verify_path();
         let list = Session::list();
         assert!(list
             .iter()

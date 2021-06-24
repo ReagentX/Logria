@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     error::Error,
-    fs::{create_dir_all, read_dir, read_to_string, write},
+    fs::{create_dir_all, read_dir, read_to_string, remove_file, write},
     path::Path,
     result::Result,
 };
@@ -89,8 +89,29 @@ impl Parser {
         Ok(session)
     }
 
+    /// Delete the path for a fully qualified session filename
+    pub fn del(items: &Vec<usize>) {
+        // Iterate through each `i` in `items` and remove the item at list index `i`
+        let files = Parser::list();
+        for i in items {
+            if i >= &files.len() {
+                break;
+            }
+            let file_name = &files[*i];
+            match remove_file(file_name) {
+                Ok(_) => {}
+                Err(why) => panic!(
+                    "Couldn't remove {:?}: {}",
+                    file_name,
+                    Error::to_string(&why)
+                ),
+            }
+        }
+    }
+
     /// Get a list of all available parser configurations
     pub fn list() -> Vec<String> {
+        Parser::verify_path();
         let mut parsers: Vec<String> = read_dir(patterns())
             .unwrap()
             .map(|parser| String::from(parser.unwrap().path().to_str().unwrap()))
@@ -159,10 +180,26 @@ mod tests {
 
     #[test]
     fn test_list() {
+        // Create a parser for use by this test
+        let mut map = HashMap::new();
+        map.insert(String::from("Date"), String::from("date"));
+        map.insert(String::from("Caller"), String::from("count"));
+        map.insert(String::from("Level"), String::from("count"));
+        map.insert(String::from("Message"), String::from("sum"));
+        let parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from("Hyphen Separated Test 3"),
+            String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            map,
+            None,
+        );
+        parser.save().unwrap();
+
         let list = Parser::list();
         assert!(list
             .iter()
-            .any(|i| i == &format!("{}/{}", patterns(), "Hyphen Separated")))
+            .any(|i| i == &format!("{}/{}", patterns(), "Hyphen Separated Test 3")))
     }
 
     #[test]
@@ -175,19 +212,19 @@ mod tests {
         let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
-            String::from("Hyphen Separated Copy"),
+            String::from("Hyphen Separated Test 2"),
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
             map.to_owned(),
             None,
         );
         parser.save().unwrap();
 
-        let file_name = format!("{}/{}", patterns(), "Hyphen Separated Copy");
+        let file_name = format!("{}/{}", patterns(), "Hyphen Separated Test 2");
         let read_parser = Parser::load(&file_name).unwrap();
         let expected_parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
-            String::from("Hyphen Separated Copy"),
+            String::from("Hyphen Separated Test 2"),
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
             map,
             None,

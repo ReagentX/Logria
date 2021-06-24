@@ -24,7 +24,8 @@ pub enum ParserState {
 
 pub struct ParserHandler {
     mc_handler: MultipleChoiceHandler,
-    redraw: bool, // True if we should redraw the choices in the window
+    redraw: bool,   // True if we should redraw the choices in the window
+    status: String, // Stores the current parser and index for the user
 }
 
 impl ParserHandler {
@@ -108,6 +109,7 @@ impl ProcessorMethods for ParserHandler {
         window.config.parser = None;
         window.config.auxiliary_messages.clear();
         window.config.last_index_processed = 0;
+        self.status.clear();
         window.reset_command_line()?;
         Ok(())
     }
@@ -155,6 +157,7 @@ impl HanderMethods for ParserHandler {
         ParserHandler {
             mc_handler: MultipleChoiceHandler::new(),
             redraw: true,
+            status: String::new(),
         }
     }
 
@@ -167,16 +170,16 @@ impl HanderMethods for ParserHandler {
                         // Tell the parser to redraw on the next tick
                         self.redraw = true;
 
+                        // Update the status string
+                        self.status
+                            .push_str(&format!("Parsing with {}", parser.name));
+
                         // Set the new parser and parser state
                         window.config.parser = Some(parser);
                         window.config.parser_state = ParserState::NeedsIndex;
 
                         // Update the auxilery messages for the second setup step
                         self.select_index(window)?;
-
-                        // Aggressively redraw the screen
-                        window.reset_output()?;
-                        window.redraw()?;
                     }
                     Err(why) => {
                         window.write_to_command_line(&why.to_string())?;
@@ -208,9 +211,14 @@ impl HanderMethods for ParserHandler {
                         // Clear auxilery messages for next use
                         window.config.auxiliary_messages.clear();
 
-                        // Aggressively redraw the screen
-                        window.reset_output()?;
-                        window.redraw()?;
+                        // Process messages
+                        self.process_matches(window)?;
+
+                        // Update the status string
+                        self.status.push_str(&format!(", field {}", item));
+
+                        // Write the new parser status to the command line
+                        window.write_to_command_line(&self.status)?;
                     }
                     None => {
                         self.mc_handler.recieve_input(window, key)?;

@@ -38,7 +38,8 @@ pub mod messages {
     ];
 
     // Error messages
-    pub const NO_MESSAGE_IN_BUFFER: &'static str = "No messages in current buffer; press s to swap buffers.";
+    pub const NO_MESSAGE_IN_BUFFER_NORMAL: &'static str = "No messages in current buffer; press s to swap buffers.";
+    pub const NO_MESSAGE_IN_BUFFER_PARSER: &'static str = "No messages match current parser rules. Press z to exit parsing mode.";
 
     // Config messages
     pub const CONFIG_START_MESSAGES: [&'static str; 2] = [

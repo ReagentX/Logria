@@ -33,7 +33,11 @@ pub mod main {
                 stream_type::StreamType,
             },
         },
-        constants::cli::{cli_chars, messages::NO_MESSAGE_IN_BUFFER, poll_rate::FASTEST},
+        constants::cli::{
+            cli_chars,
+            messages::{NO_MESSAGE_IN_BUFFER_NORMAL, NO_MESSAGE_IN_BUFFER_PARSER},
+            poll_rate::FASTEST,
+        },
         extensions::parser::Parser,
         ui::interface::build,
         util::sanitizers::length::LengthFinder,
@@ -347,7 +351,15 @@ pub mod main {
             // This will only ever hit once, because this method is only called if there are new
             // messages to render or a user action requires a full re-render
             if self.messages().is_empty() {
-                self.write_to_command_line(NO_MESSAGE_IN_BUFFER)?;
+                match self.input_type {
+                    InputType::Parser => {
+                        self.write_to_command_line(NO_MESSAGE_IN_BUFFER_PARSER)?;
+                    }
+                    InputType::Regex => {}
+                    _ => {
+                        self.write_to_command_line(NO_MESSAGE_IN_BUFFER_NORMAL)?;
+                    }
+                }
                 self.output.flush()?;
                 return Ok(());
             }

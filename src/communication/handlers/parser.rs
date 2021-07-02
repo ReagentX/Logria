@@ -218,8 +218,12 @@ impl HanderMethods for ParserHandler {
                         // Update the status string
                         self.status.push_str(&format!(", field {}", item));
 
+                        // Clear the screen for new messages
+                        window.reset_output()?;
+
                         // Write the new parser status to the command line
                         window.write_to_command_line(&self.status)?;
+
                     }
                     None => {
                         self.mc_handler.recieve_input(window, key)?;

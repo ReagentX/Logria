@@ -3,8 +3,10 @@ use std::io::Write;
 
 use crossterm::{cursor, event::KeyCode, queue, style, terminal::size, Result};
 
-use super::handler::HanderMethods;
-use crate::{communication::reader::main::MainWindow, util::history::Tape};
+use crate::{
+    communication::{handlers::handler::HanderMethods, reader::main::MainWindow},
+    util::history::Tape,
+};
 
 // Used in Command and Regex handler to capture user typing
 pub struct UserInputHandler {

@@ -15,6 +15,7 @@ pub struct MultipleChoiceHandler {
 impl MultipleChoiceHandler {
     /// Set internal choices map
     pub fn set_choices(&mut self, choices: &Vec<String>) {
+        self.choices_map.clear();
         choices.iter().enumerate().for_each(|(index, choice)| {
             self.choices_map.insert(index, choice.to_owned());
         })

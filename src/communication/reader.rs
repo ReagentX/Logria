@@ -86,9 +86,7 @@ pub mod main {
         // Render data
         pub streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
         previous_render: (usize, usize), // Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
-        previous_messages: Option<&'static Vec<String>>, // Pointer to the previous non-parsed message list, which is continuously updated
-        exit_val: i8,                                    // If exit_val is -1, the app dies
-        pub did_switch: bool, // True if we just swapped input types, False otherwise
+        pub did_switch: bool,            // True if we just swapped input types, False otherwise
     }
 
     pub struct MainWindow {
@@ -134,8 +132,6 @@ pub mod main {
                     width: 0,
                     loop_time: 0.0,
                     previous_render: (0, 0),
-                    previous_messages: None,
-                    exit_val: 0,
                     stderr_messages: vec![],    // TODO: fix
                     stdout_messages: vec![],    // TODO: fix
                     auxiliary_messages: vec![], // TODO: fix

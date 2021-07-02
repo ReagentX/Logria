@@ -522,7 +522,7 @@ pub mod main {
             Ok(())
         }
 
-        /// Generate startup text from session list
+        /// Generate startup text the given vector
         pub fn render_auxiliary_text(&mut self, text: Vec<String>) -> Result<()> {
             self.config.auxiliary_messages.clear();
             self.config.auxiliary_messages.extend(text);

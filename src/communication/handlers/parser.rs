@@ -88,6 +88,7 @@ impl ParserHandler {
         window.config.auxiliary_messages.clear();
         window.config.parser = None;
         window.config.parser_index = 0;
+        window.config.did_switch = true;
     }
 }
 

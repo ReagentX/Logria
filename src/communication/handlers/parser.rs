@@ -179,6 +179,9 @@ impl HanderMethods for ParserHandler {
                         window.config.parser = Some(parser);
                         window.config.parser_state = ParserState::NeedsIndex;
 
+                        // Move the cursor back to the start of the line
+                        window.go_to_cli()?;
+
                         // Update the auxilery messages for the second setup step
                         self.select_index(window)?;
                     }

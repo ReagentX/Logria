@@ -3,8 +3,13 @@ use std::collections::HashMap;
 use crossterm::event::KeyCode;
 use crossterm::Result;
 
-use super::{handler::HanderMethods, user_input::UserInputHandler};
-use crate::{communication::reader::main::MainWindow, ui::scroll};
+use crate::{
+    communication::{
+        handlers::{handler::HanderMethods, user_input::UserInputHandler},
+        reader::main::MainWindow,
+    },
+    ui::scroll,
+};
 
 pub struct MultipleChoiceHandler {
     choices_map: HashMap<usize, String>,
@@ -22,13 +27,8 @@ impl MultipleChoiceHandler {
     }
 
     /// Build body text for a set of choices
-    pub fn get_body_text(&self, description: Option<Vec<&str>>) -> Vec<String> {
+    pub fn get_body_text(&self) -> Vec<String> {
         let mut body_text: Vec<String> = vec![];
-        if let Some(text) = description {
-            text.iter().for_each(|f| body_text.push(f.to_string()));
-            body_text.push(String::from(""));
-        }
-
         (0..self.choices_map.len()).for_each(|key| {
             body_text.push(format!("{}: {}", key, self.choices_map.get(&key).unwrap()))
         });
@@ -140,20 +140,7 @@ mod kc_tests {
         // Generate expected result
         let expected = vec!["0: a", "1: b", "2: c"];
 
-        assert_eq!(mc.get_body_text(None), expected);
-    }
-
-    #[test]
-    fn can_get_body_text_desc() {
-        // Setup handler
-        let mut mc = MultipleChoiceHandler::new();
-        mc.set_choices(&vec!["a".to_string(), "b".to_string(), "c".to_string()]);
-        let desc = vec!["x", "y", "z"];
-
-        // Generate expected result
-        let expected = vec!["x", "y", "z", "", "0: a", "1: b", "2: c"];
-
-        assert_eq!(mc.get_body_text(Some(desc)), expected);
+        assert_eq!(mc.get_body_text(), expected);
     }
 
     #[test]

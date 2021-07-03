@@ -305,7 +305,7 @@ pub mod stream {
 }
 
 pub mod input_type {
-    #[derive(Debug)]
+    #[derive(Debug, Clone, Copy)]
     pub enum InputType {
         Normal,
         Command,

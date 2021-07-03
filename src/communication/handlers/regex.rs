@@ -87,7 +87,7 @@ impl ProcessorMethods for RegexHandler {
     /// Return the app to a normal input state
     fn return_to_normal(&mut self, window: &mut MainWindow) -> Result<()> {
         self.clear_matches(window)?;
-        window.previous_input_type = window.input_type.clone();
+        window.previous_input_type = window.input_type;
         window.input_type = Normal;
         window.set_cli_cursor(None)?;
         window.redraw()?;

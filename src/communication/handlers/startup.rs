@@ -44,8 +44,10 @@ impl StartupHandler {
         });
     }
 
+    /// Allow the user to input commands so they quit and delete sessions
     fn set_command_mode(&self, window: &mut MainWindow) -> Result<()> {
-        // Allow the user to input commands so they quit and delete sessions
+        window.config.delete_func = Some(Session::del);
+        window.previous_input_type = window.input_type.clone();
         window.go_to_cli()?;
         window.input_type = InputType::Command;
         window.reset_command_line()?;
@@ -62,10 +64,12 @@ impl StartupHandler {
                     Some(file_path) => {
                         let session = Session::load(file_path);
                         match session {
+                            // Successfully start the app
                             Ok(session) => {
                                 window.config.streams = build_streams_from_session(session);
                                 window.config.stream_type = StdErr;
                                 window.input_type = InputType::Normal;
+                                window.config.generate_auxiliary_messages = None;
                                 window.reset_output()?;
                                 window.redraw()?;
                             }
@@ -146,7 +150,7 @@ mod startup_tests {
             reader::main::MainWindow,
         },
         constants::cli::messages::START_MESSAGE,
-        extensions::session::Session,
+        extensions::session::{Session, SessionType::Command},
     };
 
     use super::StartupHandler;
@@ -166,6 +170,10 @@ mod startup_tests {
 
     #[test]
     fn can_load_session() {
+        // Create a new dummy session
+        let session = Session::new(&vec![String::from("ls -la")], Command);
+        session.save("ls -la");
+
         // Setup dummy window
         let mut window = MainWindow::_new_dummy();
 
@@ -183,7 +191,7 @@ mod startup_tests {
     fn doesnt_crash_bad_index() {
         // Setup dummy window
         let mut window = MainWindow::_new_dummy();
-        window.config.stream_type = StreamType::Startup;
+        window.config.stream_type = StreamType::Auxiliary;
 
         // Setup handler
         let mut handler = StartupHandler::new();
@@ -192,21 +200,23 @@ mod startup_tests {
         // Tests
         assert!(handler.process_command(&mut window, "999").is_ok());
         assert!(matches!(window.input_type, InputType::Startup));
-        assert!(matches!(window.config.stream_type, StreamType::Startup));
+        assert!(matches!(window.config.stream_type, StreamType::Auxiliary));
     }
 
     #[test]
     fn doesnt_crash_alpha() {
         // Setup dummy window
         let mut window = MainWindow::_new_dummy();
-        window.config.stream_type = StreamType::Startup;
+        window.config.stream_type = StreamType::Auxiliary;
 
         // Setup handler
         let mut handler = StartupHandler::new();
         handler.initialize();
 
         // Tests
-        assert!(handler.process_command(&mut window, "zzzfake_file_name").is_ok());
+        assert!(handler
+            .process_command(&mut window, "zzzfake_file_name")
+            .is_ok());
         assert!(matches!(window.input_type, InputType::Normal));
         assert!(matches!(window.config.stream_type, StreamType::StdErr));
         Session::del(&vec![Session::list().len() - 1]);

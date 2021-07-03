@@ -41,6 +41,8 @@ pub mod stream {
     pub struct FileInput {}
 
     impl Input for FileInput {
+        /// Create a file input
+        /// poll_rate is unused since the file will be read all at once
         fn new(_: Option<u64>, name: String, command: String) -> InputStream {
             // Setup multiprocessing queues
             let (_, err_rx) = channel();
@@ -95,6 +97,7 @@ pub mod stream {
     }
 
     impl Input for CommandInput {
+        /// Create a command input
         fn new(poll_rate: Option<u64>, name: String, command: String) -> InputStream {
             // Setup multiprocessing queues
             let (err_tx, err_rx) = channel();
@@ -163,9 +166,8 @@ pub mod stream {
         }
     }
 
+    /// Build app streams from user input, i.e. command text or a filepath
     pub fn build_streams_from_input(commands: &Vec<String>, save: bool) -> Vec<InputStream> {
-        // TODO:
-        // Save session when we return
         let mut streams: Vec<InputStream> = vec![];
         let mut stream_types: HashSet<SessionType> = HashSet::new();
         for command in commands {
@@ -208,6 +210,7 @@ pub mod stream {
         streams
     }
 
+    /// Build app streams from a session struct
     pub fn build_streams_from_session(session: Session) -> Vec<InputStream> {
         match session.stream_type {
             SessionType::Command => {
@@ -302,22 +305,21 @@ pub mod stream {
 }
 
 pub mod input_type {
-    #[derive(Debug)]
+    #[derive(Debug, Clone, Copy)]
     pub enum InputType {
         Normal,
         Command,
         Regex,
         Parser,
         Startup,
-        MultipleChoice, // TODO: Remove
     }
 }
 
 pub mod stream_type {
-    #[derive(Debug)]
+    #[derive(Debug, Clone, Copy)]
     pub enum StreamType {
         StdErr,
         StdOut,
-        Startup,
+        Auxiliary,
     }
 }

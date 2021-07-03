@@ -12,12 +12,10 @@ This folder contains the documentation on how to interact with Logria programmat
   - Details on how input handler classes open subprocesses
 - [Commands](commands.md)
   - Details on commands available in the app
-- [Todo](todo.md)
-  - List of tasks for the repo
 
 ## Advanced Installation
 
-`pip install logria` is the best way to install the app for normal use.
+`cargo install logria` is the best way to install the app for normal use.
 
 ### Installing as a standalone app
 
@@ -44,13 +42,15 @@ This will launch the app and show us the splash screen:
 Enter a new command to open and save a new stream,
 or enter a number to choose a saved session from the list,
 or enter `:config` to configure.
+
+Enter `:r #` to remove session #.
 Enter `:q` to quit.
 
 0: File - readme
 1: File - Sample Access Log
 2: Cmd - Generate Test Logs
 ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-│_
+│                                                                                                │
 └────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -63,7 +63,7 @@ Entering `2` will load and open handles to the commands in `Cmd - Generate Test 
 2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a first log! 43
 2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a second log! 87
 ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-│No filter applied
+│No filter applied                                                                               │
 └────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -73,11 +73,11 @@ Typing `/` and entering `100` will filter our stream down to only lines that mat
 2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a first log! 43
 2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a second log! 87
 ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-│Regex with pattern /100/
+│Regex with pattern /100/                                                                        │
 └────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Typing `/` and entering `:q` will reset the filter:
+Pressing `esc` will reset the filter:
 
 ```log
 2020-02-23 16:56:10,786 - __main__.<module> - MainProcess - INFO - I am the first log in the list
@@ -86,20 +86,7 @@ Typing `/` and entering `:q` will reset the filter:
 2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a first log! 43
 2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a second log! 87
 ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-│No filter applied
-└────────────────────────────────────────────────────────────────────────────────────────────────┘
-```
-
-Typing `/` and entering `:q` will reset the filter:
-
-```log
-2020-02-23 16:56:10,786 - __main__.<module> - MainProcess - INFO - I am the first log in the list
-2020-02-23 16:56:10,997 - __main__.<module> - MainProcess - INFO - I am a first log! 21
-2020-02-23 16:56:10,997 - __main__.<module> - MainProcess - INFO - I am a second log! 71
-2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a first log! 43
-2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a second log! 87
-┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-│No filter applied
+│No filter applied                                                                               │
 └────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -108,8 +95,8 @@ Typing `:` and entering `:q` will exit the app.
 ## Guidelines
 
 - "Brand" colors
-  - Letters: ![#e63462](https://placehold.it/15/e63462/000000?text=+)`#e63462`
-  - Accent: ![#333745](https://placehold.it/15/333745/000000?text=+)`#333745`
+  - Letters: ![#e63462](https://via.placeholder.com/15/e63462/000000?text=+) `#e63462`
+  - Accent: ![#333745](https://via.placeholder.com/15/333745/000000?text=+) `#333745`
 - Contributing
   - No pull request shall be behind develop
   - First come, first served

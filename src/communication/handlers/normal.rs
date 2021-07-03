@@ -16,6 +16,7 @@ pub struct NormalHandler {}
 impl NormalHandler {
     fn set_command_mode(&self, window: &mut MainWindow) -> Result<()> {
         window.go_to_cli()?;
+        window.previous_input_type = window.input_type.clone();
         window.input_type = InputType::Command;
         window.reset_command_line()?;
         window.set_cli_cursor(None)?;
@@ -24,28 +25,39 @@ impl NormalHandler {
     }
 
     fn set_parser_mode(&self, window: &mut MainWindow) -> Result<()> {
+        window.previous_input_type = window.input_type.clone();
         window.input_type = InputType::Parser;
+        window.reset_command_line()?;
         window.set_cli_cursor(None)?;
+        window.config.previous_stream_type = window.config.stream_type;
+        window.config.stream_type = StreamType::Auxiliary;
+        // Send 2 new refresh ticks from the main app loop when this method returns
+        window.config.did_switch = true;
         Ok(())
     }
 
     fn set_regex_mode(&self, window: &mut MainWindow) -> Result<()> {
         window.go_to_cli()?;
+        window.previous_input_type = window.input_type.clone();
         window.input_type = InputType::Regex;
         window.config.highlight_match = true;
         window.reset_command_line()?;
         window.set_cli_cursor(None)?;
         queue!(window.output, cursor::Show)?;
+        // Send 2 new refresh ticks from the main app loop when this method returns
+        window.config.did_switch = true;
         Ok(())
     }
 
     fn swap_streams(&self, window: &mut MainWindow) -> Result<()> {
+        window.config.previous_stream_type = window.config.stream_type;
         window.config.stream_type = match window.config.stream_type {
             StreamType::StdOut => StreamType::StdErr,
             StreamType::StdErr => StreamType::StdOut,
-            // Do not swap from startup stream
-            StreamType::Startup => StreamType::Startup,
+            // Do not swap from auxiliary stream
+            StreamType::Auxiliary => StreamType::Auxiliary,
         };
+        window.previous_input_type = window.input_type.clone();
         window.input_type = InputType::Normal;
         window.set_cli_cursor(None)?;
         window.reset_command_line()?;

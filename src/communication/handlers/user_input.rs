@@ -1,15 +1,12 @@
-use std::cmp::{min, max};
+use std::cmp::{max, min};
 use std::io::Write;
 
+use crossterm::{cursor, event::KeyCode, queue, style, terminal::size, Result};
 
-use crossterm::event::KeyCode;
-use crossterm::terminal::size;
-use crossterm::Result;
-use crossterm::{cursor, queue, style};
-
-use super::handler::HanderMethods;
-use crate::communication::reader::main::MainWindow;
-use crate::util::history::Tape;
+use crate::{
+    communication::{handlers::handler::HanderMethods, reader::main::MainWindow},
+    util::history::Tape,
+};
 
 // Used in Command and Regex handler to capture user typing
 pub struct UserInputHandler {
@@ -23,7 +20,7 @@ pub struct UserInputHandler {
 impl UserInputHandler {
     /// Get the useable area of the textbox container
     fn update_dimensions(&mut self) {
-        let (w, h) = size().unwrap();
+        let (w, h) = size().unwrap_or((0, 0));
         self.y = h;
         self.x = w;
     }
@@ -138,7 +135,11 @@ impl UserInputHandler {
         self.last_write = content.len() as u16 + 1;
         window.write_to_command_line(&content)?;
         self.content = content.chars().collect();
-        queue!(window.output, cursor::MoveTo(self.last_write, self.y()), cursor::Show)?;
+        queue!(
+            window.output,
+            cursor::MoveTo(self.last_write, self.y()),
+            cursor::Show
+        )?;
         Ok(())
     }
 
@@ -162,7 +163,6 @@ impl UserInputHandler {
 
         Ok(result)
     }
-
 }
 
 impl HanderMethods for UserInputHandler {

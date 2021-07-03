@@ -1,14 +1,6 @@
 {
     "commands": [
-        [
-            "Users",
-            "me",
-            "Documents",
-            "Code",
-            "Python",
-            "logria",
-            "README.md"
-        ]
+            "~/Code/Rust/logria/README.md"
     ],
-    "type": "file"
+    "stream_type": "File"
 }

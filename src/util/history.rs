@@ -1,11 +1,15 @@
-use std::cmp::min;
-use std::error::Error;
-use std::fs::{OpenOptions, create_dir_all};
-use std::io::{BufRead, BufReader, Write};
-use std::path::Path;
+use std::{
+    cmp::min,
+    error::Error,
+    fs::{create_dir_all, File, OpenOptions},
+    io::{BufRead, BufReader, Write},
+    path::Path,
+};
 
-use crate::constants::cli::excludes::HISTORY_EXCLUDES;
-use crate::constants::directories::history_tape;
+use crate::constants::{
+    cli::excludes::HISTORY_EXCLUDES,
+    directories::{history, history_tape},
+};
 
 pub struct Tape {
     history_tape: Vec<String>,
@@ -14,12 +18,16 @@ pub struct Tape {
 }
 
 impl Tape {
-    // Ensure the proper paths exist
+    /// Ensure the proper paths exist
     pub fn verify_path() {
+        let history_path = history();
+        if !Path::new(&history_path).exists() {
+            create_dir_all(history_path).unwrap();
+        }
         let tape_path = history_tape();
         if !Path::new(&tape_path).exists() {
-            create_dir_all(tape_path).unwrap();
-        } 
+            File::create(&tape_path).unwrap();
+        }
     }
 
     pub fn new() -> Tape {
@@ -33,6 +41,7 @@ impl Tape {
         tape
     }
 
+    /// Read the history file from the disk to the current history buffer
     fn read_from_disk(&mut self) {
         let file = match OpenOptions::new().read(true).open(history_tape()) {
             // The `description` method of `io::Error` returns a string that describes the error
@@ -52,12 +61,15 @@ impl Tape {
                     Ok(a) => a,
                     _ => unreachable!(),
                 });
+            } else {
+                break;
             }
         }
 
-        self.current_index = self.history_tape.len() - 1;
+        self.current_index = self.history_tape.len().checked_sub(1).unwrap_or_default();
     }
 
+    /// Add an item to the history tape
     pub fn add_item(&mut self, item: &str) {
         let clean_item = item.trim();
         if !HISTORY_EXCLUDES.contains(&clean_item) {
@@ -66,7 +78,7 @@ impl Tape {
 
             // Reset tape to end
             self.should_scroll_back = false;
-            self.current_index = self.history_tape.len() - 1;
+            self.current_index = self.history_tape.len().checked_sub(1).unwrap_or_default();
 
             // Write to file
             let mut file = match OpenOptions::new()
@@ -97,7 +109,10 @@ impl Tape {
     fn scroll_back_n(&mut self, num_to_scroll: usize) {
         if !self.history_tape.is_empty() {
             if self.should_scroll_back {
-                self.current_index = self.current_index.checked_sub(num_to_scroll).unwrap_or_default();
+                self.current_index = self
+                    .current_index
+                    .checked_sub(num_to_scroll)
+                    .unwrap_or_default();
             } else {
                 self.should_scroll_back = true
             }
@@ -106,12 +121,14 @@ impl Tape {
 
     /// Scroll the tape forward if possible
     fn scroll_forward_n(&mut self, num_to_scroll: usize) {
-        if self.current_index != self.history_tape.len() - 1 && !self.history_tape.is_empty() {
+        if self.current_index != self.history_tape.len().checked_sub(1).unwrap_or_default()
+            && !self.history_tape.is_empty()
+        {
             self.current_index = min(
-                self.history_tape.len() - 1,
+                self.history_tape.len().checked_sub(1).unwrap_or_default(),
                 self.current_index
                     .checked_add(num_to_scroll)
-                    .unwrap_or(self.history_tape.len() - 1),
+                    .unwrap_or_else(|| self.history_tape.len().checked_sub(1).unwrap_or_default()),
             );
         }
     }
@@ -130,5 +147,115 @@ impl Tape {
 
     pub fn get_current_item(&self) -> String {
         self.history_tape[self.current_index].clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Tape;
+
+    #[test]
+    fn can_construct() {
+        Tape::new();
+    }
+
+    #[test]
+    fn can_add_item() {
+        let mut tape = Tape::new();
+        tape.add_item("test");
+        assert_eq!(String::from("test"), tape.get_current_item());
+    }
+
+    #[test]
+    fn scroll_back_n_good() {
+        let mut tape = Tape::new();
+
+        // Create some dummy data
+        (0..5)
+            .into_iter()
+            .for_each(|_| tape.history_tape.push("".to_owned()));
+        tape.current_index = tape.history_tape.len().checked_sub(1).unwrap_or_default();
+        tape.should_scroll_back = true;
+
+        tape.scroll_back_n(5);
+        assert_eq!(tape.current_index, tape.history_tape.len() - 5 - 1)
+    }
+
+    #[test]
+    fn scroll_back_n_too_many() {
+        let mut tape = Tape::new();
+
+        // Create some dummy data
+        (0..5)
+            .into_iter()
+            .for_each(|_| tape.history_tape.push("".to_owned()));
+        tape.current_index = tape.history_tape.len().checked_sub(1).unwrap_or_default();
+        tape.should_scroll_back = true;
+
+        tape.scroll_back_n(tape.history_tape.len() * 2);
+        assert_eq!(tape.current_index, 0)
+    }
+
+    #[test]
+    fn scroll_back_one() {
+        let mut tape = Tape::new();
+
+        // Create some dummy data
+        (0..5)
+            .into_iter()
+            .for_each(|_| tape.history_tape.push("".to_owned()));
+        tape.current_index = tape.history_tape.len().checked_sub(1).unwrap_or_default();
+        tape.should_scroll_back = true;
+
+        tape.scroll_back();
+        assert_eq!(tape.current_index, tape.history_tape.len() - 1 - 1)
+    }
+
+    #[test]
+    fn scroll_forward_n_good() {
+        let mut tape = Tape::new();
+
+        // Create some dummy data
+        (0..25)
+            .into_iter()
+            .for_each(|_| tape.history_tape.push("".to_owned()));
+        tape.current_index = tape.history_tape.len().checked_sub(1).unwrap_or_default();
+        tape.should_scroll_back = true;
+
+        tape.scroll_back_n(10);
+        tape.scroll_forward_n(5);
+        assert_eq!(tape.current_index, tape.history_tape.len() - 5 - 1)
+    }
+
+    #[test]
+    fn scroll_forward_n_too_many() {
+        let mut tape = Tape::new();
+
+        // Create some dummy data
+        (0..5)
+            .into_iter()
+            .for_each(|_| tape.history_tape.push("".to_owned()));
+        tape.current_index = tape.history_tape.len().checked_sub(1).unwrap_or_default();
+        tape.should_scroll_back = true;
+
+        tape.scroll_back_n(10);
+        tape.scroll_forward_n(25);
+        assert_eq!(tape.current_index, tape.history_tape.len() - 1)
+    }
+
+    #[test]
+    fn scroll_forward_one() {
+        let mut tape = Tape::new();
+
+        // Create some dummy data
+        (0..5)
+            .into_iter()
+            .for_each(|_| tape.history_tape.push("".to_owned()));
+        tape.current_index = tape.history_tape.len().checked_sub(1).unwrap_or_default();
+        tape.should_scroll_back = true;
+
+        tape.scroll_back();
+        tape.scroll_forward();
+        assert_eq!(tape.current_index, tape.history_tape.len() - 1)
     }
 }

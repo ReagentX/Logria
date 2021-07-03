@@ -1,7 +1,7 @@
 use std::{
     collections::HashSet,
     error::Error,
-    fs::{read_dir, read_to_string, remove_file, write, create_dir_all},
+    fs::{create_dir_all, read_dir, read_to_string, remove_file, write},
     path::Path,
 };
 
@@ -23,20 +23,20 @@ pub struct Session {
 }
 
 impl Session {
-    // Ensure the proper paths exist
+    /// Ensure the proper paths exist
     pub fn verify_path() {
         let tape_path = sessions();
         if !Path::new(&tape_path).exists() {
             create_dir_all(tape_path).unwrap();
-        } 
+        }
     }
 
     /// Create a Session struct
-    pub fn new(commands: &Vec<String>, stream_type: SessionType) -> Session {
+    pub fn new(commands: &Vec<String>, session_type: SessionType) -> Session {
         Session::verify_path();
         Session {
             commands: commands.to_owned(),
-            stream_type,
+            stream_type: session_type,
         }
     }
 
@@ -86,6 +86,7 @@ impl Session {
 
     /// Get a list of all available session configurations
     pub fn list() -> Vec<String> {
+        Session::verify_path();
         // Files to exclude from the session list
         let mut excluded = HashSet::new();
         for &item in &SESSION_FILE_EXCLUDES {
@@ -104,6 +105,7 @@ impl Session {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
     use super::{Session, SessionType};
     use crate::constants::directories::sessions;
 
@@ -118,12 +120,19 @@ mod tests {
     #[test]
     fn serialize_session() {
         let session = Session::new(&vec![String::from("ls -la")], SessionType::Command);
-        session.save("ls -la")
+        session.save("ls -la");
+
+        assert!(Path::new(&format!("{}/{}", sessions(), "ls -la")).exists());
     }
 
     #[test]
     fn deserialize_session() {
-        let read_session = Session::load(&format!("{}/{}", sessions(), "ls -la copy")).unwrap();
+        let session = Session::new(&vec![String::from("ls -la")], SessionType::Command);
+        session.save("ls -la copy");
+        assert!(Path::new(&format!("{}/{}", sessions(), "ls -la copy")).exists());
+
+        let file_name = format!("{}/{}", sessions(), "ls -la copy");
+        let read_session = Session::load(&file_name).unwrap();
         let expected_session = Session {
             commands: vec![String::from("ls -la")],
             stream_type: SessionType::Command,

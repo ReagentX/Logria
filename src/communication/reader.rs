@@ -2,7 +2,7 @@ pub mod main {
     use std::{
         cmp::max,
         io::{stdout, Stdout, Write},
-        thread, time,
+        result, thread, time,
         time::Instant,
     };
 
@@ -18,9 +18,14 @@ pub mod main {
     use crate::{
         communication::{
             handlers::{
-                command::CommandHandler, handler::HanderMethods,
-                multiple_choice::MultipleChoiceHandler, normal::NormalHandler,
-                parser::ParserHandler, regex::RegexHandler, startup::StartupHandler,
+                command::CommandHandler,
+                handler::HanderMethods,
+                multiple_choice::MultipleChoiceHandler,
+                normal::NormalHandler,
+                parser::{ParserHandler, ParserState},
+                processor::ProcessorMethods,
+                regex::RegexHandler,
+                startup::StartupHandler,
             },
             input::{
                 input_type::InputType,
@@ -28,57 +33,69 @@ pub mod main {
                 stream_type::StreamType,
             },
         },
-        constants::cli::{cli_chars, messages::NO_MESSAGE_IN_BUFFER, poll_rate::FASTEST},
+        constants::cli::{
+            cli_chars,
+            messages::{NO_MESSAGE_IN_BUFFER_NORMAL, NO_MESSAGE_IN_BUFFER_PARSER},
+            poll_rate::FASTEST,
+        },
+        extensions::parser::Parser,
         ui::interface::build,
         util::sanitizers::length::LengthFinder,
     };
 
-    #[derive(Debug)]
     pub struct LogiraConfig {
-        pub poll_rate: u64,    // The rate at which we check for new messages
-        pub height: u16,       // Window height
-        pub width: u16,        // Window width
-        pub last_row: u16,     // The last row we can render, aka number of lines visible in the tty
-        smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
-        pub use_history: bool,
-        first_run: bool, // Whether this is a first run or not
-        loop_time: f64,  // How long a loop of the main app takes
-        previous_render: (usize, usize),
-        previous_messages: Option<&'static Vec<String>>, // Pointer to the previous non-parsed message list, which is continuously updated
-        exit_val: i8,                                    // If exit_val is -1, the app dies
+        pub width: u16,         // Window width
+        pub height: u16,        // Window height
+        pub last_row: u16, // The last row we can render, aka number of lines visible in the tty
+        pub current_end: usize, // Current last row we have rendered
 
         // Message buffers
         stderr_messages: Vec<String>,
         stdout_messages: Vec<String>,
-        pub startup_messages: Vec<String>,
         pub stream_type: StreamType,
+        pub previous_stream_type: StreamType, // The previous stream the user was looking at
+        pub auxiliary_messages: Vec<String>,  // Messages displayed by extensions
 
         // Regex settings
         pub regex_pattern: Option<regex::bytes::Regex>, // Current regex pattern
         pub matched_rows: Vec<usize>, // List of index of matches when regex filtering is active
         pub last_index_regexed: usize, // The last index the filtering function saw
         color_replace_regex: Regex,   // A regex to remove ANSI color codes
+        pub highlight_match: bool, // Determines whether we highlight the matched text to the user
 
         // Parser settings
-        pub parser: bool,                   // Reference to the current parser
-        pub parser_index: usize,            // Index for the parser to look at
-        pub parsed_messages: Vec<String>,   // List of parsed messages
-        pub analytics_enabled: bool,        // Whether we are calcualting stats or not
-        last_index_processed: usize,        // The last index the parsing function saw
-        insert_mode: bool,                  // Default to insert mode (like vim) off
-        current_status: String, // UNUSED Current status, aka what is in the command line
-        pub highlight_match: bool, // Determines whether we highlight the match to the user
+        pub parser: Option<Parser>,      // Reference to the current parser
+        pub parser_index: usize,         // Index for the parser to look at
+        pub parser_state: ParserState,   // The state of the current parser
+        pub analytics_enabled: bool,     // Whether we are calcualting stats or not
+        pub last_index_processed: usize, // The last index the parsing function saw
+
+        // App state
+        loop_time: f64,        // How long a loop of the main app takes
+        insert_mode: bool,     // Default to insert mode (like vim) off
+        pub poll_rate: u64,    // The rate at which we check for new messages
+        smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
+        pub use_history: bool, // Whether the app records user input to a history tape
+
+        // Scroll State
         pub stick_to_bottom: bool, // Whether we should follow the stream
-        pub stick_to_top: bool, // Whether we should stick to the top and not render new lines
+        pub stick_to_top: bool,    // Whether we should stick to the top and not render new lines
         pub manually_controlled_line: bool, // Whether manual scroll is active
-        pub current_end: usize, // Current last row we have rendered
+
+        // Render data
         pub streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
+        previous_render: (usize, usize), // Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
+        pub did_switch: bool,            // True if we just swapped input types, False otherwise
+        pub delete_func: Option<fn(&Vec<usize>) -> ()>, // Pointer to function used to delete items for the `: r` command
+        pub generate_auxiliary_messages: Option<fn() -> Vec<String>>,
     }
 
     pub struct MainWindow {
         pub config: LogiraConfig,
         pub input_type: InputType,
+        pub previous_input_type: InputType,
         pub output: Stdout,
+        pub mc_handler: MultipleChoiceHandler,
         length_finder: LengthFinder,
     }
 
@@ -91,6 +108,7 @@ pub mod main {
             app.config.height = 10;
             app.config.width = 100;
             app.config.stream_type = StreamType::StdErr;
+            app.config.previous_stream_type = StreamType::StdOut;
 
             // Set fake previous render
             app.config.last_row = app.config.height - 3; // simulate the last row we can render to
@@ -105,23 +123,23 @@ pub mod main {
             // Build streams here
             MainWindow {
                 input_type: InputType::Startup,
+                previous_input_type: InputType::Startup,
                 output: stdout(),
                 length_finder: LengthFinder::new(),
+                mc_handler: MultipleChoiceHandler::new(),
                 config: LogiraConfig {
                     poll_rate: FASTEST,
                     smart_poll_rate,
                     use_history: history,
-                    first_run: true,
                     height: 0,
                     width: 0,
                     loop_time: 0.0,
                     previous_render: (0, 0),
-                    previous_messages: None,
-                    exit_val: 0,
-                    stderr_messages: vec![],  // TODO: fix
-                    stdout_messages: vec![],  // TODO: fix
-                    startup_messages: vec![], // TODO: fix
-                    stream_type: StreamType::Startup,
+                    stderr_messages: vec![],    // TODO: fix
+                    stdout_messages: vec![],    // TODO: fix
+                    auxiliary_messages: vec![], // TODO: fix
+                    stream_type: StreamType::Auxiliary,
+                    previous_stream_type: StreamType::Auxiliary,
                     regex_pattern: None,
                     matched_rows: vec![],
                     last_index_regexed: 0,
@@ -129,13 +147,12 @@ pub mod main {
                         crate::constants::cli::patterns::ANSI_COLOR_PATTERN,
                     )
                     .unwrap(),
-                    parser: false,
+                    parser: None,
                     parser_index: 0,
-                    parsed_messages: vec![],
+                    parser_state: ParserState::Disabled,
                     analytics_enabled: false,
                     last_index_processed: 0,
                     insert_mode: false,
-                    current_status: String::from(""), // TODO: fix
                     highlight_match: false,
                     last_row: 0,
                     stick_to_bottom: true,
@@ -143,16 +160,19 @@ pub mod main {
                     manually_controlled_line: false,
                     current_end: 0,
                     streams: vec![],
+                    did_switch: false,
+                    delete_func: None,
+                    generate_auxiliary_messages: None,
                 },
             }
         }
 
+        /// Get the number of messages in the current message buffer
         pub fn number_of_messages(&self) -> usize {
             match self.input_type {
-                InputType::Normal
-                | InputType::MultipleChoice
-                | InputType::Command
-                | InputType::Startup => self.messages().len(),
+                InputType::Normal | InputType::Command | InputType::Startup => {
+                    self.messages().len()
+                }
                 InputType::Regex => {
                     if self.config.regex_pattern.is_none() {
                         self.messages().len()
@@ -161,8 +181,8 @@ pub mod main {
                     }
                 }
                 InputType::Parser => {
-                    if self.config.parser {
-                        self.config.parsed_messages.len()
+                    if self.config.parser.is_some() {
+                        self.config.auxiliary_messages.len()
                     } else {
                         self.messages().len()
                     }
@@ -170,6 +190,7 @@ pub mod main {
             }
         }
 
+        /// Determine the start and end indexes we need to render in the window
         pub fn determine_render_position(&mut self) -> (usize, usize) {
             let mut end: usize = 0;
             let mut rows: usize = 0;
@@ -190,10 +211,9 @@ pub mod main {
                 let mut current_index: usize = 0;
                 loop {
                     let message: &str = match self.input_type {
-                        InputType::Normal
-                        | InputType::MultipleChoice
-                        | InputType::Command
-                        | InputType::Startup => &self.messages()[current_index],
+                        InputType::Normal | InputType::Command | InputType::Startup => {
+                            &self.messages()[current_index]
+                        }
                         InputType::Regex => {
                             // If we have not activated regex or parser yet, render normal messages
                             if self.config.regex_pattern.is_none() {
@@ -202,9 +222,7 @@ pub mod main {
                                 &self.messages()[self.config.matched_rows[current_index]]
                             }
                         }
-                        InputType::Parser => {
-                            &self.messages()[current_index] // Fix
-                        }
+                        InputType::Parser => &self.config.auxiliary_messages[current_index],
                     };
 
                     // Determine if we can fit the next message
@@ -261,12 +279,12 @@ pub mod main {
             (start, end)
         }
 
+        /// Get the message at a specific index in the current buffer
         fn get_message_at_index(&self, index: usize) -> String {
             match self.input_type {
-                InputType::Normal
-                | InputType::MultipleChoice
-                | InputType::Command
-                | InputType::Startup => self.messages()[index].to_string(),
+                InputType::Normal | InputType::Command | InputType::Startup => {
+                    self.messages()[index].to_string()
+                }
                 InputType::Regex => {
                     if self.config.regex_pattern.is_none() {
                         self.messages()[index].to_string()
@@ -281,6 +299,7 @@ pub mod main {
             }
         }
 
+        /// Highlight the regex matched text with an ASCII escape code
         fn highlight_match(&self, message: String) -> String {
             // Regex out any existing color codes
             // We use a bytes regex becasue we cannot compile the pattern using normal regex
@@ -315,6 +334,7 @@ pub mod main {
             String::from_utf8(new_msg).unwrap()
         }
 
+        /// Render the relevant part of the message buffer in the window
         fn render_text_in_output(&mut self) -> Result<()> {
             // Start the render from the last row
             let mut current_row = self.config.last_row;
@@ -332,7 +352,15 @@ pub mod main {
             // This will only ever hit once, because this method is only called if there are new
             // messages to render or a user action requires a full re-render
             if self.messages().is_empty() {
-                self.write_to_command_line(NO_MESSAGE_IN_BUFFER)?;
+                match self.input_type {
+                    InputType::Parser => {
+                        self.write_to_command_line(NO_MESSAGE_IN_BUFFER_PARSER)?;
+                    }
+                    InputType::Regex => {}
+                    _ => {
+                        self.write_to_command_line(NO_MESSAGE_IN_BUFFER_NORMAL)?;
+                    }
+                }
                 self.output.flush()?;
                 return Ok(());
             }
@@ -358,7 +386,7 @@ pub mod main {
 
                 // Get some metadata we need to render the message
                 let message_length = self.length_finder.get_real_length(&message);
-                let message_rows = max(1, ((message_length) + (width - 2)) / width);
+                let message_rows = max(1, ((message_length) + (width - 1)) / width);
 
                 // Update the current row, stop writing if there is no more space
                 current_row = match current_row.checked_sub(max(1, message_rows as u16)) {
@@ -419,12 +447,21 @@ pub mod main {
             Ok(())
         }
 
+        /// Get the previous message pointer
+        pub fn previous_messages(&self) -> &Vec<String> {
+            match self.config.previous_stream_type {
+                StreamType::StdErr => &self.config.stderr_messages,
+                StreamType::StdOut => &self.config.stdout_messages,
+                StreamType::Auxiliary => &self.config.auxiliary_messages,
+            }
+        }
+
         /// Get the current message pointer
         pub fn messages(&self) -> &Vec<String> {
             match self.config.stream_type {
                 StreamType::StdErr => &self.config.stderr_messages,
                 StreamType::StdOut => &self.config.stdout_messages,
-                StreamType::Startup => &self.config.startup_messages,
+                StreamType::Auxiliary => &self.config.auxiliary_messages,
             }
         }
 
@@ -449,6 +486,7 @@ pub mod main {
             Ok(())
         }
 
+        /// Empty the command line
         pub fn reset_command_line(&mut self) -> Result<()> {
             // Leave padding for surrounding rectangle, we cannot use deleteln because it destroys the rectangle
             let clear = " ".repeat((self.config.width - 3) as usize); // TODO: Store this string as a class attribute, recalc on resize
@@ -459,6 +497,7 @@ pub mod main {
             Ok(())
         }
 
+        /// Write text to the command line
         pub fn write_to_command_line(&mut self, content: &str) -> Result<()> {
             queue!(self.output, cursor::SavePosition)?;
             // Remove what used to be in the command line
@@ -476,7 +515,6 @@ pub mod main {
             self.go_to_cli()?;
             let first_char = match self.input_type {
                 InputType::Normal | InputType::Startup => content.unwrap_or(cli_chars::NORMAL_CHAR),
-                InputType::MultipleChoice => content.unwrap_or(cli_chars::MC_CHAR),
                 InputType::Command => content.unwrap_or(cli_chars::COMMAND_CHAR),
                 InputType::Regex => content.unwrap_or(cli_chars::REGEX_CHAR),
                 InputType::Parser => content.unwrap_or(cli_chars::PARSER_CHAR),
@@ -489,10 +527,15 @@ pub mod main {
             Ok(())
         }
 
-        /// Generate startup text from session list
-        pub fn render_startup_text(&mut self) -> Result<()> {
-            self.config.startup_messages = StartupHandler::get_startup_text();
-            self.redraw()?;
+        /// Redraw auxiliary text the given function pointer
+        pub fn render_auxiliary_text(&mut self) -> Result<()> {
+            if let Some(gen) = self.config.generate_auxiliary_messages {
+                self.config.auxiliary_messages.clear();
+                self.config.auxiliary_messages.extend(gen());
+                self.redraw()?;
+            } else {
+                panic!("Cannot draw aux messages with no fn pointer!")
+            }
             Ok(())
         }
 
@@ -501,10 +544,11 @@ pub mod main {
             let (w, h) = size()?;
             self.config.height = h;
             self.config.width = w;
-            self.config.last_row = self.config.height - 3;
+            self.config.last_row = self.config.height.checked_sub(3).unwrap_or(h);
             Ok(())
         }
 
+        /// Initial application setup
         pub fn start(&mut self, commands: Option<Vec<String>>) -> Result<()> {
             // Build the app
             if let Some(c) = commands {
@@ -512,6 +556,7 @@ pub mod main {
                 self.config.streams = build_streams_from_input(&c, true);
 
                 // Set to display stderr by default
+                self.config.previous_stream_type = StreamType::StdOut;
                 self.config.stream_type = StreamType::StdErr;
 
                 // Send input to normal handler
@@ -561,6 +606,7 @@ pub mod main {
                 modifiers: KeyModifiers::CONTROL,
                 code: KeyCode::Char('c'),
             };
+            let refresh_key = KeyCode::F(5);
 
             // Instantiate handlers
             let mut normal_handler = NormalHandler::new();
@@ -568,10 +614,10 @@ pub mod main {
             let mut regex_handler = RegexHandler::new();
             let mut parser_handler = ParserHandler::new();
             let mut startup_handler = StartupHandler::new();
-            let mut mc_handler = MultipleChoiceHandler::new(); // Possibly different path for building options
 
             // Setup startup messages
-            self.render_startup_text()?;
+            self.config.generate_auxiliary_messages = Some(StartupHandler::get_startup_text);
+            self.render_auxiliary_text()?;
 
             // Initial message collection
             self.recieve_streams();
@@ -584,14 +630,12 @@ pub mod main {
             // Render anything new in case the streams are already finished
             self.render_text_in_output()?;
 
-            // enum for input mode: {normal, command, regex, choice}
-            // if input mode is command or regex, draw/remove the character to the command line
-            // Otherwise, show status
+            // Handle directing input to the correct handlers during operation
             loop {
                 // Update streams here
-                let t_0 = Instant::now();
+                // let t_0 = Instant::now();
                 let num_new_messages = self.recieve_streams();
-                let t_1 = t_0.elapsed();
+                // let t_1 = t_0.elapsed();
                 // self.write_to_command_line(&format!("{} in {:?}", num_new_messages, t_1))?;
 
                 if poll(time::Duration::from_millis(self.config.poll_rate))? {
@@ -619,24 +663,41 @@ pub mod main {
                                 InputType::Startup => {
                                     startup_handler.recieve_input(self, input.code)?
                                 }
-                                InputType::MultipleChoice => {
-                                    mc_handler.recieve_input(self, input.code)?
-                                }
                             }
                         }
                         Event::Mouse(event) => {} // Probably remove
                         Event::Resize(width, height) => {} // Call self.dimensions() and some other stuff
                     }
-                } else {
-                    // possibly sleep, cleanup, etc
-                    if self.config.regex_pattern.is_some() {
-                        regex_handler.process_matches(self);
-                    }
                 }
 
-                if num_new_messages > 0 {
+                // possibly sleep, cleanup, etc
+                // Process matches if we just switched or if there are new messages
+                if num_new_messages > 0 || self.config.did_switch {
+                    // Process extension methods
+                    match self.input_type {
+                        InputType::Regex => {
+                            if self.config.regex_pattern.is_some() {
+                                regex_handler.process_matches(self)?;
+                            } else if self.config.did_switch {
+                                self.config.did_switch = false;
+                            }
+                        }
+                        InputType::Parser => {
+                            if self.config.parser.is_some() {
+                                parser_handler.process_matches(self)?;
+                            }
+                            if self.config.did_switch {
+                                // 2 ticks, one to process the current input and another to refresh
+                                parser_handler.recieve_input(self, refresh_key)?;
+                                parser_handler.recieve_input(self, refresh_key)?;
+                                self.config.did_switch = false;
+                            }
+                        }
+                        _ => {}
+                    }
                     self.render_text_in_output()?;
                 }
+
                 let sleep = time::Duration::from_millis(self.config.poll_rate);
                 thread::sleep(sleep);
             }
@@ -644,7 +705,7 @@ pub mod main {
     }
 
     #[cfg(test)]
-    mod tests {
+    mod render_tests {
         use super::MainWindow;
 
         #[test]

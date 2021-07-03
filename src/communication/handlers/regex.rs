@@ -1,7 +1,7 @@
 use crossterm::{event::KeyCode, Result};
 use regex::bytes::Regex;
 
-use super::handler::HanderMethods;
+use super::{handler::HanderMethods, processor::ProcessorMethods};
 use crate::{
     communication::{
         handlers::user_input::UserInputHandler, input::input_type::InputType::Normal,
@@ -30,31 +30,7 @@ impl RegexHandler {
         }
     }
 
-    /// Process matches, loading the buffer of indexes to matched messages in the main buffer
-    pub fn process_matches(&self, window: &mut MainWindow) {
-        // TODO: Possibly async? Possibly loading indicator for large jobs?
-        match &self.current_pattern {
-            Some(_) => {
-                // Start from where we left off to the most recent message
-                let buf_range = (window.config.last_index_regexed, window.messages().len());
-
-                // Iterate "forever", skipping to the start and taking up till end-start
-                // TODO: Something to indicate progress
-                for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
-                    if self.test(&window.messages()[index]) {
-                        window.config.matched_rows.push(index);
-                    }
-
-                    // Update the last spot so we know where to start next time
-                    window.config.last_index_regexed = index + 1;
-                }
-            }
-            None => {
-                panic!("Called process with no regex!");
-            }
-        }
-    }
-
+    /// Save the user input pattern to the main window conig
     fn set_pattern(&mut self, window: &mut MainWindow) -> Result<()> {
         let pattern = match self.input_handler.gather(window) {
             Ok(pattern) => pattern,
@@ -79,19 +55,50 @@ impl RegexHandler {
         window.config.highlight_match = true;
         Ok(())
     }
+}
 
+impl ProcessorMethods for RegexHandler {
+    /// Process matches, loading the buffer of indexes to matched messages in the main buffer
+    fn process_matches(&self, window: &mut MainWindow) -> Result<()> {
+        // TODO: Possibly async? Possibly loading indicator for large jobs?
+        match &self.current_pattern {
+            Some(_) => {
+                // Start from where we left off to the most recent message
+                let buf_range = (window.config.last_index_regexed, window.messages().len());
+
+                // Iterate "forever", skipping to the start and taking up till end-start
+                // TODO: Something to indicate progress
+                for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
+                    if self.test(&window.messages()[index]) {
+                        window.config.matched_rows.push(index);
+                    }
+
+                    // Update the last spot so we know where to start next time
+                    window.config.last_index_regexed = index + 1;
+                }
+            }
+            None => {
+                panic!("Called process with no regex!");
+            }
+        };
+        Ok(())
+    }
+
+    /// Return the app to a normal input state
     fn return_to_normal(&mut self, window: &mut MainWindow) -> Result<()> {
         self.clear_matches(window)?;
+        window.previous_input_type = window.input_type.clone();
         window.input_type = Normal;
         window.set_cli_cursor(None)?;
         window.redraw()?;
         Ok(())
     }
 
+    /// Clear the matched messages from the message buffer
     fn clear_matches(&mut self, window: &mut MainWindow) -> Result<()> {
         self.current_pattern = None;
         window.config.regex_pattern = None;
-        window.config.matched_rows = vec![];
+        window.config.matched_rows.clear();
         window.config.last_index_regexed = 0;
         window.config.highlight_match = false;
         window.reset_command_line()?;
@@ -142,7 +149,7 @@ impl HanderMethods for RegexHandler {
                 KeyCode::Enter => {
                     self.set_pattern(window)?;
                     if self.current_pattern.is_some() {
-                        self.process_matches(window);
+                        self.process_matches(window)?;
                     };
                     window.redraw()?;
                 }
@@ -158,9 +165,11 @@ impl HanderMethods for RegexHandler {
 mod tests {
     use regex::bytes::Regex;
 
-    use crate::communication::handlers::handler::HanderMethods;
-    use crate::communication::input::input_type::InputType;
-    use crate::communication::reader::main::MainWindow;
+    use crate::communication::{
+        handlers::{handler::HanderMethods, processor::ProcessorMethods},
+        input::input_type::InputType,
+        reader::main::MainWindow,
+    };
 
     #[test]
     fn test_can_filter() {
@@ -227,7 +236,7 @@ mod tests {
         // Set regex pattern
         let pattern = "0";
         handler.current_pattern = Some(Regex::new(pattern).unwrap());
-        handler.process_matches(&mut logria);
+        handler.process_matches(&mut logria).unwrap();
         assert_eq!(100, logria.config.last_index_regexed);
     }
 
@@ -239,7 +248,7 @@ mod tests {
 
         // Set state to regex mode
         logria.input_type = InputType::Regex;
-        handler.process_matches(&mut logria);
+        handler.process_matches(&mut logria).unwrap();
     }
 
     #[test]

@@ -110,9 +110,9 @@ impl CommandHandler {
                         window.render_auxiliary_text()?;
                     } else {
                         {
-                            window.write_to_command_line(&format!(
+                            window.write_to_command_line(
                                 "Delete command is valid, but there is nothing to delete.",
-                            ))?;
+                            )?;
                         }
                     }
                 } else {

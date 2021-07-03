@@ -186,7 +186,7 @@ mod tests {
         // Set regex pattern
         let pattern = "0";
         handler.current_pattern = Some(Regex::new(pattern).unwrap());
-        handler.process_matches(&mut logria);
+        handler.process_matches(&mut logria).unwrap();
         assert_eq!(
             vec![0, 10, 20, 30, 40, 50, 60, 70, 80, 90],
             logria.config.matched_rows
@@ -205,7 +205,7 @@ mod tests {
         let pattern = "a";
         handler.current_pattern = Some(Regex::new(pattern).unwrap());
         logria.config.regex_pattern = Some(Regex::new(pattern).unwrap());
-        handler.process_matches(&mut logria);
+        handler.process_matches(&mut logria).unwrap();
         assert_eq!(0, logria.config.matched_rows.len());
     }
 
@@ -220,7 +220,7 @@ mod tests {
         // Set regex pattern
         let pattern = "0";
         handler.current_pattern = Some(Regex::new(pattern).unwrap());
-        handler.process_matches(&mut logria);
+        handler.process_matches(&mut logria).unwrap();
         handler.return_to_normal(&mut logria).unwrap();
 
         assert!(handler.current_pattern.is_none());

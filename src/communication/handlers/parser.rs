@@ -1,6 +1,5 @@
-use crossterm::{cursor, event::KeyCode, queue, Result};
+use crossterm::{event::KeyCode, Result};
 use regex::Regex;
-use std::io::Write;
 
 use crate::{
     communication::{
@@ -8,10 +7,7 @@ use crate::{
             handler::HanderMethods, multiple_choice::MultipleChoiceHandler,
             processor::ProcessorMethods,
         },
-        input::{
-            input_type::InputType::{Command, Normal},
-            stream_type::StreamType,
-        },
+        input::{input_type::InputType::Normal, stream_type::StreamType},
         reader::main::MainWindow,
     },
     extensions::parser::{Parser, PatternType},

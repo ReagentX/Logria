@@ -1,5 +1,6 @@
-use crossterm::{event::KeyCode, Result};
+use crossterm::{cursor, event::KeyCode, queue, Result};
 use regex::Regex;
+use std::io::Write;
 
 use crate::{
     communication::{
@@ -7,7 +8,10 @@ use crate::{
             handler::HanderMethods, multiple_choice::MultipleChoiceHandler,
             processor::ProcessorMethods,
         },
-        input::{input_type::InputType::Normal, stream_type::StreamType},
+        input::{
+            input_type::InputType::{Command, Normal},
+            stream_type::StreamType,
+        },
         reader::main::MainWindow,
     },
     extensions::parser::{Parser, PatternType},
@@ -17,6 +21,7 @@ use crate::{
 
 #[derive(Debug)]
 pub enum ParserState {
+    Disabled,
     NeedsParser,
     NeedsIndex,
     Full,
@@ -30,10 +35,20 @@ pub struct ParserHandler {
 
 impl ParserHandler {
     /// Setup the parser instance on the main window
+    // TODO: Make this and select_index send proper function handle to window.config.generate_auxiliary_messages
+    // So that we render the text when it updates from deletion commands
+    pub fn parser_messages_handle() -> Vec<String> {
+        let mut body_text = vec![];
+        Parser::list().iter().enumerate().for_each(|(index, choice)| {
+            body_text.push(format!("{}: {}", index, choice))
+        });
+        body_text
+    }
+
     fn select_parser(&mut self, window: &mut MainWindow) -> Result<()> {
         let parsers = Parser::list();
         self.mc_handler.set_choices(&parsers);
-        window.render_auxiliary_text(self.mc_handler.get_body_text(None))?;
+        window.render_auxiliary_text()?;
         Ok(())
     }
 
@@ -49,7 +64,9 @@ impl ParserHandler {
                 }
             }
         }
-        window.render_auxiliary_text(self.mc_handler.get_body_text(None))?;
+        window.config.auxiliary_messages.clear();
+        window.config.auxiliary_messages.extend(self.mc_handler.get_body_text());
+        window.redraw()?;
         Ok(())
     }
 
@@ -84,11 +101,24 @@ impl ParserHandler {
 
     /// Reset parser
     fn reset(&self, window: &mut MainWindow) {
+        // Parser still active, but not set up
         window.config.parser_state = ParserState::NeedsParser;
         window.config.auxiliary_messages.clear();
         window.config.parser = None;
         window.config.parser_index = 0;
         window.config.did_switch = true;
+    }
+
+    /// Allow the user to input commands so they quit and delete parsers
+    fn set_command_mode(&self, window: &mut MainWindow) -> Result<()> {
+        window.config.delete_func = Some(Parser::del);
+        window.previous_input_type = window.input_type.clone();
+        window.go_to_cli()?;
+        window.input_type = Command;
+        window.reset_command_line()?;
+        window.set_cli_cursor(None)?;
+        queue!(window.output, cursor::Show)?;
+        Ok(())
     }
 }
 
@@ -100,6 +130,7 @@ impl ProcessorMethods for ParserHandler {
         window.input_type = Normal;
         window.set_cli_cursor(None)?;
         window.config.stream_type = window.config.previous_stream_type;
+        window.config.parser_state = ParserState::Disabled;
         window.redraw()?;
         Ok(())
     }
@@ -162,10 +193,17 @@ impl HanderMethods for ParserHandler {
         }
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
+    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> crossterm::Result<()> {
+        // Enable command mode for parsers
+        if key == KeyCode::Char(':') {
+            self.set_command_mode(window)?;
+            // Early escape to not send a `:` char to the rest of this method
+            return Ok(());
+        }
+
         // Handle special cases for setup
         match window.config.parser_state {
-            ParserState::NeedsParser => match self.mc_handler.get_choice() {
+            ParserState::Disabled | ParserState::NeedsParser => match self.mc_handler.get_choice() {
                 Some(item) => match Parser::load(item) {
                     Ok(parser) => {
                         // Tell the parser to redraw on the next tick
@@ -179,6 +217,9 @@ impl HanderMethods for ParserHandler {
                         window.config.parser = Some(parser);
                         window.config.parser_state = ParserState::NeedsIndex;
 
+                        // Remove the redraw command for deleted items
+                        window.config.generate_auxiliary_messages = None;
+
                         // Move the cursor back to the start of the line
                         window.go_to_cli()?;
 
@@ -191,7 +232,10 @@ impl HanderMethods for ParserHandler {
                 },
                 None => {
                     if self.redraw {
+                        // First loop this case hits
                         window.config.stream_type = StreamType::Auxiliary;
+                        window.config.parser_state = ParserState::NeedsParser;
+                        window.config.generate_auxiliary_messages = Some(ParserHandler::parser_messages_handle);
                         self.redraw = false;
                         self.select_parser(window)?;
                         window.redraw()?;
@@ -226,7 +270,6 @@ impl HanderMethods for ParserHandler {
 
                         // Write the new parser status to the command line
                         window.write_to_command_line(&self.status)?;
-
                     }
                     None => {
                         self.mc_handler.recieve_input(window, key)?;

@@ -14,16 +14,6 @@ use crate::{
 pub struct NormalHandler {}
 
 impl NormalHandler {
-    fn set_command_mode(&self, window: &mut MainWindow) -> Result<()> {
-        window.go_to_cli()?;
-        window.previous_input_type = window.input_type.clone();
-        window.input_type = InputType::Command;
-        window.reset_command_line()?;
-        window.set_cli_cursor(None)?;
-        queue!(window.output, cursor::Show)?;
-        Ok(())
-    }
-
     fn set_parser_mode(&self, window: &mut MainWindow) -> Result<()> {
         window.previous_input_type = window.input_type.clone();
         window.input_type = InputType::Parser;
@@ -85,7 +75,7 @@ impl HanderMethods for NormalHandler {
             KeyCode::PageDown => scroll::pg_up(window),
 
             // Modes
-            KeyCode::Char(':') => self.set_command_mode(window)?,
+            KeyCode::Char(':') => window.set_command_mode(None)?,
             KeyCode::Char('/') => self.set_regex_mode(window)?,
             KeyCode::Char('p') => self.set_parser_mode(window)?,
             KeyCode::Char('s') => self.swap_streams(window)?,

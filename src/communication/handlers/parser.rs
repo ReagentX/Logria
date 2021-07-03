@@ -39,9 +39,10 @@ impl ParserHandler {
     // So that we render the text when it updates from deletion commands
     pub fn parser_messages_handle() -> Vec<String> {
         let mut body_text = vec![];
-        Parser::list().iter().enumerate().for_each(|(index, choice)| {
-            body_text.push(format!("{}: {}", index, choice))
-        });
+        Parser::list()
+            .iter()
+            .enumerate()
+            .for_each(|(index, choice)| body_text.push(format!("{}: {}", index, choice)));
         body_text
     }
 
@@ -65,7 +66,10 @@ impl ParserHandler {
             }
         }
         window.config.auxiliary_messages.clear();
-        window.config.auxiliary_messages.extend(self.mc_handler.get_body_text());
+        window
+            .config
+            .auxiliary_messages
+            .extend(self.mc_handler.get_body_text());
         window.redraw()?;
         Ok(())
     }
@@ -107,18 +111,6 @@ impl ParserHandler {
         window.config.parser = None;
         window.config.parser_index = 0;
         window.config.did_switch = true;
-    }
-
-    /// Allow the user to input commands so they quit and delete parsers
-    fn set_command_mode(&self, window: &mut MainWindow) -> Result<()> {
-        window.config.delete_func = Some(Parser::del);
-        window.previous_input_type = window.input_type.clone();
-        window.go_to_cli()?;
-        window.input_type = Command;
-        window.reset_command_line()?;
-        window.set_cli_cursor(None)?;
-        queue!(window.output, cursor::Show)?;
-        Ok(())
     }
 }
 
@@ -196,53 +188,56 @@ impl HanderMethods for ParserHandler {
     fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> crossterm::Result<()> {
         // Enable command mode for parsers
         if key == KeyCode::Char(':') {
-            self.set_command_mode(window)?;
+            window.set_command_mode(Some(Parser::del))?;
             // Early escape to not send a `:` char to the rest of this method
             return Ok(());
         }
 
         // Handle special cases for setup
         match window.config.parser_state {
-            ParserState::Disabled | ParserState::NeedsParser => match self.mc_handler.get_choice() {
-                Some(item) => match Parser::load(item) {
-                    Ok(parser) => {
-                        // Tell the parser to redraw on the next tick
-                        self.redraw = true;
+            ParserState::Disabled | ParserState::NeedsParser => {
+                match self.mc_handler.get_choice() {
+                    Some(item) => match Parser::load(item) {
+                        Ok(parser) => {
+                            // Tell the parser to redraw on the next tick
+                            self.redraw = true;
 
-                        // Update the status string
-                        self.status
-                            .push_str(&format!("Parsing with {}", parser.name));
+                            // Update the status string
+                            self.status
+                                .push_str(&format!("Parsing with {}", parser.name));
 
-                        // Set the new parser and parser state
-                        window.config.parser = Some(parser);
-                        window.config.parser_state = ParserState::NeedsIndex;
+                            // Set the new parser and parser state
+                            window.config.parser = Some(parser);
+                            window.config.parser_state = ParserState::NeedsIndex;
 
-                        // Remove the redraw command for deleted items
-                        window.config.generate_auxiliary_messages = None;
+                            // Remove the redraw command for deleted items
+                            window.config.generate_auxiliary_messages = None;
 
-                        // Move the cursor back to the start of the line
-                        window.go_to_cli()?;
+                            // Move the cursor back to the start of the line
+                            window.go_to_cli()?;
 
-                        // Update the auxilery messages for the second setup step
-                        self.select_index(window)?;
+                            // Update the auxilery messages for the second setup step
+                            self.select_index(window)?;
+                        }
+                        Err(why) => {
+                            window.write_to_command_line(&why.to_string())?;
+                        }
+                    },
+                    None => {
+                        if self.redraw {
+                            // First loop this case hits
+                            window.config.stream_type = StreamType::Auxiliary;
+                            window.config.parser_state = ParserState::NeedsParser;
+                            window.config.generate_auxiliary_messages =
+                                Some(ParserHandler::parser_messages_handle);
+                            self.redraw = false;
+                            self.select_parser(window)?;
+                            window.redraw()?;
+                        }
+                        self.mc_handler.recieve_input(window, key)?;
                     }
-                    Err(why) => {
-                        window.write_to_command_line(&why.to_string())?;
-                    }
-                },
-                None => {
-                    if self.redraw {
-                        // First loop this case hits
-                        window.config.stream_type = StreamType::Auxiliary;
-                        window.config.parser_state = ParserState::NeedsParser;
-                        window.config.generate_auxiliary_messages = Some(ParserHandler::parser_messages_handle);
-                        self.redraw = false;
-                        self.select_parser(window)?;
-                        window.redraw()?;
-                    }
-                    self.mc_handler.recieve_input(window, key)?;
                 }
-            },
+            }
             ParserState::NeedsIndex => {
                 match self.mc_handler.result {
                     Some(item) => {

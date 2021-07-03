@@ -44,18 +44,6 @@ impl StartupHandler {
         });
     }
 
-    /// Allow the user to input commands so they quit and delete sessions
-    fn set_command_mode(&self, window: &mut MainWindow) -> Result<()> {
-        window.config.delete_func = Some(Session::del);
-        window.previous_input_type = window.input_type.clone();
-        window.go_to_cli()?;
-        window.input_type = InputType::Command;
-        window.reset_command_line()?;
-        window.set_cli_cursor(None)?;
-        queue!(window.output, cursor::Show)?;
-        Ok(())
-    }
-
     fn process_command(&mut self, window: &mut MainWindow, command: &str) -> Result<()> {
         let selection = command.parse::<usize>();
         match selection {
@@ -120,7 +108,7 @@ impl HanderMethods for StartupHandler {
             KeyCode::PageDown => scroll::pg_up(window),
 
             // Mode change for remove or config commands
-            KeyCode::Char(':') => self.set_command_mode(window)?,
+            KeyCode::Char(':') => window.set_command_mode(Some(Session::del))?,
 
             // Handle user input selection
             KeyCode::Enter => {

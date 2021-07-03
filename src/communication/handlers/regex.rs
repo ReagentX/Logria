@@ -149,6 +149,7 @@ impl HanderMethods for RegexHandler {
                 KeyCode::Enter => {
                     self.set_pattern(window)?;
                     if self.current_pattern.is_some() {
+                        window.reset_output()?;
                         self.process_matches(window)?;
                     };
                     window.redraw()?;

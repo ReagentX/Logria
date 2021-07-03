@@ -141,6 +141,9 @@ impl HanderMethods for RegexHandler {
                     window.redraw()?;
                 }
 
+                // Enter command mode
+                KeyCode::Char(':') => window.set_command_mode(None)?,
+
                 // Return to normal
                 KeyCode::Esc => self.return_to_normal(window)?,
                 _ => {}

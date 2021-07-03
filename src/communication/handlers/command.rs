@@ -3,16 +3,10 @@ use std::io::Write;
 use crossterm::{event::KeyCode, Result};
 
 use super::handler::HanderMethods;
-use crate::{
-    communication::{
-        handlers::{startup::StartupHandler, user_input::UserInputHandler},
-        input::{
-            input_type::InputType,
-            stream_type::StreamType,
-        },
-        reader::main::MainWindow,
-    },
-    extensions::session::Session,
+use crate::communication::{
+    handlers::user_input::UserInputHandler,
+    input::{input_type::InputType, stream_type::StreamType},
+    reader::main::MainWindow,
 };
 
 pub struct CommandHandler {
@@ -22,10 +16,9 @@ pub struct CommandHandler {
 impl CommandHandler {
     fn return_to_prev_state(&mut self, window: &mut MainWindow) -> Result<()> {
         // If we are in auxiliary mode, go back to that, otherwise go to normal mode
-        window.input_type = match window.config.stream_type {
-            StreamType::Auxiliary => InputType::Startup,
-            _ => InputType::Normal,
-        };
+        window.input_type = window.previous_input_type.clone();
+        window.previous_input_type = InputType::Command;
+        window.config.delete_func = None;
         window.set_cli_cursor(None)?;
         window.output.flush()?;
         Ok(())
@@ -42,6 +35,7 @@ impl CommandHandler {
     fn resolve_delete_command(&self, command: &str) -> Result<Vec<usize>> {
         // Validate length
         if command.len() < 3 {
+            // TODO: Use proper error here
             return Err(crossterm::ErrorKind::FmtError(std::fmt::Error));
         }
 
@@ -80,7 +74,9 @@ impl CommandHandler {
     fn process_command(&mut self, window: &mut MainWindow, command: &str) -> Result<()> {
         if command == "q" {
             window.quit()?;
-        } else if command.starts_with("poll ") {
+        }
+        // Update poll rate
+        else if command.starts_with("poll ") {
             match self.resolve_poll_rate(command) {
                 Ok(val) => {
                     window.config.poll_rate = val;
@@ -107,28 +103,35 @@ impl CommandHandler {
         }
         // Remove saved sessions from the main screen
         else if command.starts_with('r') {
-            match window.config.stream_type {
-                StreamType::Auxiliary => match self.resolve_delete_command(command) {
-                    Ok(items) => {
-                        Session::del(&items);
-                        // TODO: Support parsers / arbitrary method calls
-                        window.render_auxiliary_text(StartupHandler::get_startup_text())?;
-                        window.write_to_command_line(&format!("Deleting items: {:?}", items))?;
+            if let StreamType::Auxiliary = window.config.stream_type {
+                if let Ok(items) = self.resolve_delete_command(command) {
+                    if let Some(del) = window.config.delete_func {
+                        del(&items);
+                        window.render_auxiliary_text()?;
+                    } else {
+                        {
+                            window.write_to_command_line(&format!(
+                                "Delete command is valid, but there is nothing to delete.",
+                            ))?;
+                        }
                     }
-                    Err(_) => {
+                } else {
+                    {
                         window.write_to_command_line(&format!(
                             "Failed to parse remove command: {:?} is invalid.",
                             command
                         ))?;
                     }
-                },
-                _ => {
+                }
+            } else {
+                {
                     window.write_to_command_line("Cannot remove files outside of startup mode.")?;
                 }
             }
         }
         // Go back to start screen
         else if command.starts_with("restart") {
+            window.write_to_command_line("Restart")?
         } else {
             window.write_to_command_line(&format!("Invalid command: {:?}", command))?;
         }

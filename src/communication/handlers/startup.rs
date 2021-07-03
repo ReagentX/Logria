@@ -44,8 +44,10 @@ impl StartupHandler {
         });
     }
 
+    /// Allow the user to input commands so they quit and delete sessions
     fn set_command_mode(&self, window: &mut MainWindow) -> Result<()> {
-        // Allow the user to input commands so they quit and delete sessions
+        window.config.delete_func = Some(Session::del);
+        window.previous_input_type = window.input_type.clone();
         window.go_to_cli()?;
         window.input_type = InputType::Command;
         window.reset_command_line()?;
@@ -62,10 +64,12 @@ impl StartupHandler {
                     Some(file_path) => {
                         let session = Session::load(file_path);
                         match session {
+                            // Successfully start the app
                             Ok(session) => {
                                 window.config.streams = build_streams_from_session(session);
                                 window.config.stream_type = StdErr;
                                 window.input_type = InputType::Normal;
+                                window.config.generate_auxiliary_messages = None;
                                 window.reset_output()?;
                                 window.redraw()?;
                             }

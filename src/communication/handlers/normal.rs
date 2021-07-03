@@ -16,6 +16,7 @@ pub struct NormalHandler {}
 impl NormalHandler {
     fn set_command_mode(&self, window: &mut MainWindow) -> Result<()> {
         window.go_to_cli()?;
+        window.previous_input_type = window.input_type.clone();
         window.input_type = InputType::Command;
         window.reset_command_line()?;
         window.set_cli_cursor(None)?;
@@ -24,6 +25,7 @@ impl NormalHandler {
     }
 
     fn set_parser_mode(&self, window: &mut MainWindow) -> Result<()> {
+        window.previous_input_type = window.input_type.clone();
         window.input_type = InputType::Parser;
         window.reset_command_line()?;
         window.set_cli_cursor(None)?;
@@ -36,6 +38,7 @@ impl NormalHandler {
 
     fn set_regex_mode(&self, window: &mut MainWindow) -> Result<()> {
         window.go_to_cli()?;
+        window.previous_input_type = window.input_type.clone();
         window.input_type = InputType::Regex;
         window.config.highlight_match = true;
         window.reset_command_line()?;
@@ -54,6 +57,7 @@ impl NormalHandler {
             // Do not swap from auxiliary stream
             StreamType::Auxiliary => StreamType::Auxiliary,
         };
+        window.previous_input_type = window.input_type.clone();
         window.input_type = InputType::Normal;
         window.set_cli_cursor(None)?;
         window.reset_command_line()?;

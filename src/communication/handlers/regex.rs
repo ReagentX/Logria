@@ -87,6 +87,7 @@ impl ProcessorMethods for RegexHandler {
     /// Return the app to a normal input state
     fn return_to_normal(&mut self, window: &mut MainWindow) -> Result<()> {
         self.clear_matches(window)?;
+        window.previous_input_type = window.input_type.clone();
         window.input_type = Normal;
         window.set_cli_cursor(None)?;
         window.redraw()?;
@@ -148,7 +149,7 @@ impl HanderMethods for RegexHandler {
                 KeyCode::Enter => {
                     self.set_pattern(window)?;
                     if self.current_pattern.is_some() {
-                        self.process_matches(window);
+                        self.process_matches(window)?;
                     };
                     window.redraw()?;
                 }

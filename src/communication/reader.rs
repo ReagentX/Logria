@@ -2,7 +2,7 @@ pub mod main {
     use std::{
         cmp::max,
         io::{stdout, Stdout, Write},
-        thread, time,
+        result, thread, time,
         time::Instant,
     };
 
@@ -43,7 +43,6 @@ pub mod main {
         util::sanitizers::length::LengthFinder,
     };
 
-    #[derive(Debug)]
     pub struct LogiraConfig {
         pub width: u16,         // Window width
         pub height: u16,        // Window height
@@ -87,11 +86,14 @@ pub mod main {
         pub streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
         previous_render: (usize, usize), // Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
         pub did_switch: bool,            // True if we just swapped input types, False otherwise
+        pub delete_func: Option<fn(&Vec<usize>) -> ()>, // Pointer to function used to delete items for the `: r` command
+        pub generate_auxiliary_messages: Option<fn() -> Vec<String>>,
     }
 
     pub struct MainWindow {
         pub config: LogiraConfig,
         pub input_type: InputType,
+        pub previous_input_type: InputType,
         pub output: Stdout,
         pub mc_handler: MultipleChoiceHandler,
         length_finder: LengthFinder,
@@ -121,6 +123,7 @@ pub mod main {
             // Build streams here
             MainWindow {
                 input_type: InputType::Startup,
+                previous_input_type: InputType::Startup,
                 output: stdout(),
                 length_finder: LengthFinder::new(),
                 mc_handler: MultipleChoiceHandler::new(),
@@ -146,7 +149,7 @@ pub mod main {
                     .unwrap(),
                     parser: None,
                     parser_index: 0,
-                    parser_state: ParserState::NeedsParser,
+                    parser_state: ParserState::Disabled,
                     analytics_enabled: false,
                     last_index_processed: 0,
                     insert_mode: false,
@@ -158,6 +161,8 @@ pub mod main {
                     current_end: 0,
                     streams: vec![],
                     did_switch: false,
+                    delete_func: None,
+                    generate_auxiliary_messages: None,
                 },
             }
         }
@@ -522,11 +527,15 @@ pub mod main {
             Ok(())
         }
 
-        /// Generate startup text the given vector
-        pub fn render_auxiliary_text(&mut self, text: Vec<String>) -> Result<()> {
-            self.config.auxiliary_messages.clear();
-            self.config.auxiliary_messages.extend(text);
-            self.redraw()?;
+        /// Redraw auxiliary text the given function pointer
+        pub fn render_auxiliary_text(&mut self) -> Result<()> {
+            if let Some(gen) = self.config.generate_auxiliary_messages {
+                self.config.auxiliary_messages.clear();
+                self.config.auxiliary_messages.extend(gen());
+                self.redraw()?;
+            } else {
+                panic!("Cannot draw aux messages with no fn pointer!")
+            }
             Ok(())
         }
 
@@ -607,7 +616,8 @@ pub mod main {
             let mut startup_handler = StartupHandler::new();
 
             // Setup startup messages
-            self.render_auxiliary_text(StartupHandler::get_startup_text())?;
+            self.config.generate_auxiliary_messages = Some(StartupHandler::get_startup_text);
+            self.render_auxiliary_text()?;
 
             // Initial message collection
             self.recieve_streams();

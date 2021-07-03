@@ -87,7 +87,7 @@ impl ProcessorMethods for RegexHandler {
     /// Return the app to a normal input state
     fn return_to_normal(&mut self, window: &mut MainWindow) -> Result<()> {
         self.clear_matches(window)?;
-        window.previous_input_type = window.input_type.clone();
+        window.previous_input_type = window.input_type;
         window.input_type = Normal;
         window.set_cli_cursor(None)?;
         window.redraw()?;
@@ -141,6 +141,9 @@ impl HanderMethods for RegexHandler {
                     window.redraw()?;
                 }
 
+                // Enter command mode
+                KeyCode::Char(':') => window.set_command_mode(None)?,
+
                 // Return to normal
                 KeyCode::Esc => self.return_to_normal(window)?,
                 _ => {}
@@ -149,6 +152,7 @@ impl HanderMethods for RegexHandler {
                 KeyCode::Enter => {
                     self.set_pattern(window)?;
                     if self.current_pattern.is_some() {
+                        window.reset_output()?;
                         self.process_matches(window)?;
                     };
                     window.redraw()?;
@@ -182,7 +186,7 @@ mod tests {
         // Set regex pattern
         let pattern = "0";
         handler.current_pattern = Some(Regex::new(pattern).unwrap());
-        handler.process_matches(&mut logria);
+        handler.process_matches(&mut logria).unwrap();
         assert_eq!(
             vec![0, 10, 20, 30, 40, 50, 60, 70, 80, 90],
             logria.config.matched_rows
@@ -201,7 +205,7 @@ mod tests {
         let pattern = "a";
         handler.current_pattern = Some(Regex::new(pattern).unwrap());
         logria.config.regex_pattern = Some(Regex::new(pattern).unwrap());
-        handler.process_matches(&mut logria);
+        handler.process_matches(&mut logria).unwrap();
         assert_eq!(0, logria.config.matched_rows.len());
     }
 
@@ -216,7 +220,7 @@ mod tests {
         // Set regex pattern
         let pattern = "0";
         handler.current_pattern = Some(Regex::new(pattern).unwrap());
-        handler.process_matches(&mut logria);
+        handler.process_matches(&mut logria).unwrap();
         handler.return_to_normal(&mut logria).unwrap();
 
         assert!(handler.current_pattern.is_none());

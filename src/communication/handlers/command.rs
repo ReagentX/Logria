@@ -16,7 +16,7 @@ pub struct CommandHandler {
 impl CommandHandler {
     fn return_to_prev_state(&mut self, window: &mut MainWindow) -> Result<()> {
         // If we are in auxiliary mode, go back to that, otherwise go to normal mode
-        window.input_type = window.previous_input_type.clone();
+        window.input_type = window.previous_input_type;
         window.previous_input_type = InputType::Command;
         window.config.delete_func = None;
         window.set_cli_cursor(None)?;
@@ -110,9 +110,9 @@ impl CommandHandler {
                         window.render_auxiliary_text()?;
                     } else {
                         {
-                            window.write_to_command_line(&format!(
+                            window.write_to_command_line(
                                 "Delete command is valid, but there is nothing to delete.",
-                            ))?;
+                            )?;
                         }
                     }
                 } else {

@@ -471,6 +471,21 @@ pub mod main {
             Ok(())
         }
 
+        /// Set the output to command mode for command interpretation
+        pub fn set_command_mode(
+            &mut self,
+            delete_func: Option<fn(&Vec<usize>) -> ()>,
+        ) -> Result<()> {
+            self.config.delete_func = delete_func;
+            self.previous_input_type = self.input_type;
+            self.go_to_cli()?;
+            self.input_type = InputType::Command;
+            self.reset_command_line()?;
+            self.set_cli_cursor(None)?;
+            queue!(self.output, cursor::Show)?;
+            Ok(())
+        }
+
         /// Overwrites the output window with empty space
         /// TODO: faster?
         /// Unused currently because it is too slow and causes flickering

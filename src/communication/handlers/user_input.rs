@@ -158,7 +158,10 @@ impl UserInputHandler {
 
         // Write to the history tape
         if window.config.use_history {
-            self.history.add_item(&result);
+            match self.history.add_item(&result) {
+                Ok(_) => {}
+                Err(why) => window.write_to_command_line(&why.to_string())?,
+            }
         }
 
         Ok(result)

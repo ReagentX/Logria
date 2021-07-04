@@ -4,11 +4,15 @@ use std::{
     fs::{create_dir_all, File, OpenOptions},
     io::{BufRead, BufReader, Write},
     path::Path,
+    result::Result,
 };
 
-use crate::constants::{
-    cli::excludes::HISTORY_EXCLUDES,
-    directories::{history, history_tape},
+use crate::{
+    constants::{
+        cli::excludes::HISTORY_EXCLUDES,
+        directories::{history, history_tape},
+    },
+    util::error::LogriaError,
 };
 
 pub struct Tape {
@@ -37,71 +41,72 @@ impl Tape {
             current_index: 0,
             should_scroll_back: false,
         };
-        tape.read_from_disk();
+        match tape.read_from_disk() {
+            Ok(_) => {}
+            Err(why) => panic!("{:?}", &why.to_string()),
+        }
         tape
     }
 
     /// Read the history file from the disk to the current history buffer
-    fn read_from_disk(&mut self) {
-        let file = match OpenOptions::new().read(true).open(history_tape()) {
+    fn read_from_disk(&mut self) -> Result<(), LogriaError> {
+        match OpenOptions::new().read(true).open(history_tape()) {
             // The `description` method of `io::Error` returns a string that describes the error
-            Err(why) => panic!(
-                "Couldn't open {:?}: {}",
+            Err(why) => Err(LogriaError::CannotRead(
                 history_tape(),
-                Error::to_string(&why)
-            ),
-            Ok(file) => file,
-        };
+                <dyn Error>::to_string(&why),
+            )),
+            Ok(file) => {
+                // Create a buffer and read from it
+                let reader = BufReader::new(file);
+                for line in reader.lines() {
+                    if line.is_ok() {
+                        self.history_tape.push(match line {
+                            Ok(a) => a,
+                            _ => unreachable!(),
+                        });
+                    } else {
+                        break;
+                    }
+                }
 
-        // Create a buffer and read from it
-        let reader = BufReader::new(file);
-        for line in reader.lines() {
-            if line.is_ok() {
-                self.history_tape.push(match line {
-                    Ok(a) => a,
-                    _ => unreachable!(),
-                });
-            } else {
-                break;
+                self.current_index = self.history_tape.len().checked_sub(1).unwrap_or_default();
+                Ok(())
             }
         }
-
-        self.current_index = self.history_tape.len().checked_sub(1).unwrap_or_default();
     }
 
     /// Add an item to the history tape
-    pub fn add_item(&mut self, item: &str) {
+    pub fn add_item(&mut self, item: &str) -> Result<(), LogriaError> {
         let clean_item = item.trim();
-        if !HISTORY_EXCLUDES.contains(&clean_item) {
-            // Write to internal buffer
-            self.history_tape.push(String::from(clean_item));
+        if HISTORY_EXCLUDES.contains(&clean_item) {
+            return Ok(());
+        }
+        // Write to internal buffer
+        self.history_tape.push(String::from(clean_item));
 
-            // Reset tape to end
-            self.should_scroll_back = false;
-            self.current_index = self.history_tape.len().checked_sub(1).unwrap_or_default();
+        // Reset tape to end
+        self.should_scroll_back = false;
+        self.current_index = self.history_tape.len().checked_sub(1).unwrap_or_default();
 
-            // Write to file
-            let mut file = match OpenOptions::new()
-                .read(true)
-                .append(true)
-                .open(history_tape())
-            {
-                // The `description` method of `io::Error` returns a string that describes the error
-                Err(why) => panic!(
-                    "Couldn't open {:?}: {}",
+        // Write to file
+        match OpenOptions::new()
+            .read(true)
+            .append(true)
+            .open(history_tape())
+        {
+            // The `description` method of `io::Error` returns a string that describes the error
+            Err(why) => Err(LogriaError::CannotRead(
+                history_tape(),
+                <dyn Error>::to_string(&why),
+            )),
+            Ok(mut file) => match writeln!(file, "{}", clean_item) {
+                Ok(_) => Ok(()),
+                Err(why) => Err(LogriaError::CannotWrite(
                     history_tape(),
-                    Error::to_string(&why)
-                ),
-                Ok(file) => file,
-            };
-            match writeln!(file, "{}", clean_item) {
-                Ok(_) => {}
-                Err(why) => panic!(
-                    "Couldn't write to {:?}: {}",
-                    history_tape(),
-                    Error::to_string(&why)
-                ),
-            }
+                    <dyn Error>::to_string(&why),
+                )),
+            },
         }
     }
 
@@ -162,7 +167,7 @@ mod tests {
     #[test]
     fn can_add_item() {
         let mut tape = Tape::new();
-        tape.add_item("test");
+        tape.add_item("test").unwrap();
         assert_eq!(String::from("test"), tape.get_current_item());
     }
 

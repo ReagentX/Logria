@@ -115,7 +115,7 @@ impl ProcessorMethods for ParserHandler {
     fn return_to_normal(&mut self, window: &mut MainWindow) -> Result<()> {
         self.clear_matches(window)?;
         self.redraw = true;
-        window.input_type = Normal;
+        window.update_input_type(Normal)?;
         window.set_cli_cursor(None)?;
         window.config.stream_type = window.config.previous_stream_type;
         window.config.parser_state = ParserState::Disabled;

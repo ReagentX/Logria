@@ -56,7 +56,7 @@ impl StartupHandler {
                             Ok(session) => {
                                 window.config.streams = build_streams_from_session(session);
                                 window.config.stream_type = StdErr;
-                                window.input_type = InputType::Normal;
+                                window.update_input_type(InputType::Normal)?;
                                 window.config.generate_auxiliary_messages = None;
                                 window.reset_output()?;
                                 window.redraw()?;
@@ -78,7 +78,7 @@ impl StartupHandler {
             Err(_) => {
                 window.config.streams = build_streams_from_input(&vec![command.to_owned()], true);
                 window.config.stream_type = StdErr;
-                window.input_type = InputType::Normal;
+                window.update_input_type(InputType::Normal)?;
                 window.reset_output()?;
                 window.redraw()?;
                 Ok(())

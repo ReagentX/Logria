@@ -485,7 +485,7 @@ pub mod main {
             queue!(self.output, cursor::Show)?;
             Ok(())
         }
-
+        
         /// Overwrites the output window with empty space
         /// TODO: faster?
         /// Unused currently because it is too slow and causes flickering
@@ -560,6 +560,12 @@ pub mod main {
             self.config.height = h;
             self.config.width = w;
             self.config.last_row = self.config.height.checked_sub(3).unwrap_or(h);
+            Ok(())
+        }
+
+        pub fn update_input_type(&mut self, input_type: InputType) -> Result<()> {
+            self.previous_input_type = self.input_type;
+            self.input_type = input_type;
             Ok(())
         }
 

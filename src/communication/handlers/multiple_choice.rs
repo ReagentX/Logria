@@ -19,7 +19,7 @@ pub struct MultipleChoiceHandler {
 
 impl MultipleChoiceHandler {
     /// Set internal choices map
-    pub fn set_choices(&mut self, choices: &Vec<String>) {
+    pub fn set_choices(&mut self, choices: &[String]) {
         self.choices_map.clear();
         choices.iter().enumerate().for_each(|(index, choice)| {
             self.choices_map.insert(index, choice.to_owned());
@@ -120,7 +120,7 @@ mod kc_tests {
     fn can_set_choices() {
         // Setup handler
         let mut mc = MultipleChoiceHandler::new();
-        mc.set_choices(&vec!["a".to_string(), "b".to_string(), "c".to_string()]);
+        mc.set_choices(&["a".to_string(), "b".to_string(), "c".to_string()]);
 
         // Generate expected result
         let mut expected: HashMap<usize, String> = HashMap::new();
@@ -135,7 +135,7 @@ mod kc_tests {
     fn can_get_body_text_no_desc() {
         // Setup handler
         let mut mc = MultipleChoiceHandler::new();
-        mc.set_choices(&vec!["a".to_string(), "b".to_string(), "c".to_string()]);
+        mc.set_choices(&["a".to_string(), "b".to_string(), "c".to_string()]);
 
         // Generate expected result
         let expected = vec!["0: a", "1: b", "2: c"];
@@ -150,7 +150,7 @@ mod kc_tests {
 
         // Setup handler
         let mut mc = MultipleChoiceHandler::new();
-        mc.set_choices(&vec!["a".to_string(), "b".to_string(), "c".to_string()]);
+        mc.set_choices(&["a".to_string(), "b".to_string(), "c".to_string()]);
 
         // Generate expected result
         mc.validate_choice(&mut logria, "1").unwrap();
@@ -165,7 +165,7 @@ mod kc_tests {
 
         // Setup handler
         let mut mc = MultipleChoiceHandler::new();
-        mc.set_choices(&vec!["a".to_string(), "b".to_string(), "c".to_string()]);
+        mc.set_choices(&["a".to_string(), "b".to_string(), "c".to_string()]);
 
         // Generate expected result
         mc.validate_choice(&mut logria, "1").unwrap();

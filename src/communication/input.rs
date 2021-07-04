@@ -167,7 +167,7 @@ pub mod stream {
     }
 
     /// Build app streams from user input, i.e. command text or a filepath
-    pub fn build_streams_from_input(commands: &Vec<String>, save: bool) -> Vec<InputStream> {
+    pub fn build_streams_from_input(commands: &[String], save: bool) -> Vec<InputStream> {
         let mut streams: Vec<InputStream> = vec![];
         let mut stream_types: HashSet<SessionType> = HashSet::new();
         for command in commands {
@@ -279,14 +279,14 @@ pub mod stream {
 
         #[test]
         fn test_build_file_stream_from_session() {
-            let session = Session::new(&vec![String::from("README.md")], SessionType::File);
+            let session = Session::new(&[String::from("README.md")], SessionType::File);
             let streams = build_streams_from_session(session);
             assert_eq!(streams[0]._type, "FileInput");
         }
 
         #[test]
         fn test_build_command_stream_from_session() {
-            let session = Session::new(&vec![String::from("ls -l")], SessionType::Command);
+            let session = Session::new(&[String::from("ls -l")], SessionType::Command);
             let streams = build_streams_from_session(session);
             assert_eq!(streams[0]._type, "CommandInput");
         }
@@ -294,7 +294,7 @@ pub mod stream {
         #[test]
         fn test_build_mixed_stream_from_session() {
             let session = Session::new(
-                &vec![String::from("ls -l"), String::from("README.md")],
+                &[String::from("ls -l"), String::from("README.md")],
                 SessionType::Mixed,
             );
             let streams = build_streams_from_session(session);

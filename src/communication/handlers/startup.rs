@@ -76,7 +76,7 @@ impl StartupHandler {
                 Ok(())
             }
             Err(_) => {
-                window.config.streams = build_streams_from_input(&vec![command.to_owned()], true);
+                window.config.streams = build_streams_from_input(&[command.to_owned()], true);
                 window.config.stream_type = StdErr;
                 window.update_input_type(InputType::Normal)?;
                 window.reset_output()?;
@@ -159,7 +159,7 @@ mod startup_tests {
     #[test]
     fn can_load_session() {
         // Create a new dummy session
-        let session = Session::new(&vec![String::from("ls -la")], Command);
+        let session = Session::new(&[String::from("ls -la")], Command);
         session.save("ls -la");
 
         // Setup dummy window
@@ -207,6 +207,6 @@ mod startup_tests {
             .is_ok());
         assert!(matches!(window.input_type, InputType::Normal));
         assert!(matches!(window.config.stream_type, StreamType::StdErr));
-        Session::del(&vec![Session::list().len() - 1]);
+        Session::del(&[Session::list().len() - 1]);
     }
 }

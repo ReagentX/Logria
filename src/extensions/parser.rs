@@ -90,7 +90,7 @@ impl Parser {
     }
 
     /// Delete the path for a fully qualified session filename
-    pub fn del(items: &Vec<usize>) {
+    pub fn del(items: &[usize]) {
         // Iterate through each `i` in `items` and remove the item at list index `i`
         let files = Parser::list();
         for i in items {

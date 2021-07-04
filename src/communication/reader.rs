@@ -86,7 +86,7 @@ pub mod main {
         pub streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
         previous_render: (usize, usize), // Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
         pub did_switch: bool,            // True if we just swapped input types, False otherwise
-        pub delete_func: Option<fn(&Vec<usize>) -> ()>, // Pointer to function used to delete items for the `: r` command
+        pub delete_func: Option<fn(&[usize]) -> ()>, // Pointer to function used to delete items for the `: r` command
         pub generate_auxiliary_messages: Option<fn() -> Vec<String>>,
     }
 
@@ -474,7 +474,7 @@ pub mod main {
         /// Set the output to command mode for command interpretation
         pub fn set_command_mode(
             &mut self,
-            delete_func: Option<fn(&Vec<usize>) -> ()>,
+            delete_func: Option<fn(&[usize]) -> ()>,
         ) -> Result<()> {
             self.config.delete_func = delete_func;
             self.previous_input_type = self.input_type;

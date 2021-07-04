@@ -32,7 +32,7 @@ impl Session {
     }
 
     /// Create a Session struct
-    pub fn new(commands: &Vec<String>, session_type: SessionType) -> Session {
+    pub fn new(commands: &[String], session_type: SessionType) -> Session {
         Session::verify_path();
         Session {
             commands: commands.to_owned(),
@@ -65,7 +65,7 @@ impl Session {
     }
 
     /// Delete the path for a fully qualified session filename
-    pub fn del(items: &Vec<usize>) {
+    pub fn del(items: &[usize]) {
         // Iterate through each `i` in `items` and remove the item at list index `i`
         let files = Session::list();
         for i in items {
@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn serialize_session() {
-        let session = Session::new(&vec![String::from("ls -la")], SessionType::Command);
+        let session = Session::new(&[String::from("ls -la")], SessionType::Command);
         session.save("ls -la");
 
         assert!(Path::new(&format!("{}/{}", sessions(), "ls -la")).exists());
@@ -127,7 +127,7 @@ mod tests {
 
     #[test]
     fn deserialize_session() {
-        let session = Session::new(&vec![String::from("ls -la")], SessionType::Command);
+        let session = Session::new(&[String::from("ls -la")], SessionType::Command);
         session.save("ls -la copy");
         assert!(Path::new(&format!("{}/{}", sessions(), "ls -la copy")).exists());
 
@@ -143,8 +143,8 @@ mod tests {
 
     #[test]
     fn delete_session() {
-        let session = Session::new(&vec![String::from("ls -la")], SessionType::Command);
+        let session = Session::new(&[String::from("ls -la")], SessionType::Command);
         session.save("zzzfake_file_name");
-        Session::del(&vec![Session::list().len() - 1]);
+        Session::del(&[Session::list().len() - 1]);
     }
 }

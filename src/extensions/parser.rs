@@ -209,7 +209,7 @@ mod tests {
     };
 
     #[test]
-    fn test_list() {
+    fn test_list_full() {
         // Create a parser for use by this test
         let mut map = HashMap::new();
         map.insert(String::from("Date"), String::from("date"));
@@ -229,6 +229,27 @@ mod tests {
         assert!(list
             .iter()
             .any(|i| i == &format!("{}/{}", patterns(), "Hyphen Separated Test 3")))
+    }
+
+    #[test]
+    fn test_list_clean() {
+        // Create a parser for use by this test
+        let mut map = HashMap::new();
+        map.insert(String::from("Date"), String::from("date"));
+        map.insert(String::from("Caller"), String::from("count"));
+        map.insert(String::from("Level"), String::from("count"));
+        map.insert(String::from("Message"), String::from("sum"));
+        let parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            map,
+            None,
+        );
+        parser.save("Hyphen Separated Test 3").unwrap();
+
+        let list = Parser::list_clean();
+        assert!(list.iter().any(|i| i == "Hyphen Separated Test 3"))
     }
 
     #[test]

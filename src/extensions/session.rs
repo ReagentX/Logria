@@ -157,11 +157,17 @@ mod tests {
     use std::path::Path;
 
     #[test]
-    fn test_list() {
+    fn test_list_full() {
         let list = Session::list_full();
         assert!(list
             .iter()
             .any(|i| i == &format!("{}/{}", sessions(), "ls -la")))
+    }
+
+    #[test]
+    fn test_list_clean() {
+        let list = Session::list_clean();
+        assert!(list.iter().any(|i| i == "ls -la"))
     }
 
     #[test]

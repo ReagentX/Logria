@@ -293,7 +293,6 @@ pub mod main {
                     }
                 }
                 InputType::Parser => {
-                    // TODO: build parser
                     self.messages()[index].to_string()
                 }
             }
@@ -472,10 +471,7 @@ pub mod main {
         }
 
         /// Set the output to command mode for command interpretation
-        pub fn set_command_mode(
-            &mut self,
-            delete_func: Option<fn(&[usize]) -> ()>,
-        ) -> Result<()> {
+        pub fn set_command_mode(&mut self, delete_func: Option<fn(&[usize]) -> ()>) -> Result<()> {
             self.config.delete_func = delete_func;
             self.previous_input_type = self.input_type;
             self.go_to_cli()?;
@@ -485,7 +481,7 @@ pub mod main {
             queue!(self.output, cursor::Show)?;
             Ok(())
         }
-        
+
         /// Overwrites the output window with empty space
         /// TODO: faster?
         /// Unused currently because it is too slow and causes flickering
@@ -574,7 +570,15 @@ pub mod main {
             // Build the app
             if let Some(c) = commands {
                 // Build streams from the command used to launch Logria
-                self.config.streams = build_streams_from_input(&c, true);
+                // If we cannot save to the disk, write to the command line and start wtihout saving
+                let possible_streams = build_streams_from_input(&c, true);
+                match possible_streams {
+                    Ok(streams) => self.config.streams = streams,
+                    Err(why) => {
+                        self.write_to_command_line(&why.to_string());
+                        build_streams_from_input(&c, false).unwrap();
+                    }
+                }
 
                 // Set to display stderr by default
                 self.config.previous_stream_type = StreamType::StdOut;

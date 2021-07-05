@@ -6,6 +6,7 @@ pub mod stream {
         io::{BufRead, BufReader},
         path::Path,
         process::Stdio,
+        result::Result,
         sync::{
             mpsc::{channel, Receiver},
             Arc, Mutex,
@@ -22,6 +23,7 @@ pub mod stream {
     use crate::{
         constants::{cli::poll_rate::FASTEST, directories::home},
         extensions::session::{Session, SessionType},
+        util::error::LogriaError,
     };
 
     #[derive(Debug)]
@@ -34,7 +36,11 @@ pub mod stream {
     }
 
     pub trait Input {
-        fn new(poll_rate: Option<u64>, name: String, command: String) -> InputStream;
+        fn build(
+            poll_rate: Option<u64>,
+            name: String,
+            command: String,
+        ) -> Result<InputStream, LogriaError>;
     }
 
     #[derive(Debug)]
@@ -43,25 +49,34 @@ pub mod stream {
     impl Input for FileInput {
         /// Create a file input
         /// poll_rate is unused since the file will be read all at once
-        fn new(_: Option<u64>, name: String, command: String) -> InputStream {
+        fn build(
+            _: Option<u64>,
+            name: String,
+            command: String,
+        ) -> Result<InputStream, LogriaError> {
             // Setup multiprocessing queues
             let (_, err_rx) = channel();
             let (out_tx, out_rx) = channel();
+
+            // Try and open a handle to the file
+            // Remove, as file input should be immediately buffered...
+            let path = Path::new(&command);
+            // Ensure file exists
+            let file = match File::open(&path) {
+                // The `description` method of `io::Error` returns a string that describes the error
+                Err(why) => {
+                    return Err(LogriaError::CannotRead(
+                        command,
+                        <dyn Error>::to_string(&why),
+                    ))
+                }
+                Ok(file) => file,
+            };
 
             // Start process
             let process = thread::Builder::new()
                 .name(format!("FileInput: {}", name))
                 .spawn(move || {
-                    // Remove, as file input should be immediately buffered...
-                    let path = Path::new(&command);
-
-                    // Try and open a handle to the file
-                    let file = match File::open(&path) {
-                        // The `description` method of `io::Error` returns a string that describes the error
-                        Err(why) => panic!("Couldn't open {:?}: {}", path, Error::to_string(&why)),
-                        Ok(file) => file,
-                    };
-
                     // Create a buffer and read from it
                     let reader = BufReader::new(file);
                     for line in reader.lines() {
@@ -76,13 +91,13 @@ pub mod stream {
                     }
                 });
 
-            InputStream {
+            Ok(InputStream {
                 stdout: out_rx,
                 stderr: err_rx,
                 proccess_name: name,
                 process,
                 _type: String::from("FileInput"),
-            }
+            })
         }
     }
 
@@ -98,7 +113,11 @@ pub mod stream {
 
     impl Input for CommandInput {
         /// Create a command input
-        fn new(poll_rate: Option<u64>, name: String, command: String) -> InputStream {
+        fn build(
+            poll_rate: Option<u64>,
+            name: String,
+            command: String,
+        ) -> Result<InputStream, LogriaError> {
             // Setup multiprocessing queues
             let (err_tx, err_rx) = channel();
             let (out_tx, out_rx) = channel();
@@ -147,13 +166,13 @@ pub mod stream {
                     });
                 });
 
-            InputStream {
+            Ok(InputStream {
                 stdout: out_rx,
                 stderr: err_rx,
                 proccess_name: name,
                 process,
                 _type: String::from("CommandInput"),
-            }
+            })
         }
     }
 
@@ -167,7 +186,10 @@ pub mod stream {
     }
 
     /// Build app streams from user input, i.e. command text or a filepath
-    pub fn build_streams_from_input(commands: &[String], save: bool) -> Vec<InputStream> {
+    pub fn build_streams_from_input(
+        commands: &[String],
+        save: bool,
+    ) -> Result<Vec<InputStream>, LogriaError> {
         let mut streams: Vec<InputStream> = vec![];
         let mut stream_types: HashSet<SessionType> = HashSet::new();
         for command in commands {
@@ -175,18 +197,20 @@ pub mod stream {
             match determine_stream_type(command) {
                 SessionType::Command => {
                     // None indicates default poll rate
-                    streams.push(CommandInput::new(
-                        None,
-                        command.to_owned(), // Same as the command
-                        command.to_owned(),
-                    ));
+                    match CommandInput::build(None, command.to_owned(), command.to_owned()) {
+                        Ok(stream) => streams.push(stream),
+                        Err(why) => return Err(why),
+                    };
                     stream_types.insert(SessionType::File);
                 }
                 SessionType::File => {
                     // None indicates default poll rate
                     let path = Path::new(command);
                     let name = path.file_name().unwrap().to_str().unwrap().to_string();
-                    streams.push(FileInput::new(None, name, command.to_owned()));
+                    match FileInput::build(None, name, command.to_owned()) {
+                        Ok(stream) => streams.push(stream),
+                        Err(why) => return Err(why),
+                    };
                     stream_types.insert(SessionType::File);
                 }
                 _ => {}
@@ -205,29 +229,36 @@ pub mod stream {
                 }
                 _ => SessionType::Mixed,
             };
-            Session::new(commands, stream_type).save(&commands[0]);
+            return match Session::new(commands, stream_type).save(&commands[0]) {
+                Ok(_) => Ok(streams),
+                Err(why) => Err(why),
+            };
         }
-        streams
+        Ok(streams)
     }
 
     /// Build app streams from a session struct
-    pub fn build_streams_from_session(session: Session) -> Vec<InputStream> {
+    pub fn build_streams_from_session(session: Session) -> Result<Vec<InputStream>, LogriaError> {
         match session.stream_type {
             SessionType::Command => {
                 let mut streams: Vec<InputStream> = vec![];
-                session.commands.iter().for_each(|command| {
-                    let name = command.to_string();
-                    streams.push(CommandInput::new(None, name, command.to_owned()))
-                });
-                streams
+                for command in session.commands {
+                    match CommandInput::build(None, command.to_owned(), command.to_owned()) {
+                        Ok(stream) => streams.push(stream),
+                        Err(why) => return Err(why),
+                    };
+                }
+                Ok(streams)
             }
             SessionType::File => {
                 let mut streams: Vec<InputStream> = vec![];
-                session.commands.iter().for_each(|command| {
-                    let name = command.to_string();
-                    streams.push(FileInput::new(None, name, command.to_owned()))
-                });
-                streams
+                for command in session.commands {
+                    match FileInput::build(None, command.to_owned(), command.to_owned()) {
+                        Ok(stream) => streams.push(stream),
+                        Err(why) => return Err(why),
+                    };
+                }
+                Ok(streams)
             }
             SessionType::Mixed => build_streams_from_input(&session.commands, false),
         }
@@ -242,21 +273,21 @@ pub mod stream {
         #[test]
         fn test_build_file_stream() {
             let commands = vec![String::from("README.md")];
-            let streams = build_streams_from_input(&commands, false);
+            let streams = build_streams_from_input(&commands, false).unwrap();
             assert_eq!(streams[0]._type, "FileInput");
         }
 
         #[test]
         fn test_build_command_stream() {
             let commands = vec![String::from("ls -la ~")];
-            let streams = build_streams_from_input(&commands, false);
+            let streams = build_streams_from_input(&commands, false).unwrap();
             assert_eq!(streams[0]._type, "CommandInput");
         }
 
         #[test]
         fn test_build_command_and_file_streams() {
             let commands = vec![String::from("ls -la ~"), String::from("README.md")];
-            let streams = build_streams_from_input(&commands, false);
+            let streams = build_streams_from_input(&commands, false).unwrap();
             assert_eq!(streams[0]._type, "CommandInput");
             assert_eq!(streams[1]._type, "FileInput");
         }
@@ -264,7 +295,7 @@ pub mod stream {
         #[test]
         fn test_build_multiple_command_streams() {
             let commands = vec![String::from("ls -la ~"), String::from("ls /")];
-            let streams = build_streams_from_input(&commands, false);
+            let streams = build_streams_from_input(&commands, false).unwrap();
             assert_eq!(streams[0]._type, "CommandInput");
             assert_eq!(streams[1]._type, "CommandInput");
         }
@@ -272,7 +303,7 @@ pub mod stream {
         #[test]
         fn test_build_multiple_file_streams() {
             let commands = vec![String::from("README.md"), String::from("Cargo.toml")];
-            let streams = build_streams_from_input(&commands, false);
+            let streams = build_streams_from_input(&commands, false).unwrap();
             assert_eq!(streams[0]._type, "FileInput");
             assert_eq!(streams[1]._type, "FileInput");
         }
@@ -280,14 +311,14 @@ pub mod stream {
         #[test]
         fn test_build_file_stream_from_session() {
             let session = Session::new(&[String::from("README.md")], SessionType::File);
-            let streams = build_streams_from_session(session);
+            let streams = build_streams_from_session(session).unwrap();
             assert_eq!(streams[0]._type, "FileInput");
         }
 
         #[test]
         fn test_build_command_stream_from_session() {
             let session = Session::new(&[String::from("ls -l")], SessionType::Command);
-            let streams = build_streams_from_session(session);
+            let streams = build_streams_from_session(session).unwrap();
             assert_eq!(streams[0]._type, "CommandInput");
         }
 
@@ -297,7 +328,7 @@ pub mod stream {
                 &[String::from("ls -l"), String::from("README.md")],
                 SessionType::Mixed,
             );
-            let streams = build_streams_from_session(session);
+            let streams = build_streams_from_session(session).unwrap();
             assert_eq!(streams[0]._type, "CommandInput");
             assert_eq!(streams[1]._type, "FileInput");
         }

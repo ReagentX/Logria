@@ -3,11 +3,15 @@ use std::{
     error::Error,
     fs::{create_dir_all, read_dir, read_to_string, remove_file, write},
     path::Path,
+    result::Result,
 };
 
 use serde::{Deserialize, Serialize};
 
-use crate::constants::{cli::excludes::SESSION_FILE_EXCLUDES, directories::sessions};
+use crate::{
+    constants::{cli::excludes::SESSION_FILE_EXCLUDES, directories::sessions},
+    util::error::LogriaError,
+};
 
 #[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Debug)]
 pub enum SessionType {
@@ -41,12 +45,12 @@ impl Session {
     }
 
     /// Create session file from a Session struct
-    pub fn save(self, file_name: &str) {
+    pub fn save(self, file_name: &str) -> Result<(), LogriaError> {
         let session_json = serde_json::to_string_pretty(&self).unwrap();
         let path = format!("{}/{}", sessions(), file_name);
         match write(&path, session_json) {
-            Ok(_) => {}
-            Err(why) => panic!("Couldn't write {:?}: {}", path, Error::to_string(&why)),
+            Ok(_) => Ok(()),
+            Err(why) => Err(LogriaError::CannotWrite(path, <dyn Error>::to_string(&why))),
         }
     }
 
@@ -105,9 +109,9 @@ impl Session {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
     use super::{Session, SessionType};
     use crate::constants::directories::sessions;
+    use std::path::Path;
 
     #[test]
     fn test_list() {
@@ -120,7 +124,7 @@ mod tests {
     #[test]
     fn serialize_session() {
         let session = Session::new(&[String::from("ls -la")], SessionType::Command);
-        session.save("ls -la");
+        session.save("ls -la").unwrap();
 
         assert!(Path::new(&format!("{}/{}", sessions(), "ls -la")).exists());
     }
@@ -128,7 +132,7 @@ mod tests {
     #[test]
     fn deserialize_session() {
         let session = Session::new(&[String::from("ls -la")], SessionType::Command);
-        session.save("ls -la copy");
+        session.save("ls -la copy").unwrap();
         assert!(Path::new(&format!("{}/{}", sessions(), "ls -la copy")).exists());
 
         let file_name = format!("{}/{}", sessions(), "ls -la copy");
@@ -144,7 +148,7 @@ mod tests {
     #[test]
     fn delete_session() {
         let session = Session::new(&[String::from("ls -la")], SessionType::Command);
-        session.save("zzzfake_file_name");
+        session.save("zzzfake_file_name").unwrap();
         Session::del(&[Session::list().len() - 1]);
     }
 }

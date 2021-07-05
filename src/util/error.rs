@@ -4,7 +4,6 @@ use std::fmt::{Display, Formatter, Result};
 #[derive(Debug)]
 pub enum LogriaError {
     InvalidRegex(Error, String),
-    InvalidSelection(String),
     WrongParserType,
     InvalidExampleRegex(String),
     InvalidExampleSplit(usize, usize),
@@ -16,7 +15,6 @@ impl Display for LogriaError {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result {
         match self {
             LogriaError::InvalidRegex(why, msg) => write!(fmt, "{}: {}", why, msg),
-            LogriaError::InvalidSelection(msg) => write!(fmt, "{}", msg),
             LogriaError::WrongParserType => {
                 write!(fmt, "Cannot construct regex for a Split type parser")
             }

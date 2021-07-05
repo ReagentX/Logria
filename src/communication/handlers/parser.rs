@@ -229,9 +229,10 @@ impl HanderMethods for ParserHandler {
                             window.config.generate_auxiliary_messages =
                                 Some(ParserHandler::parser_messages_handle);
                             self.redraw = false;
-                            self.select_parser(window)?;
                             window.redraw()?;
                         }
+                        window.render_auxiliary_text()?;
+                        self.select_parser(window)?;
                         self.mc_handler.recieve_input(window, key)?;
                     }
                 }

@@ -40,7 +40,7 @@ pub mod main {
         },
         extensions::parser::Parser,
         ui::interface::build,
-        util::{error::LogriaError, sanitizers::length::LengthFinder},
+        util::{types::Del, sanitizers::length::LengthFinder},
     };
 
     pub struct LogiraConfig {
@@ -86,7 +86,7 @@ pub mod main {
         pub streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
         previous_render: (usize, usize), // Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
         pub did_switch: bool,            // True if we just swapped input types, False otherwise
-        pub delete_func: Option<fn(&[usize]) -> result::Result<(), LogriaError>>, // Pointer to function used to delete items for the `: r` command
+        pub delete_func: Del, // Pointer to function used to delete items for the `: r` command
         pub generate_auxiliary_messages: Option<fn() -> Vec<String>>,
     }
 
@@ -471,7 +471,7 @@ pub mod main {
         /// Set the output to command mode for command interpretation
         pub fn set_command_mode(
             &mut self,
-            delete_func: Option<fn(&[usize]) -> result::Result<(), LogriaError>>,
+            delete_func: Del,
         ) -> Result<()> {
             self.config.delete_func = delete_func;
             self.previous_input_type = self.input_type;
@@ -576,7 +576,7 @@ pub mod main {
                 match possible_streams {
                     Ok(streams) => self.config.streams = streams,
                     Err(why) => {
-                        self.write_to_command_line(&why.to_string());
+                        self.write_to_command_line(&why.to_string())?;
                         build_streams_from_input(&c, false).unwrap();
                     }
                 }

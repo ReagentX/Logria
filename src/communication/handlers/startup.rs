@@ -223,6 +223,6 @@ mod startup_tests {
             .is_ok());
         assert!(matches!(window.input_type, InputType::Normal));
         assert!(matches!(window.config.stream_type, StreamType::StdErr));
-        Session::del(&[Session::list().len() - 1]);
+        Session::del(&[Session::list().len() - 1]).unwrap();
     }
 }

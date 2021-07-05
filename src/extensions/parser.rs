@@ -65,11 +65,12 @@ impl ExtensionMethods for Parser {
             let file_name = &files[*i];
             match remove_file(file_name) {
                 Ok(_) => {}
-                Err(why) => panic!(
-                    "Couldn't remove {:?}: {}",
-                    file_name,
-                    Error::to_string(&why)
-                ),
+                Err(why) => {
+                    return Err(LogriaError::CannotRemove(
+                        file_name.to_owned(),
+                        <dyn Error>::to_string(&why),
+                    ))
+                }
             }
         }
         Ok(())

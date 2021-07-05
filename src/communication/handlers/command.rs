@@ -104,7 +104,10 @@ impl CommandHandler {
             if let StreamType::Auxiliary = window.config.stream_type {
                 if let Ok(items) = self.resolve_delete_command(command) {
                     if let Some(del) = window.config.delete_func {
-                        del(&items);
+                        match del(&items) {
+                            Ok(_) => {}
+                            Err(why) => window.write_to_command_line(&why.to_string())?,
+                        }
                         window.render_auxiliary_text()?;
                     } else {
                         {

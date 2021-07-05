@@ -58,11 +58,12 @@ impl ExtensionMethods for Session {
             match remove_file(file_name) {
                 Ok(_) => {}
                 // TODO: Make this return a LogriaError
-                Err(why) => panic!(
-                    "Couldn't remove {:?}: {}",
-                    file_name,
-                    Error::to_string(&why)
-                ),
+                Err(why) => {
+                    return Err(LogriaError::CannotRemove(
+                        file_name.to_owned(),
+                        <dyn Error>::to_string(&why),
+                    ))
+                }
             }
         }
         Ok(())
@@ -159,6 +160,6 @@ mod tests {
     fn delete_session() {
         let session = Session::new(&[String::from("ls -la")], SessionType::Command);
         session.save("zzzfake_file_name").unwrap();
-        Session::del(&[Session::list().len() - 1]);
+        Session::del(&[Session::list().len() - 1]).unwrap();
     }
 }

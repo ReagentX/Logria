@@ -645,6 +645,9 @@ pub mod main {
             self.config.generate_auxiliary_messages = Some(StartupHandler::get_startup_text);
             self.render_auxiliary_text()?;
 
+            // Put the cursor in the command line
+            self.go_to_cli()?;
+
             // Initial message collection
             self.recieve_streams();
 

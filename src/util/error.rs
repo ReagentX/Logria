@@ -9,6 +9,7 @@ pub enum LogriaError {
     InvalidExampleSplit(usize, usize),
     CannotRead(String, String),
     CannotWrite(String, String),
+    CannotRemove(String, String),
 }
 
 impl Display for LogriaError {
@@ -29,6 +30,9 @@ impl Display for LogriaError {
             LogriaError::CannotRead(path, why) => write!(fmt, "Couldn't open {:?}: {}", path, why),
             LogriaError::CannotWrite(path, why) => {
                 write!(fmt, "Couldn't write {:?}: {}", path, why)
+            },
+            LogriaError::CannotRemove(path, why) => {
+                write!(fmt, "Couldn't remove {:?}: {}", path, why)
             }
         }
     }

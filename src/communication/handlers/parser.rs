@@ -202,8 +202,7 @@ impl HanderMethods for ParserHandler {
                             self.redraw = true;
 
                             // Update the status string
-                            self.status
-                                .push_str(&format!("Parsing with {}", item));
+                            self.status.push_str(&format!("Parsing with {}", item));
 
                             // Set the new parser and parser state
                             window.config.parser = Some(parser);

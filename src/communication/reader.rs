@@ -40,7 +40,7 @@ pub mod main {
         },
         extensions::parser::Parser,
         ui::interface::build,
-        util::sanitizers::length::LengthFinder,
+        util::{types::Del, sanitizers::length::LengthFinder},
     };
 
     pub struct LogiraConfig {
@@ -86,7 +86,7 @@ pub mod main {
         pub streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
         previous_render: (usize, usize), // Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
         pub did_switch: bool,            // True if we just swapped input types, False otherwise
-        pub delete_func: Option<fn(&Vec<usize>) -> ()>, // Pointer to function used to delete items for the `: r` command
+        pub delete_func: Del, // Pointer to function used to delete items for the `: r` command
         pub generate_auxiliary_messages: Option<fn() -> Vec<String>>,
     }
 
@@ -292,10 +292,7 @@ pub mod main {
                         self.messages()[self.config.matched_rows[index]].to_string()
                     }
                 }
-                InputType::Parser => {
-                    // TODO: build parser
-                    self.messages()[index].to_string()
-                }
+                InputType::Parser => self.messages()[index].to_string(),
             }
         }
 
@@ -474,7 +471,7 @@ pub mod main {
         /// Set the output to command mode for command interpretation
         pub fn set_command_mode(
             &mut self,
-            delete_func: Option<fn(&Vec<usize>) -> ()>,
+            delete_func: Del,
         ) -> Result<()> {
             self.config.delete_func = delete_func;
             self.previous_input_type = self.input_type;
@@ -563,12 +560,26 @@ pub mod main {
             Ok(())
         }
 
+        pub fn update_input_type(&mut self, input_type: InputType) -> Result<()> {
+            self.previous_input_type = self.input_type;
+            self.input_type = input_type;
+            Ok(())
+        }
+
         /// Initial application setup
         pub fn start(&mut self, commands: Option<Vec<String>>) -> Result<()> {
             // Build the app
             if let Some(c) = commands {
                 // Build streams from the command used to launch Logria
-                self.config.streams = build_streams_from_input(&c, true);
+                // If we cannot save to the disk, write to the command line and start wtihout saving
+                let possible_streams = build_streams_from_input(&c, true);
+                match possible_streams {
+                    Ok(streams) => self.config.streams = streams,
+                    Err(why) => {
+                        self.write_to_command_line(&why.to_string())?;
+                        build_streams_from_input(&c, false).unwrap();
+                    }
+                }
 
                 // Set to display stderr by default
                 self.config.previous_stream_type = StreamType::StdOut;

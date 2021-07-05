@@ -13,7 +13,7 @@ use crate::{
         reader::main::MainWindow,
     },
     constants::cli::messages::START_MESSAGE,
-    extensions::session::Session,
+    extensions::{extension::ExtensionMethods, session::Session},
     ui::scroll,
 };
 
@@ -54,9 +54,15 @@ impl StartupHandler {
                         match session {
                             // Successfully start the app
                             Ok(session) => {
-                                window.config.streams = build_streams_from_session(session);
+                                window.config.streams = match build_streams_from_session(session) {
+                                    Ok(streams) => streams,
+                                    Err(why) => {
+                                        window.write_to_command_line(&why.to_string())?;
+                                        return Ok(());
+                                    }
+                                };
                                 window.config.stream_type = StdErr;
-                                window.input_type = InputType::Normal;
+                                window.update_input_type(InputType::Normal)?;
                                 window.config.generate_auxiliary_messages = None;
                                 window.reset_output()?;
                                 window.redraw()?;
@@ -76,9 +82,16 @@ impl StartupHandler {
                 Ok(())
             }
             Err(_) => {
-                window.config.streams = build_streams_from_input(&vec![command.to_owned()], true);
+                window.config.streams = match build_streams_from_input(&[command.to_owned()], true)
+                {
+                    Ok(streams) => streams,
+                    Err(why) => {
+                        window.write_to_command_line(&why.to_string())?;
+                        build_streams_from_input(&[command.to_owned()], false).unwrap()
+                    }
+                };
                 window.config.stream_type = StdErr;
-                window.input_type = InputType::Normal;
+                window.update_input_type(InputType::Normal)?;
                 window.reset_output()?;
                 window.redraw()?;
                 Ok(())
@@ -138,7 +151,10 @@ mod startup_tests {
             reader::main::MainWindow,
         },
         constants::cli::messages::START_MESSAGE,
-        extensions::session::{Session, SessionType::Command},
+        extensions::{
+            extension::ExtensionMethods,
+            session::{Session, SessionType::Command},
+        },
     };
 
     use super::StartupHandler;
@@ -159,8 +175,8 @@ mod startup_tests {
     #[test]
     fn can_load_session() {
         // Create a new dummy session
-        let session = Session::new(&vec![String::from("ls -la")], Command);
-        session.save("ls -la");
+        let session = Session::new(&[String::from("ls -la")], Command);
+        session.save("ls -la").unwrap();
 
         // Setup dummy window
         let mut window = MainWindow::_new_dummy();
@@ -207,6 +223,6 @@ mod startup_tests {
             .is_ok());
         assert!(matches!(window.input_type, InputType::Normal));
         assert!(matches!(window.config.stream_type, StreamType::StdErr));
-        Session::del(&vec![Session::list().len() - 1]);
+        Session::del(&[Session::list().len() - 1]).unwrap();
     }
 }

@@ -4,8 +4,7 @@ use crossterm::{event::KeyCode, Result};
 
 use super::handler::HanderMethods;
 use crate::communication::{
-    handlers::user_input::UserInputHandler,
-    input::{input_type::InputType, stream_type::StreamType},
+    handlers::user_input::UserInputHandler, input::stream_type::StreamType,
     reader::main::MainWindow,
 };
 
@@ -16,8 +15,7 @@ pub struct CommandHandler {
 impl CommandHandler {
     fn return_to_prev_state(&mut self, window: &mut MainWindow) -> Result<()> {
         // If we are in auxiliary mode, go back to that, otherwise go to normal mode
-        window.input_type = window.previous_input_type;
-        window.previous_input_type = InputType::Command;
+        window.update_input_type(window.previous_input_type)?;
         window.config.delete_func = None;
         window.set_cli_cursor(None)?;
         window.output.flush()?;
@@ -106,7 +104,10 @@ impl CommandHandler {
             if let StreamType::Auxiliary = window.config.stream_type {
                 if let Ok(items) = self.resolve_delete_command(command) {
                     if let Some(del) = window.config.delete_func {
-                        del(&items);
+                        match del(&items) {
+                            Ok(_) => {}
+                            Err(why) => window.write_to_command_line(&why.to_string())?,
+                        }
                         window.render_auxiliary_text()?;
                     } else {
                         {

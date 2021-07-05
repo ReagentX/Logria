@@ -10,7 +10,10 @@ use crate::{
         input::{input_type::InputType::Normal, stream_type::StreamType},
         reader::main::MainWindow,
     },
-    extensions::parser::{Parser, PatternType},
+    extensions::{
+        extension::ExtensionMethods,
+        parser::{Parser, PatternType},
+    },
     ui::scroll,
     util::error::LogriaError,
 };
@@ -115,7 +118,7 @@ impl ProcessorMethods for ParserHandler {
     fn return_to_normal(&mut self, window: &mut MainWindow) -> Result<()> {
         self.clear_matches(window)?;
         self.redraw = true;
-        window.input_type = Normal;
+        window.update_input_type(Normal)?;
         window.set_cli_cursor(None)?;
         window.config.stream_type = window.config.previous_stream_type;
         window.config.parser_state = ParserState::Disabled;
@@ -200,7 +203,7 @@ impl HanderMethods for ParserHandler {
 
                             // Update the status string
                             self.status
-                                .push_str(&format!("Parsing with {}", parser.name));
+                                .push_str(&format!("Parsing with {}", item));
 
                             // Set the new parser and parser state
                             window.config.parser = Some(parser);
@@ -323,7 +326,6 @@ mod regex_tests {
         let parser = Parser::new(
             String::from("([1-9])"),
             PatternType::Regex,
-            String::from("Name Test"),
             String::from("1"),
             map,
             None,
@@ -354,7 +356,6 @@ mod regex_tests {
         let parser = Parser::new(
             String::from("([1-9])"),
             PatternType::Regex,
-            String::from("Name Test"),
             String::from("1"),
             map,
             None,
@@ -402,7 +403,6 @@ mod split_tests {
         let parser = Parser::new(
             String::from("1"),
             PatternType::Split,
-            String::from("Char Test"),
             String::from("1"),
             map,
             None,
@@ -436,7 +436,6 @@ mod split_tests {
         let parser = Parser::new(
             String::from("1"),
             PatternType::Split,
-            String::from("Char Test"),
             String::from("1"),
             map,
             None,

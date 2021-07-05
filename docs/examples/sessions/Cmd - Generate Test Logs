@@ -1,7 +1,7 @@
 {
     "commands": [
-        "~/Documents/Code/Python/logria/venv/bin/python3 ~/.logria/sample_streams/generate_test_logs.py",
-        "~/Documents/Code/Python/logria/venv/bin/python3 ~/.logria/sample_streams/generate_test_logs_2.py"
+        "/bin/python3 ~/example/sample_streams/generate_test_logs.py",
+        "/bin/python3 ~/example/sample_streams/generate_test_logs_2.py"
     ],
     "stream_type": "Command"
 }

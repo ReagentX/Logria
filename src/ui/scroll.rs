@@ -2,11 +2,16 @@ use std::cmp::{max, min};
 
 use crate::communication::reader::main::MainWindow;
 
+#[derive(Debug)]
+pub enum ScrollState {
+    Top,
+    Free,
+    Bottom,
+}
+
 pub fn up(window: &mut MainWindow) {
     // TODO: Smart Poll Rate
-    window.config.stick_to_top = false;
-    window.config.stick_to_bottom = false;
-    window.config.manually_controlled_line = true;
+    window.config.scroll_state = ScrollState::Free;
 
     // TODO: handle underflow
     window.config.current_end = match window.config.current_end.checked_sub(1) {
@@ -17,9 +22,7 @@ pub fn up(window: &mut MainWindow) {
 
 pub fn down(window: &mut MainWindow) {
     // TODO: Smart Poll Rate
-    window.config.stick_to_top = false;
-    window.config.stick_to_bottom = false;
-    window.config.manually_controlled_line = true;
+    window.config.scroll_state = ScrollState::Free;
 
     // Get number of messages we can scroll
     let num_messages = window.number_of_messages();
@@ -37,31 +40,23 @@ pub fn pg_down(window: &mut MainWindow) {
 }
 
 pub fn bottom(window: &mut MainWindow) {
-    window.config.stick_to_top = false;
-    window.config.stick_to_bottom = true;
-    window.config.manually_controlled_line = false;
+    window.config.scroll_state = ScrollState::Bottom
 }
 
 pub fn top(window: &mut MainWindow) {
-    window.config.stick_to_top = true;
-    window.config.stick_to_bottom = false;
-    window.config.manually_controlled_line = false;
+    window.config.scroll_state = ScrollState::Top
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::communication::reader::main::MainWindow;
-    use crate::communication::input::input_type::InputType::Regex;
-    use crate::ui::scroll;
+    use crate::{communication::{reader::main::MainWindow, input::input_type::InputType::Regex}, ui::scroll};
 
     #[test]
     fn test_render_final_items_scroll_down() {
         let mut logria = MainWindow::_new_dummy();
 
         // Set scroll state
-        logria.config.manually_controlled_line = false;
-        logria.config.stick_to_top = false;
-        logria.config.stick_to_bottom = true;
+        logria.config.scroll_state = scroll::ScrollState::Bottom;
 
         // Set existing status
         logria.determine_render_position();
@@ -79,9 +74,7 @@ mod tests {
         let mut logria = MainWindow::_new_dummy();
 
         // Set scroll state
-        logria.config.manually_controlled_line = false;
-        logria.config.stick_to_top = true;
-        logria.config.stick_to_bottom = false;
+        logria.config.scroll_state = scroll::ScrollState::Top;
 
         // Set existing status
         logria.determine_render_position();
@@ -99,9 +92,7 @@ mod tests {
         let mut logria = MainWindow::_new_dummy();
 
         // Set scroll state
-        logria.config.manually_controlled_line = false;
-        logria.config.stick_to_top = false;
-        logria.config.stick_to_bottom = true;
+        logria.config.scroll_state = scroll::ScrollState::Bottom;
 
         // Set existing status
         logria.determine_render_position();
@@ -119,9 +110,7 @@ mod tests {
         let mut logria = MainWindow::_new_dummy();
 
         // Set scroll state
-        logria.config.manually_controlled_line = false;
-        logria.config.stick_to_top = true;
-        logria.config.stick_to_bottom = false;
+        logria.config.scroll_state = scroll::ScrollState::Top;
 
         // Set existing status
         logria.determine_render_position();
@@ -139,9 +128,7 @@ mod tests {
         let mut logria = MainWindow::_new_dummy();
 
         // Set scroll state
-        logria.config.manually_controlled_line = false;
-        logria.config.stick_to_top = false;
-        logria.config.stick_to_bottom = true;
+        logria.config.scroll_state = scroll::ScrollState::Bottom;
 
         // Set existing status
         logria.determine_render_position();
@@ -159,9 +146,7 @@ mod tests {
         let mut logria = MainWindow::_new_dummy();
 
         // Set scroll state
-        logria.config.manually_controlled_line = false;
-        logria.config.stick_to_top = true;
-        logria.config.stick_to_bottom = false;
+        logria.config.scroll_state = scroll::ScrollState::Top;
 
         // Set existing status
         logria.determine_render_position();
@@ -175,27 +160,11 @@ mod tests {
     }
 
     #[test]
-    fn test_render_unset_scroll_state() {
-        let mut logria = MainWindow::_new_dummy();
-
-        // Set scroll state
-        logria.config.manually_controlled_line = false;
-        logria.config.stick_to_top = false;
-        logria.config.stick_to_bottom = false;
-
-        let (start, end) = logria.determine_render_position();
-        assert_eq!(start, 92);
-        assert_eq!(end, 100);
-    }
-
-    #[test]
     fn test_render_scroll_past_end() {
         let mut logria = MainWindow::_new_dummy();
 
         // Set scroll state
-        logria.config.manually_controlled_line = false;
-        logria.config.stick_to_top = false;
-        logria.config.stick_to_bottom = true;
+        logria.config.scroll_state = scroll::ScrollState::Bottom;
 
         // Set existing status
         logria.config.current_end = 101; // somehow longer than the messages buffer
@@ -213,9 +182,7 @@ mod tests {
         let mut logria = MainWindow::_new_dummy();
 
         // Set scroll state
-        logria.config.manually_controlled_line = false;
-        logria.config.stick_to_top = false;
-        logria.config.stick_to_bottom = true;
+        logria.config.scroll_state = scroll::ScrollState::Bottom;
 
         // Set existing status
         logria.config.current_end = 10;
@@ -238,9 +205,7 @@ mod tests {
         let mut logria = MainWindow::_new_dummy();
 
         // Set scroll state
-        logria.config.manually_controlled_line = false;
-        logria.config.stick_to_top = false;
-        logria.config.stick_to_bottom = true;
+        logria.config.scroll_state = scroll::ScrollState::Bottom;
 
         // Set existing status
         logria.determine_render_position();
@@ -263,9 +228,7 @@ mod tests {
         let mut logria = MainWindow::_new_dummy();
 
         // Set scroll state
-        logria.config.manually_controlled_line = false;
-        logria.config.stick_to_top = true;
-        logria.config.stick_to_bottom = false;
+        logria.config.scroll_state = scroll::ScrollState::Top;
 
         // Set existing status
         logria.determine_render_position();

@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     constants::{cli::excludes::SESSION_FILE_EXCLUDES, directories::sessions},
+    extensions::extension::ExtensionMethods,
     util::error::LogriaError,
 };
 
@@ -26,26 +27,17 @@ pub struct Session {
     pub stream_type: SessionType, // Cannot use `type` for the name as it is reserved
 }
 
-impl Session {
+impl ExtensionMethods for Session {
     /// Ensure the proper paths exist
-    pub fn verify_path() {
+    fn verify_path() {
         let tape_path = sessions();
         if !Path::new(&tape_path).exists() {
             create_dir_all(tape_path).unwrap();
         }
     }
 
-    /// Create a Session struct
-    pub fn new(commands: &[String], session_type: SessionType) -> Session {
-        Session::verify_path();
-        Session {
-            commands: commands.to_owned(),
-            stream_type: session_type,
-        }
-    }
-
     /// Create session file from a Session struct
-    pub fn save(self, file_name: &str) -> Result<(), LogriaError> {
+    fn save(self, file_name: &str) -> Result<(), LogriaError> {
         let session_json = serde_json::to_string_pretty(&self).unwrap();
         let path = format!("{}/{}", sessions(), file_name);
         match write(&path, session_json) {
@@ -54,22 +46,8 @@ impl Session {
         }
     }
 
-    /// Create Session struct from a session file
-    pub fn load(file_name: &str) -> Result<Session, serde_json::error::Error> {
-        // Read file
-        let session_json = match read_to_string(file_name) {
-            Ok(json) => json,
-            Err(why) => panic!("Couldn't open {:?}: {}", file_name, Error::to_string(&why)),
-        };
-        let session = serde_json::from_str(&session_json);
-        match session {
-            Ok(s) => Ok(s),
-            Err(e) => Err(e),
-        }
-    }
-
     /// Delete the path for a fully qualified session filename
-    pub fn del(items: &[usize]) {
+    fn del(items: &[usize]) -> Result<(), LogriaError> {
         // Iterate through each `i` in `items` and remove the item at list index `i`
         let files = Session::list();
         for i in items {
@@ -79,6 +57,7 @@ impl Session {
             let file_name = &files[*i];
             match remove_file(file_name) {
                 Ok(_) => {}
+                // TODO: Make this return a LogriaError
                 Err(why) => panic!(
                     "Couldn't remove {:?}: {}",
                     file_name,
@@ -86,10 +65,11 @@ impl Session {
                 ),
             }
         }
+        Ok(())
     }
 
     /// Get a list of all available session configurations
-    pub fn list() -> Vec<String> {
+    fn list() -> Vec<String> {
         Session::verify_path();
         // Files to exclude from the session list
         let mut excluded = HashSet::new();
@@ -107,10 +87,40 @@ impl Session {
     }
 }
 
+impl Session {
+    /// Create a Session struct
+    pub fn new(commands: &[String], session_type: SessionType) -> Session {
+        Session::verify_path();
+        Session {
+            commands: commands.to_owned(),
+            stream_type: session_type,
+        }
+    }
+
+    /// Create Session struct from a session file
+    pub fn load(file_name: &str) -> Result<Session, serde_json::error::Error> {
+        // Read file
+        let session_json = match read_to_string(file_name) {
+            Ok(json) => json,
+            Err(why) => panic!("Couldn't open {:?}: {}", file_name, Error::to_string(&why)),
+        };
+        let session = serde_json::from_str(&session_json);
+        match session {
+            Ok(s) => Ok(s),
+            Err(e) => Err(e),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Session, SessionType};
-    use crate::constants::directories::sessions;
+    use crate::{
+        constants::directories::sessions,
+        extensions::{
+            extension::ExtensionMethods,
+            session::{Session, SessionType},
+        },
+    };
     use std::path::Path;
 
     #[test]
@@ -136,7 +146,7 @@ mod tests {
         assert!(Path::new(&format!("{}/{}", sessions(), "ls -la copy")).exists());
 
         let file_name = format!("{}/{}", sessions(), "ls -la copy");
-        let read_session = Session::load(&file_name).unwrap();
+        let read_session: Session = Session::load(&file_name).unwrap();
         let expected_session = Session {
             commands: vec![String::from("ls -la")],
             stream_type: SessionType::Command,

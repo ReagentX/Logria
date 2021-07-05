@@ -22,7 +22,7 @@ pub mod stream {
 
     use crate::{
         constants::{cli::poll_rate::FASTEST, directories::home},
-        extensions::session::{Session, SessionType},
+        extensions::{session::{Session, SessionType}, extension::ExtensionMethods},
         util::error::LogriaError,
     };
 

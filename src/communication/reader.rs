@@ -40,7 +40,7 @@ pub mod main {
         },
         extensions::parser::Parser,
         ui::interface::build,
-        util::sanitizers::length::LengthFinder,
+        util::{error::LogriaError, sanitizers::length::LengthFinder},
     };
 
     pub struct LogiraConfig {
@@ -86,7 +86,7 @@ pub mod main {
         pub streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
         previous_render: (usize, usize), // Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
         pub did_switch: bool,            // True if we just swapped input types, False otherwise
-        pub delete_func: Option<fn(&[usize]) -> ()>, // Pointer to function used to delete items for the `: r` command
+        pub delete_func: Option<fn(&[usize]) -> result::Result<(), LogriaError>>, // Pointer to function used to delete items for the `: r` command
         pub generate_auxiliary_messages: Option<fn() -> Vec<String>>,
     }
 
@@ -292,9 +292,7 @@ pub mod main {
                         self.messages()[self.config.matched_rows[index]].to_string()
                     }
                 }
-                InputType::Parser => {
-                    self.messages()[index].to_string()
-                }
+                InputType::Parser => self.messages()[index].to_string(),
             }
         }
 
@@ -471,7 +469,10 @@ pub mod main {
         }
 
         /// Set the output to command mode for command interpretation
-        pub fn set_command_mode(&mut self, delete_func: Option<fn(&[usize]) -> ()>) -> Result<()> {
+        pub fn set_command_mode(
+            &mut self,
+            delete_func: Option<fn(&[usize]) -> result::Result<(), LogriaError>>,
+        ) -> Result<()> {
             self.config.delete_func = delete_func;
             self.previous_input_type = self.input_type;
             self.go_to_cli()?;

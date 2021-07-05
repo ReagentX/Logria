@@ -13,7 +13,7 @@ use crate::{
         reader::main::MainWindow,
     },
     constants::cli::messages::START_MESSAGE,
-    extensions::session::Session,
+    extensions::{extension::ExtensionMethods, session::Session},
     ui::scroll,
 };
 
@@ -151,7 +151,10 @@ mod startup_tests {
             reader::main::MainWindow,
         },
         constants::cli::messages::START_MESSAGE,
-        extensions::session::{Session, SessionType::Command},
+        extensions::{
+            extension::ExtensionMethods,
+            session::{Session, SessionType::Command},
+        },
     };
 
     use super::StartupHandler;

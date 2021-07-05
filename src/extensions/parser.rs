@@ -9,7 +9,10 @@ use std::{
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::{constants::directories::patterns, util::error::LogriaError};
+use crate::{
+    constants::directories::patterns, extensions::extension::ExtensionMethods,
+    util::error::LogriaError,
+};
 
 #[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Debug)]
 pub enum PatternType {
@@ -21,7 +24,6 @@ pub enum PatternType {
 pub struct Parser {
     pub pattern: String,
     pub pattern_type: PatternType, // Cannot use `type` for the name as it is reserved
-    pub name: String,
     pub example: String,
     pub analytics_methods: HashMap<String, String>,
     #[serde(skip_serializing, skip_deserializing)]
@@ -32,7 +34,7 @@ pub struct Parser {
     num_to_print: i32,
 }
 
-impl Parser {
+impl ExtensionMethods for Parser {
     /// Ensure the proper paths exist
     fn verify_path() {
         let tape_path = patterns();
@@ -41,56 +43,19 @@ impl Parser {
         }
     }
 
-    /// Create an instance of a parser
-    pub fn new(
-        pattern: String,
-        pattern_type: PatternType,
-        name: String,
-        example: String,
-        analytics_methods: HashMap<String, String>,
-        num_to_print: Option<i32>,
-    ) -> Parser {
-        Parser::verify_path();
-        Parser {
-            pattern,
-            pattern_type,
-            name,
-            example,
-            analytics_methods,
-            analytics_map: HashMap::new(),
-            analytics: HashMap::new(),
-            num_to_print: num_to_print.unwrap_or(5),
-        }
-    }
-
     /// Create parser file from a Parser struct
-    pub fn save(self) -> Result<(), LogriaError> {
+    fn save(self, file_name: &str) -> Result<(), LogriaError> {
         let parser_json = serde_json::to_string_pretty(&self).unwrap();
-        let path = format!("{}/{}", patterns(), self.name);
+        let path = format!("{}/{}", patterns(), file_name);
 
-        match write(format!("{}/{}", patterns(), self.name), parser_json) {
+        match write(format!("{}/{}", patterns(), file_name), parser_json) {
             Ok(_) => Ok(()),
             Err(why) => Err(LogriaError::CannotWrite(path, <dyn Error>::to_string(&why))),
         }
     }
 
-    /// Create Parser struct from a parser file
-    pub fn load(file_name: &str) -> Result<Parser, LogriaError> {
-        let parser_json = match read_to_string(file_name) {
-            Ok(json) => json,
-            Err(why) => {
-                return Err(LogriaError::CannotRead(
-                    file_name.to_owned(),
-                    <dyn Error>::to_string(&why),
-                ))
-            }
-        };
-        let session: Parser = serde_json::from_str(&parser_json).unwrap();
-        Ok(session)
-    }
-
     /// Delete the path for a fully qualified session filename
-    pub fn del(items: &[usize]) {
+    fn del(items: &[usize]) -> Result<(), LogriaError> {
         // Iterate through each `i` in `items` and remove the item at list index `i`
         let files = Parser::list();
         for i in items {
@@ -107,10 +72,11 @@ impl Parser {
                 ),
             }
         }
+        Ok(())
     }
 
     /// Get a list of all available parser configurations
-    pub fn list() -> Vec<String> {
+    fn list() -> Vec<String> {
         Parser::verify_path();
         let mut parsers: Vec<String> = read_dir(patterns())
             .unwrap()
@@ -118,6 +84,43 @@ impl Parser {
             .collect();
         parsers.sort();
         parsers
+    }
+}
+
+impl Parser {
+    /// Create an instance of a parser
+    pub fn new(
+        pattern: String,
+        pattern_type: PatternType,
+        example: String,
+        analytics_methods: HashMap<String, String>,
+        num_to_print: Option<i32>,
+    ) -> Parser {
+        Parser::verify_path();
+        Parser {
+            pattern,
+            pattern_type,
+            example,
+            analytics_methods,
+            analytics_map: HashMap::new(),
+            analytics: HashMap::new(),
+            num_to_print: num_to_print.unwrap_or(5),
+        }
+    }
+
+    /// Create Parser struct from a parser file
+    pub fn load(file_name: &str) -> Result<Parser, LogriaError> {
+        let parser_json = match read_to_string(file_name) {
+            Ok(json) => json,
+            Err(why) => {
+                return Err(LogriaError::CannotRead(
+                    file_name.to_owned(),
+                    <dyn Error>::to_string(&why),
+                ))
+            }
+        };
+        let session: Parser = serde_json::from_str(&parser_json).unwrap();
+        Ok(session)
     }
 
     pub fn get_regex(&self) -> Result<Regex, LogriaError> {
@@ -175,8 +178,13 @@ impl Parser {
 mod tests {
     use std::collections::HashMap;
 
-    use super::{Parser, PatternType};
-    use crate::constants::directories::patterns;
+    use crate::{
+        constants::directories::patterns,
+        extensions::{
+            extension::ExtensionMethods,
+            parser::{Parser, PatternType},
+        },
+    };
 
     #[test]
     fn test_list() {
@@ -189,12 +197,11 @@ mod tests {
         let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
-            String::from("Hyphen Separated Test 3"),
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
             map,
             None,
         );
-        parser.save().unwrap();
+        parser.save("Hyphen Separated Test 3").unwrap();
 
         let list = Parser::list();
         assert!(list
@@ -212,26 +219,23 @@ mod tests {
         let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
-            String::from("Hyphen Separated Test 2"),
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
             map.to_owned(),
             None,
         );
-        parser.save().unwrap();
+        parser.save("Hyphen Separated Test 2").unwrap();
 
         let file_name = format!("{}/{}", patterns(), "Hyphen Separated Test 2");
         let read_parser = Parser::load(&file_name).unwrap();
         let expected_parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
-            String::from("Hyphen Separated Test 2"),
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
             map,
             None,
         );
         assert_eq!(read_parser.pattern, expected_parser.pattern);
         assert_eq!(read_parser.pattern_type, expected_parser.pattern_type);
-        assert_eq!(read_parser.name, expected_parser.name);
         assert_eq!(
             read_parser.analytics_methods,
             expected_parser.analytics_methods
@@ -251,12 +255,11 @@ mod tests {
         let parser = Parser::new(
             String::from("([^ ]*) ([^ ]*) ([^ ]*) \\[([^]]*)\\] \"([^\"]*)\" ([^ ]*) ([^ ]*)"),
             PatternType::Regex,
-            String::from("Common Log Format Test 2"),
             String::from("127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326"),
             map,
             None
         );
-        parser.save().unwrap();
+        parser.save("Common Log Format Test 2").unwrap();
 
         let file_name = format!("{}/{}", patterns(), "Common Log Format Test 2");
         let read_parser = Parser::load(&file_name);
@@ -274,12 +277,11 @@ mod tests {
         let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
-            String::from("Hyphen Separated Test 1"),
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
             map,
             None,
         );
-        parser.save().unwrap();
+        parser.save("Hyphen Separated Test 1").unwrap();
 
         let file_name = format!("{}/{}", patterns(), "Hyphen Separated Test 1");
         let parser = Parser::load(&file_name);
@@ -300,12 +302,11 @@ mod tests {
         let parser = Parser::new(
             String::from("([^ ]*) ([^ ]*) ([^ ]*) \\[([^]]*)\\] \"([^\"]*)\" ([^ ]*) ([^ ]*)"),
             PatternType::Regex,
-            String::from("Common Log Format Test 1"),
             String::from("127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326"),
             map,
             None
         );
-        parser.save().unwrap();
+        parser.save("Common Log Format Test 1").unwrap();
 
         let file_name = format!("{}/{}", patterns(), "Common Log Format Test 1");
         let parser = Parser::load(&file_name);
@@ -333,12 +334,11 @@ mod tests {
         let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
-            String::from("Hyphen Separated Test 2"),
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
             map,
             None,
         );
-        parser.save().unwrap();
+        parser.save("Hyphen Separated Test 2").unwrap();
 
         let file_name = format!("{}/{}", patterns(), "Hyphen Separated Test 2");
         let parser = Parser::load(&file_name);

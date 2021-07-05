@@ -2,9 +2,8 @@ use crate::util::error::LogriaError;
 use std::result::Result;
 
 pub trait ExtensionMethods {
-    fn new() -> Self;
-    fn save() -> Result<(), LogriaError>;
-    fn load<T>() -> Result<T, serde_json::error::Error>;
-    fn del() -> Result<(), LogriaError>;
+    fn verify_path();
+    fn save(self, file_name: &str) -> Result<(), LogriaError>;
+    fn del(items: &[usize]) -> Result<(), LogriaError>;
     fn list() -> Vec<String>;
 }

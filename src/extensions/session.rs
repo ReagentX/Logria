@@ -103,7 +103,11 @@ impl Session {
         // Read file
         let session_json = match read_to_string(file_name) {
             Ok(json) => json,
-            Err(why) => panic!("Couldn't open {:?}: {}", file_name, Error::to_string(&why)),
+            Err(why) => panic!(
+                "Couldn't open {:?}: {}",
+                file_name,
+                <dyn Error>::to_string(&why)
+            ),
         };
         let session = serde_json::from_str(&session_json);
         match session {

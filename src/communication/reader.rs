@@ -39,8 +39,8 @@ pub mod main {
             poll_rate::FASTEST,
         },
         extensions::parser::Parser,
-        ui::interface::build,
-        util::{types::Del, sanitizers::length::LengthFinder},
+        ui::{interface::build, scroll::ScrollState},
+        util::{sanitizers::length::LengthFinder, types::Del},
     };
 
     pub struct LogiraConfig {
@@ -76,13 +76,9 @@ pub mod main {
         pub poll_rate: u64,    // The rate at which we check for new messages
         smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
         pub use_history: bool, // Whether the app records user input to a history tape
-
-        // Scroll State
-        pub stick_to_bottom: bool, // Whether we should follow the stream
-        pub stick_to_top: bool,    // Whether we should stick to the top and not render new lines
-        pub manually_controlled_line: bool, // Whether manual scroll is active
-
+        
         // Render data
+        pub scroll_state: ScrollState,
         pub streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
         previous_render: (usize, usize), // Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
         pub did_switch: bool,            // True if we just swapped input types, False otherwise
@@ -155,9 +151,7 @@ pub mod main {
                     insert_mode: false,
                     highlight_match: false,
                     last_row: 0,
-                    stick_to_bottom: true,
-                    stick_to_top: false,
-                    manually_controlled_line: false,
+                    scroll_state: ScrollState::Bottom,
                     current_end: 0,
                     streams: vec![],
                     did_switch: false,
@@ -207,69 +201,71 @@ pub mod main {
             }
 
             // Otherwise, determine how much we can render
-            if self.config.stick_to_top {
-                let mut current_index: usize = 0;
-                loop {
-                    let message: &str = match self.input_type {
-                        InputType::Normal | InputType::Command | InputType::Startup => {
-                            &self.messages()[current_index]
-                        }
-                        InputType::Regex => {
-                            // If we have not activated regex or parser yet, render normal messages
-                            if self.config.regex_pattern.is_none() {
+            match self.config.scroll_state {
+                ScrollState::Top => {
+                    let mut current_index: usize = 0;
+                    loop {
+                        let message: &str = match self.input_type {
+                            InputType::Normal | InputType::Command | InputType::Startup => {
                                 &self.messages()[current_index]
-                            } else {
-                                &self.messages()[self.config.matched_rows[current_index]]
                             }
+                            InputType::Regex => {
+                                // If we have not activated regex or parser yet, render normal messages
+                                if self.config.regex_pattern.is_none() {
+                                    &self.messages()[current_index]
+                                } else {
+                                    &self.messages()[self.config.matched_rows[current_index]]
+                                }
+                            }
+                            InputType::Parser => &self.config.auxiliary_messages[current_index],
+                        };
+
+                        // Determine if we can fit the next message
+                        // TODO: Fix Cast here
+                        let message_length = self.length_finder.get_real_length(message);
+                        rows += max(
+                            1,
+                            (message_length + (self.config.width as usize - 2))
+                                / self.config.width as usize,
+                        );
+
+                        // If we can fit, increment the last row number
+                        if rows <= self.config.last_row as usize
+                            && current_index < message_pointer_length - 1
+                        {
+                            current_index += 1;
+                            continue;
                         }
-                        InputType::Parser => &self.config.auxiliary_messages[current_index],
-                    };
 
-                    // Determine if we can fit the next message
-                    // TODO: Fix Cast here
-                    let message_length = self.length_finder.get_real_length(message);
-                    rows += max(
-                        1,
-                        (message_length + (self.config.width as usize - 2))
-                            / self.config.width as usize,
-                    );
-
-                    // If we can fit, increment the last row number
-                    if rows <= self.config.last_row as usize
-                        && current_index < message_pointer_length - 1
+                        // If the above if doesn't hit, we are done
+                        break;
+                    }
+                    self.config.current_end = current_index; // Save this row so we know where we are
+                    return (0, current_index);
+                }
+                ScrollState::Free => {
+                    if message_pointer_length < self.config.last_row as usize {
+                        // If have fewer messages than lines, just render it all
+                        end = message_pointer_length - 1;
+                    } else if (self.config.current_end < self.config.last_row as usize)
+                        | (self.config.current_end < message_pointer_length)
                     {
-                        current_index += 1;
-                        continue;
-                    }
-
-                    // If the above if doesn't hit, we are done
-                    break;
-                }
-                self.config.current_end = current_index; // Save this row so we know where we are
-                return (0, current_index);
-            } else if self.config.stick_to_bottom {
-                end = message_pointer_length;
-            } else if self.config.manually_controlled_line {
-                if message_pointer_length < self.config.last_row as usize {
-                    // If have fewer messages than lines, just render it all
-                    end = message_pointer_length - 1;
-                } else if (self.config.current_end < self.config.last_row as usize)
-                    | (self.config.current_end < message_pointer_length)
-                {
-                    // If the last row we rendered comes before the last row we can render,
-                    // use all of the available rows
-                    end = self.config.current_end;
-                } else {
-                    // If we have overscrolled, go back
-                    if self.config.current_end > message_pointer_length {
-                        self.config.current_end = message_pointer_length;
+                        // If the last row we rendered comes before the last row we can render,
+                        // use all of the available rows
+                        end = self.config.current_end;
                     } else {
-                        // Since current_end can be zero, we have to use the number of messages
-                        end = message_pointer_length
+                        // If we have overscrolled, go back
+                        if self.config.current_end > message_pointer_length {
+                            self.config.current_end = message_pointer_length;
+                        } else {
+                            // Since current_end can be zero, we have to use the number of messages
+                            end = message_pointer_length;
+                        }
                     }
                 }
-            } else {
-                end = message_pointer_length
+                ScrollState::Bottom => {
+                    end = message_pointer_length;
+                }
             }
             self.config.current_end = end; // Save this row so we know where we are
             let mut start: usize = 0; // default start
@@ -469,10 +465,7 @@ pub mod main {
         }
 
         /// Set the output to command mode for command interpretation
-        pub fn set_command_mode(
-            &mut self,
-            delete_func: Del,
-        ) -> Result<()> {
+        pub fn set_command_mode(&mut self, delete_func: Del) -> Result<()> {
             self.config.delete_func = delete_func;
             self.previous_input_type = self.input_type;
             self.go_to_cli()?;
@@ -735,16 +728,14 @@ pub mod main {
 
     #[cfg(test)]
     mod render_tests {
-        use super::MainWindow;
+        use crate::{communication::reader::main::MainWindow, ui::scroll::ScrollState};
 
         #[test]
         fn test_render_final_items() {
             let mut logria = MainWindow::_new_dummy();
 
             // Set scroll state
-            logria.config.manually_controlled_line = false;
-            logria.config.stick_to_top = false;
-            logria.config.stick_to_bottom = true;
+            logria.config.scroll_state = ScrollState::Bottom;
 
             let (start, end) = logria.determine_render_position();
             assert_eq!(start, 92);
@@ -756,9 +747,7 @@ pub mod main {
             let mut logria = MainWindow::_new_dummy();
 
             // Set scroll state
-            logria.config.manually_controlled_line = false;
-            logria.config.stick_to_top = true;
-            logria.config.stick_to_bottom = false;
+            logria.config.scroll_state = ScrollState::Top;
 
             let (start, end) = logria.determine_render_position();
             assert_eq!(start, 0);
@@ -770,9 +759,7 @@ pub mod main {
             let mut logria = MainWindow::_new_dummy();
 
             // Set scroll state
-            logria.config.manually_controlled_line = true;
-            logria.config.stick_to_top = false;
-            logria.config.stick_to_bottom = false;
+            logria.config.scroll_state = ScrollState::Free;
 
             // Set current scroll state
             logria.config.current_end = 3;
@@ -790,9 +777,7 @@ pub mod main {
             let mut logria = MainWindow::_new_dummy();
 
             // Set scroll state
-            logria.config.manually_controlled_line = true;
-            logria.config.stick_to_top = false;
-            logria.config.stick_to_bottom = false;
+            logria.config.scroll_state = ScrollState::Free;
 
             // Set current scroll state
             logria.config.current_end = 80;
@@ -806,9 +791,7 @@ pub mod main {
             let mut logria = MainWindow::_new_dummy();
 
             // Set scroll state
-            logria.config.manually_controlled_line = true;
-            logria.config.stick_to_top = false;
-            logria.config.stick_to_bottom = false;
+            logria.config.scroll_state = ScrollState::Free;
 
             // Set current scroll state
             logria.config.current_end = 5;
@@ -823,9 +806,7 @@ pub mod main {
             let mut logria = MainWindow::_new_dummy();
 
             // Set scroll state
-            logria.config.manually_controlled_line = false;
-            logria.config.stick_to_top = true;
-            logria.config.stick_to_bottom = false;
+            logria.config.scroll_state = ScrollState::Top;
 
             // Set current scroll state
             logria.config.current_end = 0;
@@ -843,9 +824,7 @@ pub mod main {
             let mut logria = MainWindow::_new_dummy();
 
             // Set scroll state
-            logria.config.manually_controlled_line = false;
-            logria.config.stick_to_top = true;
-            logria.config.stick_to_bottom = false;
+            logria.config.scroll_state = ScrollState::Top;
 
             // Set current scroll state
             logria.config.current_end = 0;
@@ -863,9 +842,7 @@ pub mod main {
             let mut logria = MainWindow::_new_dummy();
 
             // Set scroll state
-            logria.config.manually_controlled_line = false;
-            logria.config.stick_to_top = false;
-            logria.config.stick_to_bottom = true;
+            logria.config.scroll_state = ScrollState::Bottom;
 
             // Set current scroll state
             logria.config.current_end = 0;

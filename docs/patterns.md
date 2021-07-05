@@ -4,13 +4,12 @@ A pattern is a regex patter with associated meta that Logria uses to parse log m
 
 ## Storage
 
-Patterns are stored as `JSON` in `~/.logria/patterns` and do not have file extensions. A pattern is defined like so:
+Patterns are stored as `JSON` in `$LOGRIA_ROOT/patterns` and do not have file extensions. A pattern is defined like so:
 
 ```json
 {
     "pattern": " - ",
-    "type": "split",
-    "name": "Hyphen Separated",
+    "pattern_type": "split",
     "example": "2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message",
     "analytics": {
       "Date": "date",
@@ -29,7 +28,7 @@ There are two types of patterns: `regex` and `split`. Both use regex, but in dif
 
 - `pattern`
   - The regex to use
-- `type`
+- `pattern_type`
   - The method we intend to use the pattern, one of {`regex`, `split`}, detailed below
 - `name`
   - The name of the pattern
@@ -47,8 +46,7 @@ A `regex` pattern matches parts of a log to the matches in a regex expression an
 ```json
 {
     "pattern": "([^ ]*) ([^ ]*) ([^ ]*) \\[([^]]*)\\] \"([^\"]*)\" ([^ ]*) ([^ ]*)",
-    "type": "regex",
-    "name": "Common Log Format",
+    "pattern_type": "regex",
     "example": "127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326",
     "analytics": {
         "Remote Host": "count",
@@ -64,13 +62,12 @@ A `regex` pattern matches parts of a log to the matches in a regex expression an
 
 ### Split Patterns
 
-A split pattern uses regex to split a message on a delimiter:
+A `split` pattern uses [str::split](https://doc.rust-lang.org/std/primitive.str.html#method.split) a message on a delimiter:
 
 ```json
 {
     "pattern": " - ",
-    "type": "split",
-    "name": "Hyphen Separated",
+    "pattern_type": "split",
     "example": "2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message",
     "analytics": {
         "Date": "date",
@@ -91,7 +88,7 @@ When activated, Logria will list the patterns defined in the patterns folder for
   2: Color + Hyphen Separated
 ```
 
-Once a selection has been made, the user will be able to select which part of the matched log we will use when streaming:
+Once the first selection has been made, the user will be able to select which part of the matched log we will use when streaming:
 
 ```zsh
   0: 2020-02-04 19:06:52,852

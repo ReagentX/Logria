@@ -24,16 +24,24 @@ This folder contains the documentation on how to interact with Logria programmat
 - `cargo test` to make sure everything works
 - `cargo run --release` to compile
 
-### Configuration Directory
+### Directory Configuration
 
-By default, Logria will create `~/.logria` to store configuration files in. If you want to specify a different path, either set `LOGRIA_ROOT` to replace the `.logria` directory or set `LOGRIA_DISABLE_USER_HOME` to move the directory away from the default `~`.
+By default, Logria will create `~/.logria/` to store parsers, sessions, and an input history tape in. If you want to specify a different path, either set `LOGRIA_ROOT` to replace the `.logria` directory or set `LOGRIA_USER_HOME` to move the directory away from the default `$HOME`. Setting both means the app looks in `$LOGRIA_USER_HOME/$LOGRIA_ROOT`.
+
+#### Example Exports
+
+| export | value | result |
+|---|---|---|
+| `LOGRIA_ROOT` | `.config/logria` | `~/.config/logria/` |
+| `LOGRIA_USER_HOME` | `/usr/local/` | `/usr/local/.logria` |
+| both of the above | | `/usr/local/.config/logria/` |
 
 ## Sample Usage Session
 
 Start Logria by invoking it as a command line application:
 
 ```zsh
-chris@ChristophersMBP ~ % logria
+chris@home ~ % logria
 ```
 
 This will launch the app and show us the splash screen:
@@ -63,7 +71,7 @@ Entering `2` will load and open handles to the commands in `Cmd - Generate Test 
 2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a first log! 43
 2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a second log! 87
 ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-│No filter applied                                                                               │
+│                                                                                                │
 └────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -86,22 +94,22 @@ Pressing `esc` will reset the filter:
 2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a first log! 43
 2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a second log! 87
 ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-│No filter applied                                                                               │
+│                                                                                                │
 └────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 Typing `:` and entering `:q` will exit the app.
 
-## Guidelines
+## Contributing Guidelines
 
-- "Brand" colors
-  - Letters: ![#e63462](https://via.placeholder.com/15/e63462/000000?text=+) `#e63462`
-  - Accent: ![#333745](https://via.placeholder.com/15/333745/000000?text=+) `#333745`
-- Contributing
-  - No pull request shall be behind develop
-  - First come, first served
-  - If anything breaks, the pull request will be queued again when the issue is resolved
-  - Pull request comments will be resolved by the person who created them
+- No pull request shall be behind develop
+- First come, first served
+- If anything breaks, the pull request will be queued again when the issue is resolved
+- Pull request comments will be resolved by the person who created them
+
+## Logo Colors
+- Letters: ![#e63462](https://via.placeholder.com/15/e63462/000000?text=+) `#e63462`
+- Accent: ![#333745](https://via.placeholder.com/15/333745/000000?text=+) `#333745`
 
 ## Notes / Caveats
 

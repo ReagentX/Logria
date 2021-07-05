@@ -26,7 +26,7 @@ impl StartupHandler {
     /// Generate the startup message with available session configurations
     pub fn get_startup_text() -> Vec<String> {
         let mut text: Vec<String> = Vec::new();
-        let sessions = Session::list();
+        let sessions = Session::list_clean();
         START_MESSAGE.iter().for_each(|&s| text.push(s.to_string()));
         sessions.iter().enumerate().for_each(|(i, s)| {
             let value = s.to_string();
@@ -37,7 +37,7 @@ impl StartupHandler {
 
     /// Load the session_data hashmap internally
     fn initialize(&mut self) {
-        let sessions = Session::list();
+        let sessions = Session::list_full();
         sessions.iter().enumerate().for_each(|(i, s)| {
             let value = s.to_string();
             self.session_data.insert(i, value);
@@ -168,7 +168,7 @@ mod startup_tests {
     #[test]
     fn can_get_startup_text() {
         let text = StartupHandler::get_startup_text();
-        let sessions = Session::list();
+        let sessions = Session::list_full();
         assert_eq!(text.len(), sessions.len() + START_MESSAGE.len())
     }
 
@@ -223,6 +223,6 @@ mod startup_tests {
             .is_ok());
         assert!(matches!(window.input_type, InputType::Normal));
         assert!(matches!(window.config.stream_type, StreamType::StdErr));
-        Session::del(&[Session::list().len() - 1]).unwrap();
+        Session::del(&[Session::list_full().len() - 1]).unwrap();
     }
 }

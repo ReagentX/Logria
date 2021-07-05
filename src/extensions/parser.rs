@@ -57,7 +57,7 @@ impl ExtensionMethods for Parser {
     /// Delete the path for a fully qualified session filename
     fn del(items: &[usize]) -> Result<(), LogriaError> {
         // Iterate through each `i` in `items` and remove the item at list index `i`
-        let files = Parser::list();
+        let files = Parser::list_full();
         for i in items {
             if i >= &files.len() {
                 break;
@@ -76,12 +76,33 @@ impl ExtensionMethods for Parser {
         Ok(())
     }
 
-    /// Get a list of all available parser configurations
-    fn list() -> Vec<String> {
+    /// Get a list of all available parser configurations with fully qualified paths
+    fn list_full() -> Vec<String> {
         Parser::verify_path();
         let mut parsers: Vec<String> = read_dir(patterns())
             .unwrap()
             .map(|parser| String::from(parser.unwrap().path().to_str().unwrap()))
+            .collect();
+        parsers.sort();
+        parsers
+    }
+
+    /// Get a list of all available parser configurations for display purposes
+    fn list_clean() -> Vec<String> {
+        Parser::verify_path();
+        let mut parsers: Vec<String> = read_dir(patterns())
+            .unwrap()
+            .map(|parser| {
+                String::from(
+                    parser
+                        .unwrap()
+                        .path()
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap(),
+                )
+            })
             .collect();
         parsers.sort();
         parsers
@@ -204,7 +225,7 @@ mod tests {
         );
         parser.save("Hyphen Separated Test 3").unwrap();
 
-        let list = Parser::list();
+        let list = Parser::list_full();
         assert!(list
             .iter()
             .any(|i| i == &format!("{}/{}", patterns(), "Hyphen Separated Test 3")))

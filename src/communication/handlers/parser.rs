@@ -38,7 +38,7 @@ impl ParserHandler {
     // So that we render the text when it updates from deletion commands
     pub fn parser_messages_handle() -> Vec<String> {
         let mut body_text = vec![];
-        Parser::list()
+        Parser::list_clean()
             .iter()
             .enumerate()
             .for_each(|(index, choice)| body_text.push(format!("{}: {}", index, choice)));
@@ -46,7 +46,7 @@ impl ParserHandler {
     }
 
     fn select_parser(&mut self, window: &mut MainWindow) -> Result<()> {
-        let parsers = Parser::list();
+        let parsers = Parser::list_full();
         self.mc_handler.set_choices(&parsers);
         window.render_auxiliary_text()?;
         Ok(())

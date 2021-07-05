@@ -49,7 +49,7 @@ impl ExtensionMethods for Session {
     /// Delete the path for a fully qualified session filename
     fn del(items: &[usize]) -> Result<(), LogriaError> {
         // Iterate through each `i` in `items` and remove the item at list index `i`
-        let files = Session::list();
+        let files = Session::list_full();
         for i in items {
             if i >= &files.len() {
                 break;
@@ -69,8 +69,8 @@ impl ExtensionMethods for Session {
         Ok(())
     }
 
-    /// Get a list of all available session configurations
-    fn list() -> Vec<String> {
+    /// Get a list of all available session configurations with fully qualified paths
+    fn list_full() -> Vec<String> {
         Session::verify_path();
         // Files to exclude from the session list
         let mut excluded = HashSet::new();
@@ -81,6 +81,34 @@ impl ExtensionMethods for Session {
         let mut sessions: Vec<String> = read_dir(sessions())
             .unwrap()
             .map(|session| String::from(session.unwrap().path().to_str().unwrap()))
+            .filter(|item| !excluded.contains(item))
+            .collect();
+        sessions.sort();
+        sessions
+    }
+
+    /// Get a list of all available session configurations for display purposes
+    fn list_clean() -> Vec<String> {
+        Session::verify_path();
+        // Files to exclude from the session list
+        let mut excluded = HashSet::new();
+        for &item in &SESSION_FILE_EXCLUDES {
+            excluded.insert(format!("{}/{}", sessions(), item));
+        }
+
+        let mut sessions: Vec<String> = read_dir(sessions())
+            .unwrap()
+            .map(|session| {
+                String::from(
+                    session
+                        .unwrap()
+                        .path()
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap(),
+                )
+            })
             .filter(|item| !excluded.contains(item))
             .collect();
         sessions.sort();
@@ -130,7 +158,7 @@ mod tests {
 
     #[test]
     fn test_list() {
-        let list = Session::list();
+        let list = Session::list_full();
         assert!(list
             .iter()
             .any(|i| i == &format!("{}/{}", sessions(), "ls -la")))
@@ -164,6 +192,6 @@ mod tests {
     fn delete_session() {
         let session = Session::new(&[String::from("ls -la")], SessionType::Command);
         session.save("zzzfake_file_name").unwrap();
-        Session::del(&[Session::list().len() - 1]).unwrap();
+        Session::del(&[Session::list_full().len() - 1]).unwrap();
     }
 }

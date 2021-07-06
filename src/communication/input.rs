@@ -123,7 +123,7 @@ pub mod stream {
             let (out_tx, out_rx) = channel();
 
             // Handle poll rate
-            let poll_rate = Arc::new(Mutex::new(poll_rate.unwrap_or(FASTEST)));
+            let poll_rate = Arc::new(Mutex::new(poll_rate.unwrap_or(FASTEST as u64)));
             let internal_poll_rate = Arc::clone(&poll_rate);
 
             // Start reading from the queues

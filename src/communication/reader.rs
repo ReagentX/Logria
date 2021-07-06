@@ -2,8 +2,7 @@ pub mod main {
     use std::{
         cmp::max,
         io::{stdout, Stdout, Write},
-        result, thread, time,
-        time::Instant,
+        time::{Duration, Instant},
     };
 
     use crossterm::{
@@ -36,7 +35,7 @@ pub mod main {
         constants::cli::{
             cli_chars,
             messages::{NO_MESSAGE_IN_BUFFER_NORMAL, NO_MESSAGE_IN_BUFFER_PARSER},
-            poll_rate::FASTEST,
+            poll_rate::{FASTEST, SLOWEST},
         },
         extensions::parser::Parser,
         ui::{interface::build, scroll::ScrollState},
@@ -71,12 +70,12 @@ pub mod main {
         pub last_index_processed: usize, // The last index the parsing function saw
 
         // App state
-        loop_time: f64,        // How long a loop of the main app takes
+        loop_time: Instant,    // How long a loop of the main app takes
         insert_mode: bool,     // Default to insert mode (like vim) off
         pub poll_rate: u64,    // The rate at which we check for new messages
         smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
         pub use_history: bool, // Whether the app records user input to a history tape
-        
+
         // Render data
         pub scroll_state: ScrollState,
         pub streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
@@ -124,12 +123,12 @@ pub mod main {
                 length_finder: LengthFinder::new(),
                 mc_handler: MultipleChoiceHandler::new(),
                 config: LogiraConfig {
-                    poll_rate: FASTEST,
+                    poll_rate: 50, // 500hz
                     smart_poll_rate,
                     use_history: history,
                     height: 0,
                     width: 0,
-                    loop_time: 0.0,
+                    loop_time: Instant::now(),
                     previous_render: (0, 0),
                     stderr_messages: vec![],    // TODO: fix
                     stdout_messages: vec![],    // TODO: fix
@@ -553,10 +552,34 @@ pub mod main {
             Ok(())
         }
 
+        /// Set a new input type enum while preserving the old one in the history
         pub fn update_input_type(&mut self, input_type: InputType) -> Result<()> {
             self.previous_input_type = self.input_type;
             self.input_type = input_type;
             Ok(())
+        }
+
+        /// Determine a reasonable poll rate based on the speed of messages received
+        /// TODO: Make this faster?
+        fn handle_smart_poll_rate(&mut self, t_1: Duration, new_messages: u32) {
+            if self.config.smart_poll_rate && new_messages > 0 {
+                // Determine messages per ms
+                let messages_per_second = (new_messages as f32 / t_1.as_millis() as f32) * 1000.;
+
+                // Clamp poll rate to {1ms..1000ms} inclusive
+                let new_poll_rate = (messages_per_second as u32).clamp(FASTEST, SLOWEST);
+
+                // Update the poll rate
+                self.update_poll_rate((new_poll_rate) as u64);
+
+                // Reset the timer we use to count new messages
+                self.config.loop_time = Instant::now();
+            }
+        }
+
+        /// Update poll rate of the main loop plus the child processes
+        fn update_poll_rate(&mut self, new_poll_rate: u64) {
+            self.config.poll_rate = new_poll_rate;
         }
 
         /// Initial application setup
@@ -601,7 +624,7 @@ pub mod main {
         }
 
         /// Update stderr and stdout buffers from every stream's queue
-        fn recieve_streams(&mut self) -> i32 {
+        fn recieve_streams(&mut self) -> u32 {
             let mut total_messages = 0;
             for stream in &self.config.streams {
                 // Read from streams until there is no more input
@@ -654,13 +677,16 @@ pub mod main {
 
             // Handle directing input to the correct handlers during operation
             loop {
-                // Update streams here
+                // Update streams and poll rate
                 // let t_0 = Instant::now();
                 let num_new_messages = self.recieve_streams();
-                // let t_1 = t_0.elapsed();
-                // self.write_to_command_line(&format!("{} in {:?}", num_new_messages, t_1))?;
+                self.handle_smart_poll_rate(self.config.loop_time.elapsed(), num_new_messages);
+                // self.write_to_command_line(&format!(
+                //     "{} in {:?}",
+                //     num_new_messages, self.config.poll_rate
+                // ))?;
 
-                if poll(time::Duration::from_millis(self.config.poll_rate))? {
+                if poll(Duration::from_millis(self.config.poll_rate))? {
                     match read()? {
                         Event::Key(input) => {
                             // Die on Ctrl-C
@@ -719,9 +745,6 @@ pub mod main {
                     }
                     self.render_text_in_output()?;
                 }
-
-                let sleep = time::Duration::from_millis(self.config.poll_rate);
-                thread::sleep(sleep);
             }
         }
     }

@@ -561,10 +561,10 @@ pub mod main {
 
         /// Determine a reasonable poll rate based on the speed of messages received
         /// TODO: Make this faster?
-        fn handle_smart_poll_rate(&mut self, t_1: Duration, new_messages: u32) {
+        fn handle_smart_poll_rate(&mut self, t_1: Duration, new_messages: u128) {
             if self.config.smart_poll_rate && new_messages > 0 {
                 // Determine messages per ms
-                let messages_per_second = (new_messages as f32 / t_1.as_millis() as f32) * 1000.;
+                let messages_per_second = (new_messages * 1000) / t_1.as_millis();
 
                 // Clamp poll rate to {1ms..1000ms} inclusive
                 let new_poll_rate = (messages_per_second as u32).clamp(FASTEST, SLOWEST);
@@ -624,7 +624,7 @@ pub mod main {
         }
 
         /// Update stderr and stdout buffers from every stream's queue
-        fn recieve_streams(&mut self) -> u32 {
+        fn recieve_streams(&mut self) -> u128 {
             let mut total_messages = 0;
             for stream in &self.config.streams {
                 // Read from streams until there is no more input

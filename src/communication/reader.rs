@@ -560,17 +560,15 @@ pub mod main {
         }
 
         /// Determine a reasonable poll rate based on the speed of messages received
-        /// TODO: Make this faster?
-        fn handle_smart_poll_rate(&mut self, t_1: Duration, new_messages: u128) {
-            if self.config.smart_poll_rate && new_messages > 0 {
-                // Determine messages per ms
-                let messages_per_second = (new_messages * 1000) / t_1.as_millis();
-
-                // Clamp poll rate to {1ms..1000ms} inclusive
-                let new_poll_rate = (messages_per_second as u32).clamp(FASTEST, SLOWEST);
-
-                // Update the poll rate
-                self.update_poll_rate((new_poll_rate) as u64);
+        fn handle_smart_poll_rate(&mut self, t_1: Duration, new_messages: u64) {
+            if self.config.smart_poll_rate {
+                // Set the poll rate to the number of milliseconds per message
+                self.update_poll_rate(
+                    (t_1.as_millis() as u64)
+                        .checked_div(new_messages)
+                        .unwrap_or(SLOWEST)
+                        .clamp(FASTEST, SLOWEST),
+                );
 
                 // Reset the timer we use to count new messages
                 self.config.loop_time = Instant::now();
@@ -624,7 +622,7 @@ pub mod main {
         }
 
         /// Update stderr and stdout buffers from every stream's queue
-        fn recieve_streams(&mut self) -> u128 {
+        fn recieve_streams(&mut self) -> u64 {
             let mut total_messages = 0;
             for stream in &self.config.streams {
                 // Read from streams until there is no more input
@@ -876,6 +874,54 @@ pub mod main {
             let (start, end) = logria.determine_render_position();
             assert_eq!(start, 0);
             assert_eq!(end, 0);
+        }
+    }
+
+    mod poll_rate_tests {
+        use crate::communication::reader::main::MainWindow;
+        use std::time::Duration;
+
+        #[test]
+        fn test_no_poll_rate_change_when_disabled() {
+            let mut logria = MainWindow::_new_dummy();
+
+            // Disable smart polling
+            logria.config.smart_poll_rate = false;
+
+            // Update the poll rate for 100ms
+            logria.handle_smart_poll_rate(Duration::new(0, 100000000), 10);
+
+            assert_eq!(logria.config.poll_rate, 50);
+        }
+
+        #[test]
+        fn test_poll_rate_change_when_enabled_100ms_10messages() {
+            let mut logria = MainWindow::_new_dummy();
+
+            // Update the poll rate
+            logria.handle_smart_poll_rate(Duration::new(0, 100000000), 10);
+
+            assert_eq!(logria.config.poll_rate, 10);
+        }
+
+        #[test]
+        fn test_poll_rate_change_when_enabled_50ms_50messages() {
+            let mut logria = MainWindow::_new_dummy();
+
+            // Update the poll rate
+            logria.handle_smart_poll_rate(Duration::new(0, 50000000), 5);
+
+            assert_eq!(logria.config.poll_rate, 10);
+        }
+
+        #[test]
+        fn test_poll_rate_change_when_enabled_idle() {
+            let mut logria = MainWindow::_new_dummy();
+
+            // Update the poll rate
+            logria.handle_smart_poll_rate(Duration::new(0, 100000), 0);
+
+            assert_eq!(logria.config.poll_rate, 1000);
         }
     }
 }

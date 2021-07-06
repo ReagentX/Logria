@@ -93,7 +93,7 @@ impl ExtensionMethods for Session {
         // Files to exclude from the session list
         let mut excluded = HashSet::new();
         for &item in &SESSION_FILE_EXCLUDES {
-            excluded.insert(format!("{}/{}", sessions(), item));
+            excluded.insert(item.to_owned());
         }
 
         let mut sessions: Vec<String> = read_dir(sessions())

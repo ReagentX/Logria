@@ -1,5 +1,5 @@
 pub mod poll_rate {
-    // Numerical limits in miliseconds
+    // Numerical limits in milliseconds
     // Fast enough for smooth typing, 1000Hz
     pub const FASTEST: u64 = 1;
     // Poll once per second, 1Hz

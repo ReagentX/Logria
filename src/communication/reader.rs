@@ -563,12 +563,12 @@ pub mod main {
         fn handle_smart_poll_rate(&mut self, t_1: Duration, new_messages: u64) {
             if self.config.smart_poll_rate {
                 // Determine messages per second
-                let messages_per_ms = (t_1.as_millis() as u64)
+                let ms_per_message = (t_1.as_millis() as u64)
                     .checked_div(new_messages)
                     .unwrap_or(SLOWEST);
 
                 // Clamp poll rate to {1ms..1000ms} inclusive
-                let new_poll_rate = messages_per_ms.clamp(FASTEST, SLOWEST);
+                let new_poll_rate = ms_per_message.clamp(FASTEST, SLOWEST);
 
                 // Update the poll rate
                 self.update_poll_rate(new_poll_rate);

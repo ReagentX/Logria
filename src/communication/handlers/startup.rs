@@ -64,6 +64,7 @@ impl StartupHandler {
                                 window.config.stream_type = StdErr;
                                 window.update_input_type(InputType::Normal)?;
                                 window.config.generate_auxiliary_messages = None;
+                                window.config.message_speed_tracker.reset();
                                 window.reset_output()?;
                                 window.redraw()?;
                             }

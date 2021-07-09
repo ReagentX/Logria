@@ -39,7 +39,7 @@ pub mod main {
         },
         extensions::parser::Parser,
         ui::{interface::build, scroll::ScrollState},
-        util::{sanitizers::length::LengthFinder, types::Del},
+        util::{math::MeanTrack, sanitizers::length::LengthFinder, types::Del},
     };
 
     pub struct LogiraConfig {
@@ -70,9 +70,10 @@ pub mod main {
         pub last_index_processed: usize, // The last index the parsing function saw
 
         // App state
-        loop_time: Instant,    // How long a loop of the main app takes
-        insert_mode: bool,     // Default to insert mode (like vim) off
-        pub poll_rate: u64,    // The rate at which we check for new messages
+        loop_time: Instant, // How long a loop of the main app takes
+        insert_mode: bool,  // Default to insert mode (like vim) off
+        pub poll_rate: u64, // The rate at which we check for new messages
+        pub message_speed_tracker: MeanTrack, // A deque based moving average tracker
         smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
         pub use_history: bool, // Whether the app records user input to a history tape
 
@@ -156,6 +157,7 @@ pub mod main {
                     did_switch: false,
                     delete_func: None,
                     generate_auxiliary_messages: None,
+                    message_speed_tracker: MeanTrack::new(5),
                 },
             }
         }
@@ -563,12 +565,12 @@ pub mod main {
         fn handle_smart_poll_rate(&mut self, t_1: Duration, new_messages: u64) {
             if self.config.smart_poll_rate {
                 // Set the poll rate to the number of milliseconds per message
-                self.update_poll_rate(
-                    (t_1.as_millis() as u64)
-                        .checked_div(new_messages)
-                        .unwrap_or(SLOWEST)
-                        .clamp(FASTEST, SLOWEST),
-                );
+                let ms_per_message = (t_1.as_millis() as u64)
+                    .checked_div(new_messages)
+                    .unwrap_or(SLOWEST)
+                    .clamp(FASTEST, SLOWEST);
+                self.config.message_speed_tracker.update(ms_per_message);
+                self.update_poll_rate(self.config.message_speed_tracker.mean());
 
                 // Reset the timer we use to count new messages
                 self.config.loop_time = Instant::now();
@@ -683,7 +685,8 @@ pub mod main {
                 //     "{} in {:?}",
                 //     num_new_messages, self.config.poll_rate
                 // ))?;
-
+                self.write_to_command_line(&format!("{:?}", self.config.message_speed_tracker.deque)).unwrap();
+                
                 if poll(Duration::from_millis(self.config.poll_rate))? {
                     match read()? {
                         Event::Key(input) => {
@@ -715,7 +718,6 @@ pub mod main {
                         Event::Resize(width, height) => {} // Call self.dimensions() and some other stuff
                     }
                 }
-
                 // possibly sleep, cleanup, etc
                 // Process matches if we just switched or if there are new messages
                 if num_new_messages > 0 || self.config.did_switch {

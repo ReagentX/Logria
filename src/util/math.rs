@@ -5,7 +5,7 @@ pub struct MeanTrack {
     pub deque: VecDeque<u64>,
     sum: u64,
     size: u64,
-    max_size: usize, // Avoids casting `capacity` every insertion
+    max_size: usize, // Avoids casting `size` every insertion
 }
 
 impl MeanTrack {
@@ -22,7 +22,7 @@ impl MeanTrack {
         if self.deque.len() >= self.max_size {
             self.sum -= self.deque.pop_back().unwrap();
         } else {
-            self.size += 1
+            self.size += 1;
         }
         self.deque.push_front(item);
         self.sum += item;

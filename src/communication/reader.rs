@@ -39,7 +39,7 @@ pub mod main {
         },
         extensions::parser::Parser,
         ui::{interface::build, scroll::ScrollState},
-        util::{math::MeanTrack, sanitizers::length::LengthFinder, types::Del},
+        util::{poll::MeanTrack, sanitizers::length::LengthFinder, types::Del},
     };
 
     pub struct LogiraConfig {

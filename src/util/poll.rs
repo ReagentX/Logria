@@ -40,7 +40,7 @@ impl MeanTrack {
 }
 
 mod mean_track_tests {
-    use crate::util::math::MeanTrack;
+    use crate::util::poll::MeanTrack;
 
     #[test]
     fn can_create() {

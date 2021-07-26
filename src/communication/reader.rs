@@ -563,7 +563,7 @@ pub mod main {
 
         /// Determine a reasonable poll rate based on the speed of messages received
         fn handle_smart_poll_rate(&mut self, t_1: Duration, new_messages: u64) {
-            if self.config.smart_poll_rate {
+            if self.config.smart_poll_rate && !(InputType::Startup == self.input_type) {
                 // Set the poll rate to the number of milliseconds per message
                 let ms_per_message = (t_1.as_millis() as u64)
                     .checked_div(new_messages)
@@ -685,8 +685,7 @@ pub mod main {
                 //     "{} in {:?}",
                 //     num_new_messages, self.config.poll_rate
                 // ))?;
-                self.write_to_command_line(&format!("{:?}", self.config.message_speed_tracker.deque)).unwrap();
-                
+
                 if poll(Duration::from_millis(self.config.poll_rate))? {
                     match read()? {
                         Event::Key(input) => {
@@ -880,7 +879,7 @@ pub mod main {
     }
 
     mod poll_rate_tests {
-        use crate::communication::reader::main::MainWindow;
+        use crate::communication::{input::input_type::InputType, reader::main::MainWindow};
         use std::time::Duration;
 
         #[test]
@@ -899,6 +898,10 @@ pub mod main {
         #[test]
         fn test_poll_rate_change_when_enabled_100ms_10messages() {
             let mut logria = MainWindow::_new_dummy();
+            logria.input_type = InputType::Normal;
+
+            // Test default value
+            assert_eq!(logria.config.poll_rate, 50);
 
             // Update the poll rate
             logria.handle_smart_poll_rate(Duration::new(0, 100000000), 10);
@@ -909,6 +912,10 @@ pub mod main {
         #[test]
         fn test_poll_rate_change_when_enabled_50ms_50messages() {
             let mut logria = MainWindow::_new_dummy();
+            logria.input_type = InputType::Normal;
+
+            // Test default value
+            assert_eq!(logria.config.poll_rate, 50);
 
             // Update the poll rate
             logria.handle_smart_poll_rate(Duration::new(0, 50000000), 5);
@@ -919,11 +926,48 @@ pub mod main {
         #[test]
         fn test_poll_rate_change_when_enabled_idle() {
             let mut logria = MainWindow::_new_dummy();
+            logria.input_type = InputType::Normal;
+
+            // Test default value
+            assert_eq!(logria.config.poll_rate, 50);
 
             // Update the poll rate
-            logria.handle_smart_poll_rate(Duration::new(0, 100000), 0);
+            logria.handle_smart_poll_rate(Duration::new(0, 100000000), 0);
+            logria.handle_smart_poll_rate(Duration::new(0, 100000000), 0);
+            logria.handle_smart_poll_rate(Duration::new(0, 100000000), 0);
+            logria.handle_smart_poll_rate(Duration::new(0, 100000000), 0);
+            logria.handle_smart_poll_rate(Duration::new(0, 100000000), 0);
+            logria.handle_smart_poll_rate(Duration::new(0, 100000000), 0);
+            logria.handle_smart_poll_rate(Duration::new(0, 100000000), 0);
+            logria.handle_smart_poll_rate(Duration::new(0, 100000000), 0);
+            logria.handle_smart_poll_rate(Duration::new(0, 100000000), 0);
+            logria.handle_smart_poll_rate(Duration::new(0, 100000000), 0);
 
             assert_eq!(logria.config.poll_rate, 1000);
+        }
+
+        #[test]
+        fn test_poll_rate_change_when_enabled_idle_multiple() {
+            let mut logria = MainWindow::_new_dummy();
+            logria.input_type = InputType::Normal;
+
+            // Test default value
+            assert_eq!(logria.config.poll_rate, 50);
+
+            // Update the poll rate
+            logria.handle_smart_poll_rate(Duration::new(0, 10000000), 1);
+
+            assert_eq!(logria.config.poll_rate, 10);
+
+            // Update the poll rate
+            logria.handle_smart_poll_rate(Duration::new(0, 10000000), 1);
+
+            assert_eq!(logria.config.poll_rate, 10);
+
+            // Update the poll rate, dont go to 1000
+            logria.handle_smart_poll_rate(Duration::new(0, 10000000), 0);
+
+            assert_eq!(logria.config.poll_rate, 13);
         }
     }
 }

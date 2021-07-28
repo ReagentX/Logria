@@ -2,60 +2,60 @@ use std::collections::vec_deque::VecDeque;
 
 use std::cmp::{max, min};
 
-use crate::constants::cli::poll_rate::SLOWEST;
+use crate::constants::cli::poll_rate::{DEFAULT, SLOWEST};
 
 #[derive(Debug)]
-pub struct Tracker {
-    num_cycles: u64, // The number of times we have increased, i.e.
-    previous_base: u64,
+pub struct Backoff {
+    num_cycles: u64,    // The number of times we have increased the poll rate
+    previous_base: u64, // The previous amount we increased the poll rate by
 }
 
-impl Tracker {
-    pub fn new() -> Tracker {
-        Tracker {
+impl Backoff {
+    pub fn new() -> Backoff {
+        Backoff {
             num_cycles: 1,
-            previous_base: 0,
+            previous_base: DEFAULT,
         }
     }
 
     pub fn determine_poll_rate(&mut self, poll_rate: u64) -> u64 {
-        if poll_rate == SLOWEST {
+        // Poll rate is capped to SLOWEST in the reader
+        if poll_rate > self.previous_base || poll_rate == SLOWEST {
             let increase = self.previous_base * self.num_cycles;
             self.num_cycles = self.num_cycles.checked_add(1).unwrap_or(1);
-            self.previous_base = min(max(self.previous_base + increase, 1), SLOWEST);
-            // println!("cycles: {}, base: {}", self.num_cycles, self.previous_base);
+            self.previous_base = min(min(self.previous_base + increase, poll_rate), SLOWEST);
             self.previous_base
         } else {
             self.num_cycles = 1;
-            self.previous_base = poll_rate;
+            self.previous_base = max(poll_rate, 1); // Ensure we are always positive
             poll_rate
         }
     }
 }
 
 #[derive(Debug)]
-pub struct MeanTrack {
+pub struct RollingMean {
     pub deque: VecDeque<u64>,
     sum: u64,
     size: u64,
     max_size: usize,
-    tracker: Tracker,
+    tracker: Backoff,
 }
 
-impl MeanTrack {
-    pub fn new(max_size: usize) -> MeanTrack {
-        MeanTrack {
+impl RollingMean {
+    pub fn new(max_size: usize) -> RollingMean {
+        RollingMean {
             deque: VecDeque::with_capacity(max_size),
             sum: 0,
             size: 0,
             max_size,
-            tracker: Tracker::new(),
+            tracker: Backoff::new(),
         }
     }
 
     pub fn update(&mut self, item: u64) {
         if self.deque.len() >= self.max_size {
-            self.sum -= self.deque.pop_back().unwrap();
+            self.sum -= self.deque.pop_back().unwrap_or(0);
         } else {
             self.size += 1;
         }
@@ -76,11 +76,11 @@ impl MeanTrack {
 }
 
 mod mean_track_tests {
-    use crate::util::poll::MeanTrack;
+    use crate::util::poll::RollingMean;
 
     #[test]
     fn can_create() {
-        let tracker = MeanTrack::new(5);
+        let tracker = RollingMean::new(5);
         assert_eq!(tracker.sum, 0);
         assert_eq!(tracker.max_size, 5);
         assert_eq!(tracker.size, 0);
@@ -88,7 +88,7 @@ mod mean_track_tests {
 
     #[test]
     fn cant_exceed_capacity() {
-        let mut tracker = MeanTrack::new(2);
+        let mut tracker = RollingMean::new(2);
         tracker.update(1);
         tracker.update(2);
         tracker.update(3);
@@ -100,7 +100,7 @@ mod mean_track_tests {
 
     #[test]
     fn can_get_mean_full() {
-        let mut tracker = MeanTrack::new(5);
+        let mut tracker = RollingMean::new(5);
         tracker.update(1);
         tracker.update(2);
         tracker.update(3);
@@ -113,7 +113,7 @@ mod mean_track_tests {
 
     #[test]
     fn can_get_mean_under() {
-        let mut tracker = MeanTrack::new(5);
+        let mut tracker = RollingMean::new(5);
         tracker.update(1);
         tracker.update(2);
         tracker.update(3);
@@ -124,7 +124,7 @@ mod mean_track_tests {
 
     #[test]
     fn can_get_mean_over() {
-        let mut tracker = MeanTrack::new(5);
+        let mut tracker = RollingMean::new(5);
         tracker.update(1);
         tracker.update(2);
         tracker.update(3);
@@ -140,17 +140,17 @@ mod mean_track_tests {
 
 #[cfg(test)]
 mod tracker_tests {
-    use crate::util::poll::Tracker;
+    use crate::util::poll::Backoff;
 
     #[test]
     fn can_create() {
-        let tracker = Tracker::new();
+        let tracker = Backoff::new();
         assert_eq!(tracker.num_cycles, 1);
     }
 
     #[test]
     fn stays_low_no_slowest() {
-        let mut tracker = Tracker::new();
+        let mut tracker = Backoff::new();
         tracker.determine_poll_rate(25);
         tracker.determine_poll_rate(900);
         tracker.determine_poll_rate(34);
@@ -158,8 +158,24 @@ mod tracker_tests {
     }
 
     #[test]
+    fn stays_low_when_less_than_max() {
+        let mut tracker = Backoff::new();
+        let result = tracker.determine_poll_rate(25);
+        assert_eq!(result, 25);
+        assert_eq!(tracker.num_cycles, 1);
+
+        let result = tracker.determine_poll_rate(1000);
+        assert_eq!(result, 50);
+        assert_eq!(tracker.num_cycles, 2);
+
+        let result = tracker.determine_poll_rate(900);
+        assert_eq!(result, 150);
+        assert_eq!(tracker.num_cycles, 3);
+    }
+
+    #[test]
     fn expands_slowly() {
-        let mut tracker = Tracker::new();
+        let mut tracker = Backoff::new();
         tracker.determine_poll_rate(34);
         assert_eq!(tracker.previous_base, 34);
 

@@ -4,6 +4,8 @@ pub mod poll_rate {
     pub const FASTEST: u64 = 1;
     // Poll once per second, 1Hz
     pub const SLOWEST: u64 = 1000;
+    // Default rate, 500 hz
+    pub const DEFAULT: u64 = 50;
 }
 
 pub mod patterns {

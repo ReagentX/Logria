@@ -35,11 +35,11 @@ pub mod main {
         constants::cli::{
             cli_chars,
             messages::{NO_MESSAGE_IN_BUFFER_NORMAL, NO_MESSAGE_IN_BUFFER_PARSER},
-            poll_rate::{FASTEST, SLOWEST},
+            poll_rate::{FASTEST, SLOWEST, DEFAULT},
         },
         extensions::parser::Parser,
         ui::{interface::build, scroll::ScrollState},
-        util::{poll::MeanTrack, sanitizers::length::LengthFinder, types::Del},
+        util::{poll::RollingMean, sanitizers::length::LengthFinder, types::Del},
     };
 
     pub struct LogiraConfig {
@@ -73,7 +73,7 @@ pub mod main {
         loop_time: Instant, // How long a loop of the main app takes
         insert_mode: bool,  // Default to insert mode (like vim) off
         pub poll_rate: u64, // The rate at which we check for new messages
-        pub message_speed_tracker: MeanTrack, // A deque based moving average tracker
+        pub message_speed_tracker: RollingMean, // A deque based moving average tracker
         smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
         pub use_history: bool, // Whether the app records user input to a history tape
 
@@ -124,7 +124,7 @@ pub mod main {
                 length_finder: LengthFinder::new(),
                 mc_handler: MultipleChoiceHandler::new(),
                 config: LogiraConfig {
-                    poll_rate: 50, // 500hz
+                    poll_rate: DEFAULT,
                     smart_poll_rate,
                     use_history: history,
                     height: 0,
@@ -157,7 +157,7 @@ pub mod main {
                     did_switch: false,
                     delete_func: None,
                     generate_auxiliary_messages: None,
-                    message_speed_tracker: MeanTrack::new(5),
+                    message_speed_tracker: RollingMean::new(5),
                 },
             }
         }

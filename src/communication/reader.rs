@@ -939,9 +939,6 @@ pub mod main {
             logria.handle_smart_poll_rate(Duration::new(0, 100000000), 0);
             logria.handle_smart_poll_rate(Duration::new(0, 100000000), 0);
             logria.handle_smart_poll_rate(Duration::new(0, 100000000), 0);
-            logria.handle_smart_poll_rate(Duration::new(0, 100000000), 0);
-            logria.handle_smart_poll_rate(Duration::new(0, 100000000), 0);
-            logria.handle_smart_poll_rate(Duration::new(0, 100000000), 0);
 
             assert_eq!(logria.config.poll_rate, 1000);
         }

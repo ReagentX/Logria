@@ -35,7 +35,7 @@ pub mod main {
         constants::cli::{
             cli_chars,
             messages::{NO_MESSAGE_IN_BUFFER_NORMAL, NO_MESSAGE_IN_BUFFER_PARSER},
-            poll_rate::{FASTEST, SLOWEST, DEFAULT},
+            poll_rate::{DEFAULT, FASTEST, SLOWEST},
         },
         extensions::parser::Parser,
         ui::{interface::build, scroll::ScrollState},
@@ -563,7 +563,7 @@ pub mod main {
 
         /// Determine a reasonable poll rate based on the speed of messages received
         fn handle_smart_poll_rate(&mut self, t_1: Duration, new_messages: u64) {
-            if self.config.smart_poll_rate && !(InputType::Startup == self.input_type) {
+            if self.config.smart_poll_rate && !(self.input_type == InputType::Startup) {
                 // Set the poll rate to the number of milliseconds per message
                 let ms_per_message = (t_1.as_millis() as u64)
                     .checked_div(new_messages)

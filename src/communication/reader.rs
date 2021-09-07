@@ -81,7 +81,8 @@ pub mod main {
         pub scroll_state: ScrollState,
         pub streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
         previous_render: (usize, usize), // Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
-        pub did_switch: bool,            // True if we just swapped input types, False otherwise
+        was_empty: bool, // True if the previously rendered buffer had no data in it, False otherwise
+        pub did_switch: bool, // True if we just swapped input types, False otherwise
         pub delete_func: Del, // Pointer to function used to delete items for the `: r` command
         pub generate_auxiliary_messages: Option<fn() -> Vec<String>>,
     }
@@ -155,6 +156,7 @@ pub mod main {
                     current_end: 0,
                     streams: vec![],
                     did_switch: false,
+                    was_empty: false,
                     delete_func: None,
                     generate_auxiliary_messages: None,
                     message_speed_tracker: RollingMean::new(5),
@@ -355,6 +357,7 @@ pub mod main {
                         self.write_to_command_line(NO_MESSAGE_IN_BUFFER_NORMAL)?;
                     }
                 }
+                self.config.was_empty = true;
                 self.output.flush()?;
                 return Ok(());
             }
@@ -364,6 +367,19 @@ pub mod main {
             {
                 queue!(self.output, cursor::RestorePosition)?;
                 return Ok(());
+            }
+
+            // If the previous render was empty, we have a message in the command line
+            // that we need to clear out, but only for modes where the status does not
+            // come from user input
+            if self.config.was_empty {
+                self.config.was_empty = false;
+                match self.input_type {
+                    InputType::Parser | InputType::Regex => {}
+                    _ => {
+                        self.reset_command_line()?;
+                    }
+                }
             }
 
             // Since we are rendering if we got here, lock in the new render state

@@ -122,6 +122,7 @@ impl ProcessorMethods for ParserHandler {
         window.set_cli_cursor(None)?;
         window.config.stream_type = window.config.previous_stream_type;
         window.config.parser_state = ParserState::Disabled;
+        window.config.current_status = None;
         window.redraw()?;
         Ok(())
     }
@@ -263,7 +264,8 @@ impl HanderMethods for ParserHandler {
                         window.reset_output()?;
 
                         // Write the new parser status to the command line
-                        window.write_to_command_line(&self.status)?;
+                        window.config.current_status = Some(self.status.to_owned());
+                        window.write_status()?;
                     }
                     None => {
                         self.mc_handler.recieve_input(window, key)?;

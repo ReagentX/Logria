@@ -84,6 +84,7 @@ pub mod main {
         was_empty: bool, // True if the previously rendered buffer had no data in it, False otherwise
         pub did_switch: bool, // True if we just swapped input types, False otherwise
         pub delete_func: Del, // Pointer to function used to delete items for the `: r` command
+        pub current_status: Option<String>, // Current status of the app  if there is one, i.e. if regex or parsers are active
         pub generate_auxiliary_messages: Option<fn() -> Vec<String>>,
     }
 
@@ -159,6 +160,7 @@ pub mod main {
                     was_empty: false,
                     delete_func: None,
                     generate_auxiliary_messages: None,
+                    current_status: None,
                     message_speed_tracker: RollingMean::new(5),
                 },
             }
@@ -166,6 +168,10 @@ pub mod main {
 
         /// Get the number of messages in the current message buffer
         pub fn number_of_messages(&self) -> usize {
+            // if there is a regex active, use that, otherwise handle normally
+            if self.config.regex_pattern.is_some() {
+                return self.config.matched_rows.len();
+            }
             match self.input_type {
                 InputType::Normal | InputType::Command | InputType::Startup => {
                     self.messages().len()
@@ -279,7 +285,12 @@ pub mod main {
         }
 
         /// Get the message at a specific index in the current buffer
+        /// TODO: Return a reference, not a new String
         fn get_message_at_index(&self, index: usize) -> String {
+            // if there is a regex active, use that, otherwise handle normally
+            if self.config.regex_pattern.is_some() {
+                return self.messages()[self.config.matched_rows[index]].to_string();
+            }
             match self.input_type {
                 InputType::Normal | InputType::Command | InputType::Startup => {
                     self.messages()[index].to_string()
@@ -484,12 +495,21 @@ pub mod main {
         /// Set the output to command mode for command interpretation
         pub fn set_command_mode(&mut self, delete_func: Del) -> Result<()> {
             self.config.delete_func = delete_func;
-            self.previous_input_type = self.input_type;
+            self.update_input_type(InputType::Command)?;
             self.go_to_cli()?;
-            self.input_type = InputType::Command;
             self.reset_command_line()?;
             self.set_cli_cursor(None)?;
             queue!(self.output, cursor::Show)?;
+            Ok(())
+        }
+
+        /// Writes the current status String to the command line if it exists
+        pub fn write_status(&mut self) -> Result<()> {
+            if self.config.current_status.is_some() {
+                self.write_to_command_line(
+                    &self.config.current_status.as_ref().unwrap().to_owned(),
+                )?;
+            }
             Ok(())
         }
 
@@ -511,7 +531,8 @@ pub mod main {
         /// Empty the command line
         pub fn reset_command_line(&mut self) -> Result<()> {
             // Leave padding for surrounding rectangle, we cannot use deleteln because it destroys the rectangle
-            let clear = " ".repeat((self.config.width - 3) as usize); // TODO: Store this string as a class attribute, recalc on resize
+            // TODO: Store this string as a class attribute, recalc on resize
+            let clear = " ".repeat((self.config.width - 3) as usize);
             self.go_to_cli()?;
 
             // If the cursor was visible, hide it

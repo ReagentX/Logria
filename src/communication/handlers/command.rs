@@ -16,6 +16,7 @@ impl CommandHandler {
     fn return_to_prev_state(&mut self, window: &mut MainWindow) -> Result<()> {
         // If we are in auxiliary mode, go back to that, otherwise go to normal mode
         window.update_input_type(window.previous_input_type)?;
+        window.write_status()?;
         window.config.delete_func = None;
         window.set_cli_cursor(None)?;
         window.output.flush()?;

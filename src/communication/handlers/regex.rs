@@ -39,7 +39,8 @@ impl RegexHandler {
 
         self.current_pattern = match Regex::new(&pattern) {
             Ok(regex) => {
-                window.write_to_command_line(&format!("Regex with pattern /{}/", pattern))?;
+                window.config.current_status = Some(format!("Regex with pattern /{}/", pattern));
+                window.write_status()?;
 
                 // Update the main window's regex
                 window.config.regex_pattern = Some(regex.to_owned());
@@ -87,6 +88,7 @@ impl ProcessorMethods for RegexHandler {
     /// Return the app to a normal input state
     fn return_to_normal(&mut self, window: &mut MainWindow) -> Result<()> {
         self.clear_matches(window)?;
+        window.config.current_status = None;
         window.update_input_type(Normal)?;
         window.set_cli_cursor(None)?;
         window.redraw()?;
@@ -166,6 +168,7 @@ impl HanderMethods for RegexHandler {
 
 #[cfg(test)]
 mod tests {
+    use crossterm::event::KeyCode;
     use regex::bytes::Regex;
 
     use crate::communication::{
@@ -263,5 +266,33 @@ mod tests {
         // Set state to regex mode
         logria.input_type = InputType::Regex;
         handler.test("test");
+    }
+
+    #[test]
+    fn test_can_enter_command_mode() {
+        let mut logria = MainWindow::_new_dummy();
+        let mut handler = super::RegexHandler::new();
+
+        // Set state to regex mode
+        logria.input_type = InputType::Regex;
+
+        // Set regex pattern
+        let pattern = "0";
+        handler.current_pattern = Some(Regex::new(pattern).unwrap());
+
+        // Normally this is set by `set_pattern()` but that requires user input
+        logria.config.regex_pattern = Some(Regex::new(pattern).unwrap());
+        handler.process_matches(&mut logria).unwrap();
+
+        // Simulate keystroke for command mode
+        handler
+            .recieve_input(&mut logria, KeyCode::Char(':'))
+            .unwrap();
+
+        // Ensure we have the same amount of messages as when the regex was active
+        assert_eq!(
+            logria.config.matched_rows.len(),
+            logria.number_of_messages()
+        );
     }
 }

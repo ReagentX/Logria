@@ -2,14 +2,14 @@
 
 # Logria
 
-A powerful CLI tool that puts log analytics at your fingertips. This is a Rust implementation of my [Python](https://github.com/ReagentX/Logria-py) proof-of-concept.
+A powerful CLI tool that puts log aggregation at your fingertips. This is a Rust implementation of my [Python](https://github.com/ReagentX/Logria-py) proof-of-concept.
 
 ## tl;dr
 
 - Live filtering of data from other processes, replacing `grep`
 - Use shell commands or files as input, save sessions and come back later
 - Replace regex/filter without killing the process or losing the stream's history
-- Parse logs using user-defined rules, apply analytics methods on top
+- Parse logs using user-defined rules, apply aggregation methods on top
 
 ## Installation
 
@@ -46,7 +46,7 @@ For more details, see [Sample Usage Session](docs/README.md#sample-usage-session
 | `h` | if regex active, toggle highlighting of matches |
 | `s` | swap reading `stderr` and `stdout` |
 | `p` | activate parser |
-| `a` | toggle analytics mode when parser is active |
+| `a` | toggle aggregation mode when parser is active |
 | `z` | deactivate parser |
 | ↑ | scroll buffer up one line |
 | ↓ | scroll buffer down one line |
@@ -69,9 +69,9 @@ Here are some of the ways you can leverage Logria:
 
 ![parser](/resources/screenshots/parser.png)
 
-### Live analytics/statistics tracking
+### Live aggregation/statistics tracking
 
-![analytics](/resources/screenshots/analytics.png)
+![aggregation](/resources/screenshots/aggregation.png)
 
 ### User-defined saved sessions
 

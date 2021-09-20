@@ -5,7 +5,7 @@ use crossterm::Result;
 
 use crate::{
     communication::{
-        handlers::{handler::HanderMethods, user_input::UserInputHandler},
+        handlers::{handler::Handler, user_input::UserInputHandler},
         reader::main::MainWindow,
     },
     ui::scroll,
@@ -65,7 +65,7 @@ impl MultipleChoiceHandler {
     }
 }
 
-impl HanderMethods for MultipleChoiceHandler {
+impl Handler for MultipleChoiceHandler {
     fn new() -> MultipleChoiceHandler {
         MultipleChoiceHandler {
             choices_map: HashMap::new(),
@@ -109,7 +109,7 @@ mod kc_tests {
     use std::collections::HashMap;
 
     use super::MultipleChoiceHandler;
-    use crate::communication::{handlers::handler::HanderMethods, reader::main::MainWindow};
+    use crate::communication::{handlers::handler::Handler, reader::main::MainWindow};
 
     #[test]
     fn can_create() {

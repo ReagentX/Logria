@@ -4,7 +4,7 @@ use regex::Regex;
 use crate::{
     communication::{
         handlers::{
-            handler::HanderMethods, multiple_choice::MultipleChoiceHandler,
+            handler::Handler, multiple_choice::MultipleChoiceHandler,
             processor::ProcessorMethods,
         },
         input::{input_type::InputType::Normal, stream_type::StreamType},
@@ -176,7 +176,7 @@ impl ProcessorMethods for ParserHandler {
     }
 }
 
-impl HanderMethods for ParserHandler {
+impl Handler for ParserHandler {
     fn new() -> ParserHandler {
         ParserHandler {
             mc_handler: MultipleChoiceHandler::new(),
@@ -309,7 +309,7 @@ mod regex_tests {
 
     use crate::{
         communication::{
-            handlers::{handler::HanderMethods, parser::ParserState, processor::ProcessorMethods},
+            handlers::{handler::Handler, parser::ParserState, processor::ProcessorMethods},
             input::{input_type::InputType, stream_type::StreamType},
             reader::main::MainWindow,
         },
@@ -386,7 +386,7 @@ mod split_tests {
 
     use crate::{
         communication::{
-            handlers::{handler::HanderMethods, parser::ParserState, processor::ProcessorMethods},
+            handlers::{handler::Handler, parser::ParserState, processor::ProcessorMethods},
             input::{input_type::InputType, stream_type::StreamType},
             reader::main::MainWindow,
         },

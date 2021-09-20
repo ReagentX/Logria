@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crossterm::{event::KeyCode, Result};
 
-use super::{handler::HanderMethods, user_input::UserInputHandler};
+use super::{handler::Handler, user_input::UserInputHandler};
 use crate::{
     communication::{
         input::{
@@ -101,7 +101,7 @@ impl StartupHandler {
     }
 }
 
-impl HanderMethods for StartupHandler {
+impl Handler for StartupHandler {
     fn new() -> StartupHandler {
         StartupHandler {
             input_handler: UserInputHandler::new(),
@@ -147,7 +147,7 @@ impl HanderMethods for StartupHandler {
 mod startup_tests {
     use crate::{
         communication::{
-            handlers::handler::HanderMethods,
+            handlers::handler::Handler,
             input::{input_type::InputType, stream_type::StreamType},
             reader::main::MainWindow,
         },

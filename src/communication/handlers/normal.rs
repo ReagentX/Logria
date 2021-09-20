@@ -2,7 +2,7 @@ use std::io::Write;
 
 use crossterm::{cursor, event::KeyCode, queue, Result};
 
-use super::handler::HanderMethods;
+use super::handler::Handler;
 use crate::{
     communication::{
         input::{input_type::InputType, stream_type::StreamType},
@@ -54,7 +54,7 @@ impl NormalHandler {
     }
 }
 
-impl HanderMethods for NormalHandler {
+impl Handler for NormalHandler {
     fn new() -> NormalHandler {
         NormalHandler {}
     }

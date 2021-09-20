@@ -18,7 +18,7 @@ pub mod main {
         communication::{
             handlers::{
                 command::CommandHandler,
-                handler::HanderMethods,
+                handler::Handler,
                 multiple_choice::MultipleChoiceHandler,
                 normal::NormalHandler,
                 parser::{ParserHandler, ParserState},

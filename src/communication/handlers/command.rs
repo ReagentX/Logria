@@ -2,7 +2,7 @@ use std::io::Write;
 
 use crossterm::{event::KeyCode, Result};
 
-use super::handler::HanderMethods;
+use super::handler::Handler;
 use crate::communication::{
     handlers::user_input::UserInputHandler, input::stream_type::StreamType,
     reader::main::MainWindow,
@@ -142,7 +142,7 @@ impl CommandHandler {
     }
 }
 
-impl HanderMethods for CommandHandler {
+impl Handler for CommandHandler {
     fn new() -> CommandHandler {
         CommandHandler {
             input_hander: UserInputHandler::new(),
@@ -170,7 +170,7 @@ impl HanderMethods for CommandHandler {
 #[cfg(test)]
 mod poll_rate_tests {
     use super::CommandHandler;
-    use crate::communication::handlers::handler::HanderMethods;
+    use crate::communication::handlers::handler::Handler;
 
     #[test]
     fn test_can_set_poll_rate() {
@@ -198,7 +198,7 @@ mod poll_rate_tests {
 #[cfg(test)]
 mod remove_tests {
     use super::CommandHandler;
-    use crate::communication::handlers::handler::HanderMethods;
+    use crate::communication::handlers::handler::Handler;
 
     #[test]
     fn test_resolve_single_num() {

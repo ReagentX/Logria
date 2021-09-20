@@ -1,7 +1,7 @@
 use crossterm::{event::KeyCode, Result};
 use regex::bytes::Regex;
 
-use super::{handler::HanderMethods, processor::ProcessorMethods};
+use super::{handler::Handler, processor::ProcessorMethods};
 use crate::{
     communication::{
         handlers::user_input::UserInputHandler, input::input_type::InputType::Normal,
@@ -107,7 +107,7 @@ impl ProcessorMethods for RegexHandler {
     }
 }
 
-impl HanderMethods for RegexHandler {
+impl Handler for RegexHandler {
     fn new() -> RegexHandler {
         RegexHandler {
             color_pattern: Regex::new(ANSI_COLOR_PATTERN).unwrap(),
@@ -172,7 +172,7 @@ mod tests {
     use regex::bytes::Regex;
 
     use crate::communication::{
-        handlers::{handler::HanderMethods, processor::ProcessorMethods},
+        handlers::{handler::Handler, processor::ProcessorMethods},
         input::input_type::InputType,
         reader::main::MainWindow,
     };

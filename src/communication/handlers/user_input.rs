@@ -4,7 +4,7 @@ use std::io::Write;
 use crossterm::{cursor, event::KeyCode, queue, style, terminal::size, Result};
 
 use crate::{
-    communication::{handlers::handler::HanderMethods, reader::main::MainWindow},
+    communication::{handlers::handler::Handler, reader::main::MainWindow},
     util::history::Tape,
 };
 
@@ -168,7 +168,7 @@ impl UserInputHandler {
     }
 }
 
-impl HanderMethods for UserInputHandler {
+impl Handler for UserInputHandler {
     fn new() -> UserInputHandler {
         let mut handler = UserInputHandler {
             x: 0,

@@ -4,8 +4,7 @@ use regex::Regex;
 use crate::{
     communication::{
         handlers::{
-            handler::Handler, multiple_choice::MultipleChoiceHandler,
-            processor::ProcessorMethods,
+            handler::Handler, multiple_choice::MultipleChoiceHandler, processor::ProcessorMethods,
         },
         input::{input_type::InputType::Normal, stream_type::StreamType},
         reader::main::MainWindow,
@@ -79,13 +78,19 @@ impl ParserHandler {
         parser: &Parser,
         index: usize,
         message: &str,
+        aggregate: &bool,
     ) -> std::result::Result<Option<String>, LogriaError> {
-        match parser.pattern_type {
-            PatternType::Regex => match parser.get_regex() {
-                Ok(pattern) => Ok(self.regex_handle(message, index, pattern)),
-                Err(why) => Err(why),
-            },
-            PatternType::Split => Ok(self.split_handle(message, index, &parser.pattern)),
+        if *aggregate {
+            // Perform analytics here
+            Ok(self.aggregate_handle(message))
+        } else {
+            match parser.pattern_type {
+                PatternType::Regex => match parser.get_regex() {
+                    Ok(pattern) => Ok(self.regex_handle(message, index, pattern)),
+                    Err(why) => Err(why),
+                },
+                PatternType::Split => Ok(self.split_handle(message, index, &parser.pattern)),
+            }
         }
     }
 
@@ -100,6 +105,10 @@ impl ParserHandler {
     fn split_handle(&self, message: &str, index: usize, pattern: &str) -> Option<String> {
         let result: Vec<&str> = message.split_terminator(pattern).collect();
         result.get(index).map(|part| String::from(*part))
+    }
+
+    fn aggregate_handle(&self, message: &str) -> Option<String> {
+        Some(String::from(message))
     }
 
     /// Reset parser
@@ -159,6 +168,7 @@ impl ProcessorMethods for ParserHandler {
                             parser,
                             window.config.parser_index,
                             &window.previous_messages()[index],
+                            &window.config.analytics_enabled,
                         ) {
                             window.config.auxiliary_messages.push(message);
                         }
@@ -290,6 +300,11 @@ impl Handler for ParserHandler {
                         self.reset(window);
                     }
 
+                    // Swap to and from analytics mode
+                    KeyCode::Char('a') => {
+                        window.config.analytics_enabled = !window.config.analytics_enabled;
+                    }
+
                     // Return to normal
                     KeyCode::Char('z') | KeyCode::Esc => self.return_to_normal(window)?,
 
@@ -313,7 +328,7 @@ mod regex_tests {
             input::{input_type::InputType, stream_type::StreamType},
             reader::main::MainWindow,
         },
-        extensions::parser::{Parser, PatternType},
+        extensions::parser::{AggregationType, Parser, PatternType},
     };
 
     #[test]
@@ -324,7 +339,7 @@ mod regex_tests {
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), String::from("count"));
+        map.insert(String::from("1"), AggregationType::Count);
         let parser = Parser::new(
             String::from("([1-9])"),
             PatternType::Regex,
@@ -354,7 +369,7 @@ mod regex_tests {
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), String::from("count"));
+        map.insert(String::from("1"), AggregationType::Count);
         let parser = Parser::new(
             String::from("([1-9])"),
             PatternType::Regex,
@@ -390,7 +405,7 @@ mod split_tests {
             input::{input_type::InputType, stream_type::StreamType},
             reader::main::MainWindow,
         },
-        extensions::parser::{Parser, PatternType},
+        extensions::parser::{AggregationType, Parser, PatternType},
     };
 
     #[test]
@@ -401,7 +416,7 @@ mod split_tests {
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), String::from("count"));
+        map.insert(String::from("1"), AggregationType::Count);
         let parser = Parser::new(
             String::from("1"),
             PatternType::Split,
@@ -434,7 +449,7 @@ mod split_tests {
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), String::from("count"));
+        map.insert(String::from("1"), AggregationType::Count);
         let parser = Parser::new(
             String::from("1"),
             PatternType::Split,

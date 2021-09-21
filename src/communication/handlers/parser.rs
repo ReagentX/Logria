@@ -82,7 +82,7 @@ impl ParserHandler {
     ) -> std::result::Result<Option<String>, LogriaError> {
         if *aggregate {
             // Perform analytics here
-            Ok(self.aggregate_handle(message))
+            Ok(self.aggregate_handle(parser, message))
         } else {
             match parser.pattern_type {
                 PatternType::Regex => match parser.get_regex() {
@@ -107,7 +107,23 @@ impl ParserHandler {
         result.get(index).map(|part| String::from(*part))
     }
 
-    fn aggregate_handle(&self, message: &str) -> Option<String> {
+    /// Handle aggregation logic for a single message
+    fn aggregate_handle(&self, parser: &Parser, message: &str) -> Option<String> {
+        // Split message into a Vec<&str> of its parts
+        let message_parts: Vec<&str> = match parser.pattern_type {
+            PatternType::Regex => match parser.get_regex() {
+                Ok(pattern) => Ok(pattern
+                    .captures(message)
+                    .unwrap()
+                    .iter()
+                    .flatten()
+                    .map(|f| f.as_str())
+                    .collect()),
+                Err(why) => Err(why),
+            },
+            PatternType::Split => Ok(message.split_terminator(&parser.pattern).collect()),
+        }
+        .unwrap_or_default();
         Some(String::from(message))
     }
 
@@ -392,6 +408,38 @@ mod regex_tests {
             vec!["1", "2", "3", "4", "5", "6", "7", "8", "9", "1"]
         );
     }
+
+    #[test]
+    fn test_can_setup_with_session_aggregated() {
+        let mut logria = MainWindow::_new_dummy();
+        let handler = ParserHandler::new();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("1"), AggregationType::Count);
+        let parser = Parser::new(
+            String::from("([1-9])"),
+            PatternType::Regex,
+            String::from("1"),
+            map,
+            None,
+        );
+
+        // Update window config
+        logria.config.parser = Some(parser);
+        logria.config.parser_state = ParserState::Full;
+        logria.input_type = InputType::Parser;
+        logria.config.parser_index = 1;
+        logria.config.previous_stream_type = StreamType::StdErr;
+        logria.config.analytics_enabled = true;
+
+        handler.process_matches(&mut logria).unwrap();
+
+        assert_eq!(
+            logria.config.auxiliary_messages[0..10],
+            vec!["1", "2", "3", "4", "5", "6", "7", "8", "9", "1"]
+        );
+    }
 }
 
 #[cfg(test)]
@@ -464,6 +512,38 @@ mod split_tests {
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 1;
         logria.config.previous_stream_type = StreamType::StdErr;
+
+        handler.process_matches(&mut logria).unwrap();
+        assert_eq!(
+            logria.config.auxiliary_messages[0..10],
+            vec!["0", "", "2", "3", "4", "5", "6", "7", "8", "9"]
+        );
+        assert_eq!(logria.config.auxiliary_messages.len(), 10)
+    }
+
+    #[test]
+    fn test_can_setup_with_session_aggregated() {
+        let mut logria = MainWindow::_new_dummy();
+        let handler = ParserHandler::new();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("1"), AggregationType::Count);
+        let parser = Parser::new(
+            String::from("1"),
+            PatternType::Split,
+            String::from("1"),
+            map,
+            None,
+        );
+
+        // Update window config
+        logria.config.parser = Some(parser);
+        logria.config.parser_state = ParserState::Full;
+        logria.input_type = InputType::Parser;
+        logria.config.parser_index = 1;
+        logria.config.previous_stream_type = StreamType::StdErr;
+        logria.config.analytics_enabled = true;
 
         handler.process_matches(&mut logria).unwrap();
         assert_eq!(

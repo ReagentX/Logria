@@ -184,7 +184,7 @@ impl ProcessorMethods for ParserHandler {
                             parser,
                             window.config.parser_index,
                             &window.previous_messages()[index],
-                            &window.config.analytics_enabled,
+                            &window.config.aggregation_enabled,
                         ) {
                             window.config.auxiliary_messages.push(message);
                         }
@@ -318,7 +318,7 @@ impl Handler for ParserHandler {
 
                     // Swap to and from analytics mode
                     KeyCode::Char('a') => {
-                        window.config.analytics_enabled = !window.config.analytics_enabled;
+                        window.config.aggregation_enabled = !window.config.aggregation_enabled;
                     }
 
                     // Return to normal
@@ -431,7 +431,7 @@ mod regex_tests {
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 1;
         logria.config.previous_stream_type = StreamType::StdErr;
-        logria.config.analytics_enabled = true;
+        logria.config.aggregation_enabled = true;
 
         handler.process_matches(&mut logria).unwrap();
 
@@ -543,7 +543,7 @@ mod split_tests {
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 1;
         logria.config.previous_stream_type = StreamType::StdErr;
-        logria.config.analytics_enabled = true;
+        logria.config.aggregation_enabled = true;
 
         handler.process_matches(&mut logria).unwrap();
         assert_eq!(

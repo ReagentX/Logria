@@ -66,7 +66,8 @@ pub mod main {
         pub parser: Option<Parser>,      // Reference to the current parser
         pub parser_index: usize,         // Index for the parser to look at
         pub parser_state: ParserState,   // The state of the current parser
-        pub analytics_enabled: bool,     // Whether we are calcualting stats or not
+        // TODO: Part of ParserState?
+        pub aggregation_enabled: bool,     // Whether we are aggregating log data or not
         pub last_index_processed: usize, // The last index the parsing function saw
 
         // App state
@@ -148,7 +149,7 @@ pub mod main {
                     parser: None,
                     parser_index: 0,
                     parser_state: ParserState::Disabled,
-                    analytics_enabled: false,
+                    aggregation_enabled: false,
                     last_index_processed: 0,
                     insert_mode: false,
                     highlight_match: false,
@@ -374,7 +375,7 @@ pub mod main {
             }
 
             // Don't do anything if nothing changed; start at index 0
-            if !self.config.analytics_enabled && self.config.previous_render == (max(0, start), end)
+            if !self.config.aggregation_enabled && self.config.previous_render == (max(0, start), end)
             {
                 queue!(self.output, cursor::RestorePosition)?;
                 return Ok(());

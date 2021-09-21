@@ -34,6 +34,7 @@ pub struct ParserHandler {
 impl ParserHandler {
     /// Setup the parser instance on the main window
     // TODO: Make this and select_index send proper function handle to window.config.generate_auxiliary_messages
+    // TODO: Pretty sure the above is done, need to double check
     // So that we render the text when it updates from deletion commands
     pub fn parser_messages_handle() -> Vec<String> {
         let mut body_text = vec![];
@@ -416,7 +417,8 @@ mod regex_tests {
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), AggregationType::Count);
+        // TODO: Build working test case and parser
+        map.insert(String::from("1"), AggregationType::Mean);
         let parser = Parser::new(
             String::from("([1-9])"),
             PatternType::Regex,
@@ -527,8 +529,9 @@ mod split_tests {
         let handler = ParserHandler::new();
 
         // Create Parser
+        // TODO: Build working test case and parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), AggregationType::Count);
+        map.insert(String::from("1"), AggregationType::Mean);
         let parser = Parser::new(
             String::from("1"),
             PatternType::Split,

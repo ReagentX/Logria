@@ -95,14 +95,14 @@ impl ParserHandler {
         }
     }
 
-    /// Parse message with regex logic
+    /// Parse a message with regex logic
     fn regex_handle(&self, message: &str, index: usize, pattern: Regex) -> Option<String> {
         pattern
             .captures(message)
             .map(|captures| captures.get(index).unwrap().as_str().to_owned())
     }
 
-    /// Parse message with split logic
+    /// Parse a message with split logic
     fn split_handle(&self, message: &str, index: usize, pattern: &str) -> Option<String> {
         let result: Vec<&str> = message.split_terminator(pattern).collect();
         result.get(index).map(|part| String::from(*part))
@@ -334,6 +334,69 @@ impl Handler for ParserHandler {
 }
 
 #[cfg(test)]
+mod parse_tests {
+    use super::ParserHandler;
+    use crate::{
+        communication::handlers::handler::Handler,
+        extensions::parser::{AggregationType, Parser, PatternType},
+    };
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_does_split() {
+        // Create handler
+        let handler = ParserHandler::new();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("1"), AggregationType::Count);
+        let parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from("1"),
+            map,
+            None,
+        );
+
+        let parsed_message = handler
+            .parse(&parser, 0, "I - Am - A - Test", &false)
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(parsed_message, String::from("I"))
+    }
+
+    #[test]
+    fn test_does_regex() {
+        // Create handler
+        let handler = ParserHandler::new();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("1"), AggregationType::Count);
+        let parser = Parser::new(
+            String::from("(\\d+)"),
+            PatternType::Regex,
+            String::from("1"),
+            map,
+            None,
+        );
+
+        let parsed_message = handler
+            .parse(&parser, 0, "Log message part 65 test", &false)
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(parsed_message, String::from("65"))
+    }
+
+    #[test]
+    fn test_does_analytics_average() {
+        // TODO: Implement tests for every parser method
+    }
+}
+
+#[cfg(test)]
 mod regex_tests {
     use std::collections::HashMap;
 
@@ -526,6 +589,7 @@ mod split_tests {
     #[test]
     fn test_can_setup_with_session_aggregated() {
         let mut logria = MainWindow::_new_dummy();
+        // Add some messages that can be easily parsed
         let handler = ParserHandler::new();
 
         // Create Parser
@@ -533,7 +597,7 @@ mod split_tests {
         let mut map = HashMap::new();
         map.insert(String::from("1"), AggregationType::Mean);
         let parser = Parser::new(
-            String::from("1"),
+            String::from("-"),
             PatternType::Split,
             String::from("1"),
             map,

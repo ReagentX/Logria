@@ -145,6 +145,27 @@ mod tests {
     }
 
     #[test]
+    fn can_count_int() {
+        let mut c: Counter<i32> = Counter::new();
+        c.increment(1);
+        c.increment(1);
+        c.increment(1);
+        c.increment(2);
+        c.increment(2);
+
+        let mut expected_count = HashMap::new();
+        expected_count.insert(1, 3);
+        expected_count.insert(2, 2);
+
+        let mut expected_order: HashMap<u64, Vec<i32>> = HashMap::new();
+        expected_order.insert(3, vec![1]);
+        expected_order.insert(2, vec![2]);
+
+        assert_eq!(c.state, expected_count);
+        assert_eq!(c.order, expected_order);
+    }
+
+    #[test]
     fn can_count() {
         let mut c: Counter<String> = Counter::new();
         c.increment(A.to_owned());

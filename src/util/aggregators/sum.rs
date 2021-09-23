@@ -63,6 +63,16 @@ mod int_tests {
     }
 
     #[test]
+    fn message() {
+        let mut sum: IntSum<i32> = IntSum::new();
+        sum.update(1);
+        sum.update(2);
+        sum.update(3);
+
+        assert_eq!(sum.messages(1), vec!["Total: 6"]);
+    }
+
+    #[test]
     fn sum_empty() {
         let mean: IntSum<u64> = IntSum::new();
 
@@ -92,6 +102,16 @@ mod float_tests {
         sum.update(3_f32);
 
         assert!(sum.total - 6_f32 == 0_f32);
+    }
+
+    #[test]
+    fn messages() {
+        let mut sum: FloatSum<f32> = FloatSum::new();
+        sum.update(1_f32);
+        sum.update(2_f32);
+        sum.update(3_f32);
+
+        assert_eq!(sum.messages(1), vec!["Total: 6"]);
     }
 
     #[test]

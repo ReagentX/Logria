@@ -1,16 +1,16 @@
-use std::ops::AddAssign;
+use std::{fmt::Display, ops::AddAssign};
 
 use num_traits::{one, zero, Float, PrimInt};
 
 use crate::util::aggregators::aggregator::Aggregator;
 
-struct IntMean<T: PrimInt> {
+struct IntMean<T: PrimInt + Display> {
     count: T,
     total: T,
 }
 
 /// Integer implementation of Mean
-impl<I: PrimInt> Aggregator<I> for IntMean<I> {
+impl<I: PrimInt + Display> Aggregator<I> for IntMean<I> {
     fn new() -> IntMean<I> {
         IntMean {
             count: zero(),
@@ -27,23 +27,27 @@ impl<I: PrimInt> Aggregator<I> for IntMean<I> {
     }
 
     fn messages(&self, _: usize) -> Vec<String> {
-        vec![]
+        vec![
+            format!("Mean: {}", self.mean()),
+            format!("Count: {}", self.count),
+            format!("Total: {}", self.total),
+        ]
     }
 }
 
-impl<I: PrimInt> IntMean<I> {
+impl<I: PrimInt + Display> IntMean<I> {
     fn mean(&self) -> I {
         self.total.checked_div(&self.count).unwrap_or_else(zero)
     }
 }
 
-struct FloatMean<F: Float + AddAssign> {
+struct FloatMean<F: Float + AddAssign + Display> {
     count: F,
     total: F,
 }
 
 /// Float implementation of Mean
-impl<F: Float + AddAssign> Aggregator<F> for FloatMean<F> {
+impl<F: Float + AddAssign + Display> Aggregator<F> for FloatMean<F> {
     fn new() -> FloatMean<F> {
         FloatMean {
             count: zero::<F>(),
@@ -66,11 +70,15 @@ impl<F: Float + AddAssign> Aggregator<F> for FloatMean<F> {
     }
 
     fn messages(&self, _: usize) -> Vec<String> {
-        vec![]
+        vec![
+            format!("Mean: {}", self.mean()),
+            format!("Count: {}", self.count),
+            format!("Total: {}", self.total),
+        ]
     }
 }
 
-impl<F: Float + AddAssign> FloatMean<F> {
+impl<F: Float + AddAssign + Display> FloatMean<F> {
     fn mean(&self) -> F {
         if self.count == zero::<F>() {
             self.total
@@ -94,6 +102,23 @@ mod int_tests {
         assert_eq!(mean.mean(), 2);
         assert_eq!(mean.total, 6);
         assert_eq!(mean.count, 3);
+    }
+
+    #[test]
+    fn display() {
+        let mut mean: IntMean<i32> = IntMean::new();
+        mean.update(1);
+        mean.update(2);
+        mean.update(3);
+
+        assert_eq!(
+            mean.messages(1),
+            vec![
+                "Mean: 2".to_string(),
+                "Count: 3".to_string(),
+                "Total: 6".to_string(),
+            ]
+        );
     }
 
     #[test]
@@ -131,6 +156,23 @@ mod float_tests {
         assert!((mean.mean() - 2_f64).abs() == 0_f64);
         assert!((mean.total - 6_f64).abs() == 0_f64);
         assert!((mean.count - 3_f64).abs() == 0_f64);
+    }
+
+    #[test]
+    fn display() {
+        let mut mean: FloatMean<f64> = FloatMean::new();
+        mean.update(1_f64);
+        mean.update(2_f64);
+        mean.update(3_f64);
+
+        assert_eq!(
+            mean.messages(1),
+            vec![
+                "Mean: 2".to_string(),
+                "Count: 3".to_string(),
+                "Total: 6".to_string(),
+            ]
+        );
     }
 
     #[test]

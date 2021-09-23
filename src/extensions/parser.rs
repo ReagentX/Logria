@@ -11,23 +11,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     constants::directories::patterns, extensions::extension::ExtensionMethods,
-    util::error::LogriaError,
+    util::{error::LogriaError, aggregators::aggregator::AggregationType},
 };
 
 #[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Debug)]
 pub enum PatternType {
     Split,
     Regex,
-}
-
-#[derive(Eq, PartialEq, Serialize, Deserialize, Debug)]
-pub enum AggregationType {
-    Mean,
-    Median,
-    Mode,
-    Sum,
-    Count,
-    Date,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

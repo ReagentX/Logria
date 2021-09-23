@@ -338,7 +338,8 @@ mod parse_tests {
     use super::ParserHandler;
     use crate::{
         communication::handlers::handler::Handler,
-        extensions::parser::{AggregationType, Parser, PatternType},
+        extensions::parser::{Parser, PatternType},
+        util::aggregators::aggregator::AggregationType,
     };
     use std::collections::HashMap;
 
@@ -408,7 +409,8 @@ mod regex_tests {
             input::{input_type::InputType, stream_type::StreamType},
             reader::main::MainWindow,
         },
-        extensions::parser::{AggregationType, Parser, PatternType},
+        extensions::parser::{Parser, PatternType},
+        util::aggregators::aggregator::AggregationType,
     };
 
     #[test]
@@ -518,7 +520,8 @@ mod split_tests {
             input::{input_type::InputType, stream_type::StreamType},
             reader::main::MainWindow,
         },
-        extensions::parser::{AggregationType, Parser, PatternType},
+        extensions::parser::{Parser, PatternType},
+        util::aggregators::aggregator::AggregationType,
     };
 
     #[test]

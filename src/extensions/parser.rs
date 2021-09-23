@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     constants::directories::patterns, extensions::extension::ExtensionMethods,
-    util::{error::LogriaError, aggregators::aggregator::AggregationType},
+    util::{error::LogriaError, aggregators::aggregator::AggregationMethod},
 };
 
 #[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Debug)]
@@ -25,7 +25,7 @@ pub struct Parser {
     pub pattern: String,
     pub pattern_type: PatternType, // Cannot use `type` for the name as it is reserved
     pub example: String,
-    pub analytics_methods: HashMap<String, AggregationType>,
+    pub analytics_methods: HashMap<String, AggregationMethod>,
     #[serde(skip_serializing, skip_deserializing)]
     analytics_map: HashMap<String, String>,
     #[serde(skip_serializing, skip_deserializing)]
@@ -115,7 +115,7 @@ impl Parser {
         pattern: String,
         pattern_type: PatternType,
         example: String,
-        analytics_methods: HashMap<String, AggregationType>,
+        analytics_methods: HashMap<String, AggregationMethod>,
         num_to_print: Option<i32>,
     ) -> Parser {
         Parser::verify_path();
@@ -204,7 +204,7 @@ mod tests {
         constants::directories::patterns,
         extensions::{
             extension::ExtensionMethods,
-            parser::{AggregationType, Parser, PatternType},
+            parser::{AggregationMethod, Parser, PatternType},
         },
     };
 
@@ -212,10 +212,10 @@ mod tests {
     fn test_list_full() {
         // Create a parser for use by this test
         let mut map = HashMap::new();
-        map.insert(String::from("Date"), AggregationType::Date);
-        map.insert(String::from("Caller"), AggregationType::Count);
-        map.insert(String::from("Level"), AggregationType::Count);
-        map.insert(String::from("Message"), AggregationType::Sum);
+        map.insert(String::from("Date"), AggregationMethod::Date);
+        map.insert(String::from("Caller"), AggregationMethod::Count);
+        map.insert(String::from("Level"), AggregationMethod::Count);
+        map.insert(String::from("Message"), AggregationMethod::Sum);
         let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
@@ -235,10 +235,10 @@ mod tests {
     fn test_list_clean() {
         // Create a parser for use by this test
         let mut map = HashMap::new();
-        map.insert(String::from("Date"), AggregationType::Date);
-        map.insert(String::from("Caller"), AggregationType::Count);
-        map.insert(String::from("Level"), AggregationType::Count);
-        map.insert(String::from("Message"), AggregationType::Sum);
+        map.insert(String::from("Date"), AggregationMethod::Date);
+        map.insert(String::from("Caller"), AggregationMethod::Count);
+        map.insert(String::from("Level"), AggregationMethod::Count);
+        map.insert(String::from("Message"), AggregationMethod::Sum);
         let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
@@ -255,15 +255,15 @@ mod tests {
     #[test]
     fn serialize_deserialize_session() {
         let mut map = HashMap::new();
-        map.insert(String::from("Date"), AggregationType::Date);
-        map.insert(String::from("Caller"), AggregationType::Count);
-        map.insert(String::from("Level"), AggregationType::Count);
-        map.insert(String::from("Message"), AggregationType::Sum);
+        map.insert(String::from("Date"), AggregationMethod::Date);
+        map.insert(String::from("Caller"), AggregationMethod::Count);
+        map.insert(String::from("Level"), AggregationMethod::Count);
+        map.insert(String::from("Message"), AggregationMethod::Sum);
         let mut map2 = HashMap::new();
-        map2.insert(String::from("Date"), AggregationType::Date);
-        map2.insert(String::from("Caller"), AggregationType::Count);
-        map2.insert(String::from("Level"), AggregationType::Count);
-        map2.insert(String::from("Message"), AggregationType::Sum);
+        map2.insert(String::from("Date"), AggregationMethod::Date);
+        map2.insert(String::from("Caller"), AggregationMethod::Count);
+        map2.insert(String::from("Level"), AggregationMethod::Count);
+        map2.insert(String::from("Message"), AggregationMethod::Sum);
         let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
@@ -293,13 +293,13 @@ mod tests {
     #[test]
     fn can_get_regex() {
         let mut map = HashMap::new();
-        map.insert(String::from("Remote Host"), AggregationType::Count);
-        map.insert(String::from("User ID"), AggregationType::Count);
-        map.insert(String::from("Username"), AggregationType::Count);
-        map.insert(String::from("Date"), AggregationType::Count);
-        map.insert(String::from("Request"), AggregationType::Count);
-        map.insert(String::from("Status"), AggregationType::Count);
-        map.insert(String::from("Size"), AggregationType::Count);
+        map.insert(String::from("Remote Host"), AggregationMethod::Count);
+        map.insert(String::from("User ID"), AggregationMethod::Count);
+        map.insert(String::from("Username"), AggregationMethod::Count);
+        map.insert(String::from("Date"), AggregationMethod::Count);
+        map.insert(String::from("Request"), AggregationMethod::Count);
+        map.insert(String::from("Status"), AggregationMethod::Count);
+        map.insert(String::from("Size"), AggregationMethod::Count);
         let parser = Parser::new(
             String::from("([^ ]*) ([^ ]*) ([^ ]*) \\[([^]]*)\\] \"([^\"]*)\" ([^ ]*) ([^ ]*)"),
             PatternType::Regex,
@@ -318,10 +318,10 @@ mod tests {
     #[test]
     fn cannot_get_regex() {
         let mut map = HashMap::new();
-        map.insert(String::from("Date"), AggregationType::Date);
-        map.insert(String::from("Caller"), AggregationType::Count);
-        map.insert(String::from("Level"), AggregationType::Count);
-        map.insert(String::from("Message"), AggregationType::Sum);
+        map.insert(String::from("Date"), AggregationMethod::Date);
+        map.insert(String::from("Caller"), AggregationMethod::Count);
+        map.insert(String::from("Level"), AggregationMethod::Count);
+        map.insert(String::from("Message"), AggregationMethod::Sum);
         let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
@@ -340,13 +340,13 @@ mod tests {
     #[test]
     fn can_get_example_regex() {
         let mut map = HashMap::new();
-        map.insert(String::from("Remote Host"), AggregationType::Count);
-        map.insert(String::from("User ID"), AggregationType::Count);
-        map.insert(String::from("Username"), AggregationType::Count);
-        map.insert(String::from("Date"), AggregationType::Count);
-        map.insert(String::from("Request"), AggregationType::Count);
-        map.insert(String::from("Status"), AggregationType::Count);
-        map.insert(String::from("Size"), AggregationType::Count);
+        map.insert(String::from("Remote Host"), AggregationMethod::Count);
+        map.insert(String::from("User ID"), AggregationMethod::Count);
+        map.insert(String::from("Username"), AggregationMethod::Count);
+        map.insert(String::from("Date"), AggregationMethod::Count);
+        map.insert(String::from("Request"), AggregationMethod::Count);
+        map.insert(String::from("Status"), AggregationMethod::Count);
+        map.insert(String::from("Size"), AggregationMethod::Count);
         let parser = Parser::new(
             String::from("([^ ]*) ([^ ]*) ([^ ]*) \\[([^]]*)\\] \"([^\"]*)\" ([^ ]*) ([^ ]*)"),
             PatternType::Regex,
@@ -375,10 +375,10 @@ mod tests {
     #[test]
     fn can_get_example_split() {
         let mut map = HashMap::new();
-        map.insert(String::from("Date"), AggregationType::Date);
-        map.insert(String::from("Caller"), AggregationType::Count);
-        map.insert(String::from("Level"), AggregationType::Count);
-        map.insert(String::from("Message"), AggregationType::Sum);
+        map.insert(String::from("Date"), AggregationMethod::Date);
+        map.insert(String::from("Caller"), AggregationMethod::Count);
+        map.insert(String::from("Level"), AggregationMethod::Count);
+        map.insert(String::from("Message"), AggregationMethod::Sum);
         let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,

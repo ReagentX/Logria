@@ -339,7 +339,7 @@ mod parse_tests {
     use crate::{
         communication::handlers::handler::Handler,
         extensions::parser::{Parser, PatternType},
-        util::aggregators::aggregator::AggregationType,
+        util::aggregators::aggregator::AggregationMethod,
     };
     use std::collections::HashMap;
 
@@ -350,7 +350,7 @@ mod parse_tests {
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), AggregationType::Count);
+        map.insert(String::from("1"), AggregationMethod::Count);
         let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
@@ -374,7 +374,7 @@ mod parse_tests {
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), AggregationType::Count);
+        map.insert(String::from("1"), AggregationMethod::Count);
         let parser = Parser::new(
             String::from("(\\d+)"),
             PatternType::Regex,
@@ -410,7 +410,7 @@ mod regex_tests {
             reader::main::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
-        util::aggregators::aggregator::AggregationType,
+        util::aggregators::aggregator::AggregationMethod,
     };
 
     #[test]
@@ -421,7 +421,7 @@ mod regex_tests {
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), AggregationType::Count);
+        map.insert(String::from("1"), AggregationMethod::Count);
         let parser = Parser::new(
             String::from("([1-9])"),
             PatternType::Regex,
@@ -451,7 +451,7 @@ mod regex_tests {
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), AggregationType::Count);
+        map.insert(String::from("1"), AggregationMethod::Count);
         let parser = Parser::new(
             String::from("([1-9])"),
             PatternType::Regex,
@@ -483,7 +483,7 @@ mod regex_tests {
         // Create Parser
         let mut map = HashMap::new();
         // TODO: Build working test case and parser
-        map.insert(String::from("1"), AggregationType::Mean);
+        map.insert(String::from("1"), AggregationMethod::Mean);
         let parser = Parser::new(
             String::from("([1-9])"),
             PatternType::Regex,
@@ -521,7 +521,7 @@ mod split_tests {
             reader::main::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
-        util::aggregators::aggregator::AggregationType,
+        util::aggregators::aggregator::AggregationMethod,
     };
 
     #[test]
@@ -532,7 +532,7 @@ mod split_tests {
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), AggregationType::Count);
+        map.insert(String::from("1"), AggregationMethod::Count);
         let parser = Parser::new(
             String::from("1"),
             PatternType::Split,
@@ -565,7 +565,7 @@ mod split_tests {
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), AggregationType::Count);
+        map.insert(String::from("1"), AggregationMethod::Count);
         let parser = Parser::new(
             String::from("1"),
             PatternType::Split,
@@ -598,7 +598,7 @@ mod split_tests {
         // Create Parser
         // TODO: Build working test case and parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), AggregationType::Mean);
+        map.insert(String::from("1"), AggregationMethod::Mean);
         let parser = Parser::new(
             String::from("-"),
             PatternType::Split,

@@ -7,7 +7,7 @@ pub trait Aggregator<T> {
 }
 
 #[derive(Eq, PartialEq, Serialize, Deserialize, Debug)]
-pub enum AggregationType {
+pub enum AggregationMethod {
     Mean,
     Median,
     Mode,

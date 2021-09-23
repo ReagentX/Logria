@@ -1,17 +1,14 @@
-use std::hash::Hash;
-use std::{
-    cmp::{Eq, PartialEq},
-    collections::HashMap,
-    fmt::Display,
-};
+use std::{cmp::Eq, collections::HashMap, fmt::Display, hash::Hash};
+
+use crate::util::aggregators::aggregator::Aggregator;
 
 /// Counter struct inspired by Python's stdlib Counter class
-struct Counter<T> {
+struct Counter<T: Hash + Eq + Clone + Display> {
     state: HashMap<T, u64>,
     order: HashMap<u64, Vec<T>>,
 }
 
-impl<T: Hash + Eq + PartialEq + Clone + Display> Counter<T> {
+impl<T: Hash + Eq + Clone + Display> Aggregator<T> for Counter<T> {
     fn new() -> Counter<T> {
         Counter {
             state: HashMap::new(),
@@ -19,13 +16,11 @@ impl<T: Hash + Eq + PartialEq + Clone + Display> Counter<T> {
         }
     }
 
-    /// Determine the total number of items in the Counter
-    fn total(&self) -> u64 {
-        self.state.values().into_iter().sum()
+    fn update(&mut self, message: T){
+        self.increment(message)
     }
 
-    /// Get the `n` most common items in the Counter
-    fn most_common(&self, n: usize) -> Vec<String> {
+    fn messages(&self, n: usize) -> Vec<String> {
         // Place to store the result
         let mut result = Vec::with_capacity(n);
         if n == 0 {
@@ -57,6 +52,13 @@ impl<T: Hash + Eq + PartialEq + Clone + Display> Counter<T> {
         }
 
         result
+    }
+}
+
+impl<T: Hash + Eq + Clone + Display> Counter<T> {
+    /// Determine the total number of items in the Counter
+    fn total(&self) -> u64 {
+        self.state.values().into_iter().sum()
     }
 
     /// Remove an item from the internal order store
@@ -129,9 +131,8 @@ impl<T: Hash + Eq + PartialEq + Clone + Display> Counter<T> {
 
 #[cfg(test)]
 mod tests {
+    use crate::util::aggregators::{aggregator::Aggregator, counter::Counter};
     use std::collections::HashMap;
-
-    use super::Counter;
 
     static A: &str = "a";
     static B: &str = "b";
@@ -167,11 +168,11 @@ mod tests {
     #[test]
     fn can_sum() {
         let mut c: Counter<String> = Counter::new();
-        c.increment(A.to_owned());
-        c.increment(A.to_owned());
-        c.increment(A.to_owned());
-        c.increment(B.to_owned());
-        c.increment(B.to_owned());
+        c.update(A.to_owned());
+        c.update(A.to_owned());
+        c.update(A.to_owned());
+        c.update(B.to_owned());
+        c.update(B.to_owned());
 
         let mut expected = HashMap::new();
         expected.insert(A.to_owned(), 3);
@@ -254,7 +255,7 @@ mod tests {
 
         let expected: Vec<String> = vec![];
 
-        assert_eq!(c.most_common(0), expected);
+        assert_eq!(c.messages(0), expected);
     }
 
     #[test]
@@ -272,7 +273,7 @@ mod tests {
 
         let expected = vec![String::from("a: 3")];
 
-        assert_eq!(c.most_common(1), expected);
+        assert_eq!(c.messages(1), expected);
     }
 
     #[test]
@@ -290,7 +291,7 @@ mod tests {
 
         let expected = vec![String::from("a: 3"), String::from("b: 3")];
 
-        assert_eq!(c.most_common(2), expected);
+        assert_eq!(c.messages(2), expected);
     }
 
     #[test]
@@ -312,7 +313,7 @@ mod tests {
             String::from("c: 2"),
         ];
 
-        assert_eq!(c.most_common(3), expected);
+        assert_eq!(c.messages(3), expected);
     }
 
     #[test]
@@ -335,6 +336,6 @@ mod tests {
             String::from("d: 1"),
         ];
 
-        assert_eq!(c.most_common(4), expected);
+        assert_eq!(c.messages(4), expected);
     }
 }

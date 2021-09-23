@@ -4,4 +4,4 @@ pub mod history;
 pub mod error;
 pub mod types;
 pub mod poll;
-pub mod counter;
+pub mod aggregators;

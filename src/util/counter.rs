@@ -60,13 +60,13 @@ impl<T: Hash + Eq + PartialEq + Clone + Display> Counter<T> {
     }
 
     /// Remove an item from the internal order store
-    fn purge_from_order(&mut self, item: &T, count: u64) {
-        if let Some(order) = self.order.get_mut(&count) {
+    fn purge_from_order(&mut self, item: &T, count: &u64) {
+        if let Some(order) = self.order.get_mut(count) {
             // If there was data there, remove the existing item
             if !order.is_empty() {
                 order.retain(|i| i != item);
                 if order.is_empty() {
-                    self.order.remove(&count);
+                    self.order.remove(count);
                 }
             };
         };
@@ -78,7 +78,7 @@ impl<T: Hash + Eq + PartialEq + Clone + Display> Counter<T> {
 
     /// Update the internal item order HashMap
     fn update_order(&mut self, item: T, old_count: &u64, new_count: &u64) {
-        self.purge_from_order(&item, *old_count);
+        self.purge_from_order(&item, old_count);
         match self.order.get_mut(new_count) {
             Some(v) => {
                 v.push(item);
@@ -91,7 +91,7 @@ impl<T: Hash + Eq + PartialEq + Clone + Display> Counter<T> {
 
     /// Increment an item into the counter, creating if it does not exist
     fn increment(&mut self, item: T) {
-        let old_count = *self.state.get(&item).unwrap_or(&0);
+        let old_count = self.state.get(&item).unwrap_or(&0).to_owned();
         let new_count = old_count.checked_add(1);
         match new_count {
             Some(count) => self.state.insert(item.to_owned(), count),
@@ -102,7 +102,7 @@ impl<T: Hash + Eq + PartialEq + Clone + Display> Counter<T> {
 
     /// Reduce an item from the counter, removing if it becomes 0
     fn decrement(&mut self, item: T) {
-        let old_count = *self.state.get(&item).unwrap_or(&0);
+        let old_count = self.state.get(&item).unwrap_or(&0).to_owned();
         let new_count = old_count.checked_sub(1);
         match new_count {
             Some(count) => {
@@ -121,10 +121,9 @@ impl<T: Hash + Eq + PartialEq + Clone + Display> Counter<T> {
 
     /// Remove an item from the counter completely
     fn delete(&mut self, item: &T) {
-        if let Some(count) = self.state.get(item) {
-            self.purge_from_order(item, *count);
-            self.purge_from_state(item);
-        }
+        let count = self.state.get(item).unwrap().to_owned();
+        self.purge_from_order(item, &count);
+        self.purge_from_state(item);
     }
 }
 

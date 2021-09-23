@@ -1,6 +1,6 @@
 use std::ops::AddAssign;
 
-use num_traits::{one, zero, Float, One, PrimInt, Zero};
+use num_traits::{one, zero, Float, PrimInt};
 
 use crate::util::aggregators::aggregator::Aggregator;
 
@@ -13,16 +13,13 @@ struct IntMean<T: PrimInt> {
 impl<I: PrimInt> Aggregator<I> for IntMean<I> {
     fn new() -> IntMean<I> {
         IntMean {
-            count: zero::<I>(),
-            total: zero::<I>(),
+            count: zero(),
+            total: zero(),
         }
     }
 
     fn update(&mut self, message: I) {
-        self.count = self
-            .count
-            .checked_add(&one::<I>())
-            .unwrap_or_else(I::max_value);
+        self.count = self.count.checked_add(&one()).unwrap_or_else(I::max_value);
         self.total = self
             .total
             .checked_add(&message)
@@ -36,9 +33,7 @@ impl<I: PrimInt> Aggregator<I> for IntMean<I> {
 
 impl<I: PrimInt> IntMean<I> {
     fn mean(&self) -> I {
-        self.total
-            .checked_div(&self.count)
-            .unwrap_or_else(zero::<I>)
+        self.total.checked_div(&self.count).unwrap_or_else(zero)
     }
 }
 
@@ -57,12 +52,17 @@ impl<F: Float + AddAssign> Aggregator<F> for FloatMean<F> {
     }
 
     fn update(&mut self, message: F) {
-        self.count += one::<F>();
+        if self.count >= F::max_value() {
+            self.count = F::max_value()
+        } else {
+            self.count += one::<F>();
+        };
+
         if self.total >= F::max_value() {
             self.total = F::max_value()
         } else {
             self.total += message
-        }
+        };
     }
 
     fn messages(&self, _: usize) -> Vec<String> {

@@ -1,22 +1,32 @@
-use num_traits::{one, CheckedAdd, CheckedDiv, One};
+use std::ops::AddAssign;
+
+use num_traits::{one, zero, Float, One, PrimInt, Zero};
 
 use crate::util::aggregators::aggregator::Aggregator;
-struct Mean<T: Copy + Default + CheckedAdd + CheckedDiv + One> {
+
+struct IntMean<T: PrimInt> {
     count: T,
     total: T,
 }
 
-impl<T: Copy + Default + CheckedAdd + CheckedDiv + One> Aggregator<T> for Mean<T> {
-    fn new() -> Mean<T> {
-        Mean {
-            count: T::default(),
-            total: T::default(),
+/// Integer implementation of Mean
+impl<I: PrimInt> Aggregator<I> for IntMean<I> {
+    fn new() -> IntMean<I> {
+        IntMean {
+            count: zero::<I>(),
+            total: zero::<I>(),
         }
     }
 
-    fn update(&mut self, message: T) {
-        self.count = self.count.checked_add(&one::<T>()).unwrap_or_default();
-        self.total = self.total.checked_add(&message).unwrap_or_default();
+    fn update(&mut self, message: I) {
+        self.count = self
+            .count
+            .checked_add(&one::<I>())
+            .unwrap_or_else(I::max_value);
+        self.total = self
+            .total
+            .checked_add(&message)
+            .unwrap_or_else(I::max_value);
     }
 
     fn messages(&self, _: usize) -> Vec<String> {
@@ -24,19 +34,59 @@ impl<T: Copy + Default + CheckedAdd + CheckedDiv + One> Aggregator<T> for Mean<T
     }
 }
 
-impl<T: Copy + Default + CheckedAdd + CheckedDiv + One> Mean<T> {
-    fn mean(&self) -> T {
-        self.total.checked_div(&self.count).unwrap_or_default()
+impl<I: PrimInt> IntMean<I> {
+    fn mean(&self) -> I {
+        self.total
+            .checked_div(&self.count)
+            .unwrap_or_else(zero::<I>)
+    }
+}
+
+struct FloatMean<F: Float + AddAssign> {
+    count: F,
+    total: F,
+}
+
+/// Float implementation of Mean
+impl<F: Float + AddAssign> Aggregator<F> for FloatMean<F> {
+    fn new() -> FloatMean<F> {
+        FloatMean {
+            count: zero::<F>(),
+            total: zero::<F>(),
+        }
+    }
+
+    fn update(&mut self, message: F) {
+        self.count += one::<F>();
+        if self.total >= F::max_value() {
+            self.total = F::max_value()
+        } else {
+            self.total += message
+        }
+    }
+
+    fn messages(&self, _: usize) -> Vec<String> {
+        vec![]
+    }
+}
+
+impl<F: Float + AddAssign> FloatMean<F> {
+    fn mean(&self) -> F {
+        if self.count == zero::<F>() {
+            self.total
+        } else {
+            self.total / self.count
+        }
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::util::aggregators::{aggregator::Aggregator, mean::Mean};
+mod int_tests {
+    use crate::util::aggregators::{aggregator::Aggregator, mean::IntMean};
 
     #[test]
-    fn mean_int() {
-        let mut mean: Mean<i32> = Mean::new();
+    fn mean() {
+        let mut mean: IntMean<i32> = IntMean::new();
         mean.update(1);
         mean.update(2);
         mean.update(3);
@@ -47,20 +97,8 @@ mod tests {
     }
 
     #[test]
-    fn mean_float() {
-        let mut mean: Mean<i64> = Mean::new();
-        mean.update(1_i64);
-        mean.update(2_i64);
-        mean.update(3_i64);
-
-        assert!((mean.mean() - 2_i64).abs() == 0);
-        assert!((mean.total - 6_i64).abs() == 0);
-        assert!((mean.count - 3_i64).abs() == 0);
-    }
-
-    #[test]
-    fn empty_mean_int() {
-        let mean: Mean<i8> = Mean::new();
+    fn empty_mean() {
+        let mean: IntMean<i8> = IntMean::new();
 
         assert_eq!(mean.mean(), 0);
         assert_eq!(mean.total, 0);
@@ -68,33 +106,50 @@ mod tests {
     }
 
     #[test]
-    fn empty_mean_float() {
-        let mean: Mean<i32> = Mean::new();
-
-        assert!(mean.mean() == 0);
-        assert!(mean.total == 0);
-        assert!(mean.count == 0);
-    }
-
-    #[test]
-    fn mean_int_overflow() {
-        let mut mean: Mean<i32> = Mean::new();
+    fn mean_overflow() {
+        let mut mean: IntMean<i32> = IntMean::new();
         mean.update(i32::MAX - 1);
         mean.update(i32::MAX - 1);
 
-        assert_eq!(mean.mean(), i32::MAX);
+        assert_eq!(mean.mean(), i32::MAX / 2);
         assert_eq!(mean.total, i32::MAX);
-        assert_eq!(mean.count, i32::MAX);
+        assert_eq!(mean.count, 2);
+    }
+}
+
+#[cfg(test)]
+mod float_tests {
+    use crate::util::aggregators::{aggregator::Aggregator, mean::FloatMean};
+
+    #[test]
+    fn mean() {
+        let mut mean: FloatMean<f64> = FloatMean::new();
+        mean.update(1_f64);
+        mean.update(2_f64);
+        mean.update(3_f64);
+
+        assert!((mean.mean() - 2_f64).abs() == 0_f64);
+        assert!((mean.total - 6_f64).abs() == 0_f64);
+        assert!((mean.count - 3_f64).abs() == 0_f64);
     }
 
     #[test]
-    fn mean_float_overflow() {
-        let mut mean: Mean<i64> = Mean::new();
-        mean.update(i64::MAX - 1_i64);
-        mean.update(i64::MAX - 1_i64);
+    fn empty_mean() {
+        let mean: FloatMean<f32> = FloatMean::new();
 
-        assert!((mean.mean() - 2_i64).abs() == 0);
-        assert!((mean.total - 6_i64).abs() == 0);
-        assert!((mean.count - 3_i64).abs() == 0);
+        assert!(mean.mean() == 0_f32);
+        assert!(mean.total == 0_f32);
+        assert!(mean.count == 0_f32);
+    }
+
+    #[test]
+    fn mean_overflow() {
+        let mut mean: FloatMean<f64> = FloatMean::new();
+        mean.update(f64::MAX - 1_f64);
+        mean.update(f64::MAX - 1_f64);
+
+        assert!((mean.mean() - f64::MAX / 2_f64).abs() == 0_f64);
+        assert!((mean.total - f64::MAX).abs() == 0_f64);
+        assert!((mean.count - 2_f64).abs() == 0_f64);
     }
 }

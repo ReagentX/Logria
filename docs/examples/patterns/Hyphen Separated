@@ -6,7 +6,7 @@
         "Timestamp": {
             "Date": "[year]-[month]-[day]"
         },
-        "Caller": "Count",
+        "Method": "Count",
         "Level": "Count",
         "Message": "Sum"
     }

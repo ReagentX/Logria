@@ -213,7 +213,7 @@ mod tests {
         // Create a parser for use by this test
         let mut map = HashMap::new();
         map.insert(String::from("Date"), AggregationMethod::Date(String::from("[year]-[month]-[day]")));
-        map.insert(String::from("Caller"), AggregationMethod::Count);
+        map.insert(String::from("Method"), AggregationMethod::Count);
         map.insert(String::from("Level"), AggregationMethod::Count);
         map.insert(String::from("Message"), AggregationMethod::Sum);
         let parser = Parser::new(
@@ -236,7 +236,7 @@ mod tests {
         // Create a parser for use by this test
         let mut map = HashMap::new();
         map.insert(String::from("Date"), AggregationMethod::Date(String::from("[year]-[month]-[day]")));
-        map.insert(String::from("Caller"), AggregationMethod::Count);
+        map.insert(String::from("Method"), AggregationMethod::Count);
         map.insert(String::from("Level"), AggregationMethod::Count);
         map.insert(String::from("Message"), AggregationMethod::Sum);
         let parser = Parser::new(
@@ -256,12 +256,12 @@ mod tests {
     fn serialize_deserialize_session() {
         let mut map = HashMap::new();
         map.insert(String::from("Date"), AggregationMethod::Date(String::from("[year]-[month]-[day]")));
-        map.insert(String::from("Caller"), AggregationMethod::Count);
+        map.insert(String::from("Method"), AggregationMethod::Count);
         map.insert(String::from("Level"), AggregationMethod::Count);
         map.insert(String::from("Message"), AggregationMethod::Sum);
         let mut map2 = HashMap::new();
         map2.insert(String::from("Date"), AggregationMethod::Date(String::from("[year]-[month]-[day]")));
-        map2.insert(String::from("Caller"), AggregationMethod::Count);
+        map2.insert(String::from("Method"), AggregationMethod::Count);
         map2.insert(String::from("Level"), AggregationMethod::Count);
         map2.insert(String::from("Message"), AggregationMethod::Sum);
         let parser = Parser::new(
@@ -319,7 +319,7 @@ mod tests {
     fn cannot_get_regex() {
         let mut map = HashMap::new();
         map.insert(String::from("Date"), AggregationMethod::Date(String::from("[year]-[month]-[day]")));
-        map.insert(String::from("Caller"), AggregationMethod::Count);
+        map.insert(String::from("Method"), AggregationMethod::Count);
         map.insert(String::from("Level"), AggregationMethod::Count);
         map.insert(String::from("Message"), AggregationMethod::Sum);
         let parser = Parser::new(
@@ -376,7 +376,7 @@ mod tests {
     fn can_get_example_split() {
         let mut map = HashMap::new();
         map.insert(String::from("Date"), AggregationMethod::Date(String::from("[year]-[month]-[day]")));
-        map.insert(String::from("Caller"), AggregationMethod::Count);
+        map.insert(String::from("Method"), AggregationMethod::Count);
         map.insert(String::from("Level"), AggregationMethod::Count);
         map.insert(String::from("Message"), AggregationMethod::Sum);
         let parser = Parser::new(

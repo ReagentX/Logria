@@ -3,9 +3,11 @@ name = "logria"
 version = "0.1.0"
 authors = ["Christopher Sardegna <logria@reagentx.net>"]
 edition = "2018"
+repository = "https://github.com/ReagentX/Logria"
+readme = "README.md"
+description = "A powerful CLI tool that puts log analytics at your fingertips."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 clap = "3.0.0-beta.2"
 dirs = "3.0.1"

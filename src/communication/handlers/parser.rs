@@ -14,7 +14,16 @@ use crate::{
         parser::{Parser, PatternType},
     },
     ui::scroll,
-    util::error::LogriaError,
+    util::{
+        aggregators::{
+            aggregator::{AggregationMethod, Aggregator},
+            counter::Counter,
+            date::Date,
+            mean::IntMean,
+            sum::IntSum,
+        },
+        error::LogriaError,
+    },
 };
 
 #[derive(Debug)]
@@ -126,8 +135,22 @@ impl ParserHandler {
         }
         .unwrap_or_default();
         for (idx, part) in message_parts.iter().enumerate() {
-            // TODO: Determine what parser based on the index of the message
-            // Since the hashset is not orderedm, we need to make it work
+            let item = parser.order.get(idx).unwrap();
+            let method = parser.aggregation_methods.get(item).unwrap();
+            if parser.aggregator_map.contains_key(item) {
+                todo!();
+            } else {
+                let aggregator = match method {
+                    AggregationMethod::Mean => IntMean::new(method),
+                    AggregationMethod::Mode => Counter::new(method),
+                    AggregationMethod::Sum => IntSum::new(method),
+                    AggregationMethod::Count => Counter::new(method),
+                    AggregationMethod::Date(_) => Date::new(method),
+                    AggregationMethod::Time(_) => Date::new(method),
+                    AggregationMethod::DateTime(_) => Date::new(method),
+                };
+                parser.aggregator_map.insert(item.to_owned(), method);
+            }
             todo!()
         }
         Some(String::from(message))

@@ -7,7 +7,7 @@ pub trait Aggregator<'a, T> {
 }
 
 #[derive(Eq, PartialEq, Serialize, Deserialize, Debug)]
-pub enum AggregationMethod<'a> {
+pub enum AggregationMethod {
     Mean,         // Done
     Mode,         // Special case of Count, for most_common(1)
     Sum,          // Done

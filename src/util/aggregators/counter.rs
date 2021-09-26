@@ -1,14 +1,22 @@
-use std::{cmp::Eq, collections::HashMap, fmt::Display, hash::Hash};
+use std::{
+    cmp::Eq,
+    collections::{BTreeSet, HashMap},
+    fmt::Display,
+    hash::Hash,
+};
 
-use crate::util::aggregators::aggregator::{AggregationMethod, Aggregator};
+use crate::util::{
+    aggregators::aggregator::{AggregationMethod, Aggregator},
+    error::LogriaError,
+};
 
 /// Counter struct inspired by Python's stdlib Counter class
-struct Counter<T: Hash + Eq + Clone + Display> {
+struct Counter<T: Hash + Eq + Clone + Display + Ord> {
     state: HashMap<T, u64>,
-    order: HashMap<u64, Vec<T>>, // TODO: Use Set instead of Vec
+    order: HashMap<u64, BTreeSet<T>>,
 }
 
-impl<T: Hash + Eq + Clone + Display> Aggregator<T> for Counter<T> {
+impl<T: Hash + Eq + Clone + Display + Ord> Aggregator<T> for Counter<T> {
     fn new(_: &AggregationMethod) -> Counter<T> {
         Counter {
             state: HashMap::new(),
@@ -16,8 +24,9 @@ impl<T: Hash + Eq + Clone + Display> Aggregator<T> for Counter<T> {
         }
     }
 
-    fn update(&mut self, message: T) {
-        self.increment(message)
+    fn update(&mut self, message: T) -> Result<(), LogriaError> {
+        self.increment(message);
+        Ok(())
     }
 
     fn messages(&self, n: usize) -> Vec<String> {
@@ -55,7 +64,7 @@ impl<T: Hash + Eq + Clone + Display> Aggregator<T> for Counter<T> {
     }
 }
 
-impl<T: Hash + Eq + Clone + Display> Counter<T> {
+impl<T: Hash + Eq + Clone + Display + Ord> Counter<T> {
     /// Determine the total number of items in the Counter
     fn total(&self) -> u64 {
         self.state.values().into_iter().sum()
@@ -83,10 +92,12 @@ impl<T: Hash + Eq + Clone + Display> Counter<T> {
         self.purge_from_order(&item, old_count);
         match self.order.get_mut(new_count) {
             Some(v) => {
-                v.push(item);
+                v.insert(item);
             }
             None => {
-                self.order.insert(*new_count, vec![item]);
+                let mut set = BTreeSet::new();
+                set.insert(item);
+                self.order.insert(*new_count, set);
             }
         }
     }
@@ -135,7 +146,7 @@ mod tests {
         aggregator::{AggregationMethod::Count, Aggregator},
         counter::Counter,
     };
-    use std::collections::HashMap;
+    use std::collections::{BTreeSet, HashMap};
 
     static A: &str = "a";
     static B: &str = "b";
@@ -160,9 +171,13 @@ mod tests {
         expected_count.insert(1, 3);
         expected_count.insert(2, 2);
 
-        let mut expected_order: HashMap<u64, Vec<i32>> = HashMap::new();
-        expected_order.insert(3, vec![1]);
-        expected_order.insert(2, vec![2]);
+        let mut expected_order: HashMap<u64, BTreeSet<i32>> = HashMap::new();
+        let mut a = BTreeSet::new();
+        let mut b = BTreeSet::new();
+        a.insert(1);
+        b.insert(2);
+        expected_order.insert(3, a);
+        expected_order.insert(2, b);
 
         assert_eq!(c.state, expected_count);
         assert_eq!(c.order, expected_order);
@@ -181,9 +196,13 @@ mod tests {
         expected_count.insert(A.to_owned(), 3);
         expected_count.insert(B.to_owned(), 2);
 
-        let mut expected_order: HashMap<u64, Vec<String>> = HashMap::new();
-        expected_order.insert(3, vec![A.to_owned()]);
-        expected_order.insert(2, vec![B.to_owned()]);
+        let mut expected_order: HashMap<u64, BTreeSet<String>> = HashMap::new();
+        let mut a = BTreeSet::new();
+        let mut b = BTreeSet::new();
+        a.insert(A.to_owned());
+        b.insert(B.to_owned());
+        expected_order.insert(3, a);
+        expected_order.insert(2, b);
 
         assert_eq!(c.state, expected_count);
         assert_eq!(c.order, expected_order);
@@ -192,11 +211,11 @@ mod tests {
     #[test]
     fn can_sum() {
         let mut c: Counter<String> = Counter::new(&Count);
-        c.update(A.to_owned());
-        c.update(A.to_owned());
-        c.update(A.to_owned());
-        c.update(B.to_owned());
-        c.update(B.to_owned());
+        c.update(A.to_owned()).unwrap();
+        c.update(A.to_owned()).unwrap();
+        c.update(A.to_owned()).unwrap();
+        c.update(B.to_owned()).unwrap();
+        c.update(B.to_owned()).unwrap();
 
         let mut expected = HashMap::new();
         expected.insert(A.to_owned(), 3);
@@ -219,8 +238,11 @@ mod tests {
         expected_count.insert(A.to_owned(), 2);
         expected_count.insert(B.to_owned(), 2);
 
-        let mut expected_order: HashMap<u64, Vec<String>> = HashMap::new();
-        expected_order.insert(2, vec![B.to_owned(), A.to_owned()]);
+        let mut expected_order: HashMap<u64, BTreeSet<String>> = HashMap::new();
+        let mut a = BTreeSet::new();
+        a.insert(A.to_owned());
+        a.insert(B.to_owned());
+        expected_order.insert(2, a);
 
         assert_eq!(c.state, expected_count);
         assert_eq!(c.order, expected_order);
@@ -237,8 +259,10 @@ mod tests {
         let mut expected_count = HashMap::new();
         expected_count.insert(B.to_owned(), 2);
 
-        let mut expected_order: HashMap<u64, Vec<String>> = HashMap::new();
-        expected_order.insert(2, vec![B.to_owned()]);
+        let mut expected_order: HashMap<u64, BTreeSet<String>> = HashMap::new();
+        let mut b = BTreeSet::new();
+        b.insert(B.to_owned());
+        expected_order.insert(2, b);
 
         assert_eq!(c.state, expected_count);
         assert_eq!(c.order, expected_order);
@@ -257,8 +281,10 @@ mod tests {
         let mut expected_count = HashMap::new();
         expected_count.insert(B.to_owned(), 2);
 
-        let mut expected_order: HashMap<u64, Vec<String>> = HashMap::new();
-        expected_order.insert(2, vec![B.to_owned()]);
+        let mut expected_order: HashMap<u64, BTreeSet<String>> = HashMap::new();
+        let mut b = BTreeSet::new();
+        b.insert(B.to_owned());
+        expected_order.insert(2, b);
 
         assert_eq!(c.state, expected_count);
         assert_eq!(c.order, expected_order);

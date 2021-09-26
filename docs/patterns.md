@@ -13,7 +13,7 @@ Patterns are stored as `JSON` in `$LOGRIA_ROOT/patterns` and do not have file ex
     "example": "2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message",
     "aggregation_methods": {
         "Timestamp": {
-            "Date": "[year]-[month]-[day] [hour]:[minute]:[second].[millisecond]"
+            "DateTime": "[year]-[month]-[day] [hour]:[minute]:[second],[millisecond]"
         },
         "Method": "Count",
         "Level": "Count",
@@ -39,8 +39,8 @@ There are two types of patterns: `regex` and `split`. Both use regex, but in dif
 - `analytics`
   - A map of the name of the parsed message to a method to handle analytics
   - These are mapped internally by index, i.e. the first item in the dict maps to the first match
-  - Methods currently include `Mean`, `Mode`, and `Sum`, `Count`, and `Date`.
-    - `Date` methods require a date format description as outlined in the [`time` book](https://time-rs.github.io/book/api/format-description.html) or [`time` docs](https://docs.rs/time/0.3.3/time/struct.Date.html#method.parse). 
+  - Methods currently include `Mean`, `Mode`, `Sum`, `Count`, `Date`, `Time`, and `DateTime`.
+    - `Date`, `Time`, or `DateTime` methods require a format description as outlined in the [`time` book](https://time-rs.github.io/book/api/format-description.html) or [`time` docs](https://docs.rs/time/0.3.3/time/struct.Date.html#method.parse).
 
 ### Regex Patterns
 
@@ -74,7 +74,7 @@ A `split` pattern uses [str::split](https://doc.rust-lang.org/std/primitive.str.
     "example": "2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message",
     "aggregation_methods": {
         "Timestamp": {
-            "Date": "[year]-[month]-[day] [hour]:[minute]:[second].[millisecond]"
+            "DateTime": "[year]-[month]-[day] [hour]:[minute]:[second],[millisecond]"
         },
         "Method": "Count",
         "Level": "Count",

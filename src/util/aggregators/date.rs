@@ -22,7 +22,7 @@ impl Aggregator<String> for Date {
         if let AggregationMethod::Date(format_string) = method {
             let parser: Date = Date {
                 format: format_string.to_owned(),
-                earliest: DateTime::MIN,
+                earliest: DateTime::MAX,
                 latest: DateTime::MIN,
                 count: 0,
                 rate: 0.,
@@ -46,7 +46,7 @@ impl Aggregator<String> for Date {
                     self.unit = rate_data.1;
                 }
                 Err(why) => {
-                    panic!(why)
+                    panic!("{}", why.to_string())
                 }
             },
             Err(why) => {}
@@ -101,7 +101,32 @@ mod use_tests {
 
     #[test]
     fn can_construct() {
-        let date_ag: Date = Date::new(&AggregationMethod::Date("[month]/[day]/[year]".to_string()));
+        let d: Date = Date::new(&AggregationMethod::Date("[month]/[day]/[year]".to_string()));
+    }
+
+    #[test]
+    fn can_update() {
+        let mut d: Date = Date::new(&AggregationMethod::Date("[month]/[day]/[year]".to_string()));
+        d.update("01/01/2021".to_string());
+        d.update("01/02/2021".to_string());
+        d.update("01/03/2021".to_string());
+        d.update("01/04/2021".to_string());
+
+        let expected = Date {
+            format: "[month]/[day]/[year]".to_string(),
+            earliest: DateTime::from_ordinal_date(2021, 1).unwrap(),
+            latest: DateTime::from_ordinal_date(2021, 4).unwrap(),
+            count: 4,
+            rate: 1.3333333333333333,
+            unit: String::from("per day"),
+        };
+
+        assert_eq!(d.format, expected.format);
+        assert_eq!(d.earliest, expected.earliest);
+        assert_eq!(d.latest, expected.latest);
+        assert_eq!(d.count, expected.count);
+        assert_eq!(d.unit, expected.unit);
+        assert!(d.rate - expected.rate == 0.);
     }
 }
 

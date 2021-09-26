@@ -26,6 +26,7 @@ pub struct Parser {
     pub pattern: String,
     pub pattern_type: PatternType, // Cannot use `type` for the name as it is reserved
     pub example: String,
+    pub order: Vec<String>,
     pub aggregation_methods: HashMap<String, AggregationMethod>,
     #[serde(skip_serializing, skip_deserializing)]
     analytics_map: HashMap<String, String>,
@@ -116,7 +117,8 @@ impl Parser {
         pattern: String,
         pattern_type: PatternType,
         example: String,
-        analytics_methods: HashMap<String, AggregationMethod>,
+        order: Vec<String>,
+        aggregation_methods: HashMap<String, AggregationMethod>,
         num_to_print: Option<i32>,
     ) -> Parser {
         Parser::verify_path();
@@ -124,7 +126,8 @@ impl Parser {
             pattern,
             pattern_type,
             example,
-            aggregation_methods: analytics_methods,
+            order,
+            aggregation_methods,
             analytics_map: HashMap::new(),
             analytics: HashMap::new(),
             num_to_print: num_to_print.unwrap_or(5),
@@ -224,6 +227,12 @@ mod tests {
             String::from(" - "),
             PatternType::Split,
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
             map,
             None,
         );
@@ -250,6 +259,12 @@ mod tests {
             String::from(" - "),
             PatternType::Split,
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
             map,
             None,
         );
@@ -281,6 +296,12 @@ mod tests {
             String::from(" - "),
             PatternType::Split,
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
             map2,
             None,
         );
@@ -292,6 +313,12 @@ mod tests {
             String::from(" - "),
             PatternType::Split,
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
             map,
             None,
         );
@@ -317,6 +344,7 @@ mod tests {
             String::from("([^ ]*) ([^ ]*) ([^ ]*) \\[([^]]*)\\] \"([^\"]*)\" ([^ ]*) ([^ ]*)"),
             PatternType::Regex,
             String::from("127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326"),
+            vec!["Remote Host".to_string(), "User ID".to_string(), "Username".to_string(), "Date".to_string(), "Request".to_string(), "Status".to_string(), "Size".to_string()],
             map,
             None
         );
@@ -342,6 +370,12 @@ mod tests {
             String::from(" - "),
             PatternType::Split,
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
             map,
             None,
         );
@@ -367,6 +401,7 @@ mod tests {
             String::from("([^ ]*) ([^ ]*) ([^ ]*) \\[([^]]*)\\] \"([^\"]*)\" ([^ ]*) ([^ ]*)"),
             PatternType::Regex,
             String::from("127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326"),
+            vec!["Remote Host".to_string(), "User ID".to_string(), "Username".to_string(), "Date".to_string(), "Request".to_string(), "Status".to_string(), "Size".to_string()],
             map,
             None
         );
@@ -402,6 +437,12 @@ mod tests {
             String::from(" - "),
             PatternType::Split,
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
             map,
             None,
         );

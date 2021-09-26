@@ -1,24 +1,32 @@
-use std::fmt::Display;
-
-use crate::util::aggregators::aggregator::{AggregationMethod, Aggregator};
-use time::{
-    format_description::{parse, FormatItem},
-    Date as DateTime,
+use std::{
+    cmp::{max, min},
+    env::consts::DLL_SUFFIX,
+    fmt::Display,
+    time::Duration,
 };
 
-struct Date<T: Display> {
+use crate::util::aggregators::aggregator::{AggregationMethod, Aggregator};
+use time::{format_description::parse, Date as DateTime};
+
+struct Date {
     format: String,
-    earliest: Option<T>,
-    latest: Option<T>,
+    earliest: DateTime,
+    latest: DateTime,
+    count: i64,
+    rate: f64,
+    unit: String,
 }
 
-impl<T: Display> Aggregator<T> for Date<T> {
+impl Aggregator<String> for Date {
     fn new(method: &AggregationMethod) -> Self {
         if let AggregationMethod::Date(format_string) = method {
-            let parser: Date<T> = Date {
+            let parser: Date = Date {
                 format: format_string.to_owned(),
-                earliest: None,
-                latest: None,
+                earliest: DateTime::MIN,
+                latest: DateTime::MIN,
+                count: 0,
+                rate: 0.,
+                unit: String::from(""),
             };
             parser
         } else {
@@ -26,19 +34,65 @@ impl<T: Display> Aggregator<T> for Date<T> {
         }
     }
 
-    fn update(&mut self, message: T) {
-        todo!()
+    fn update(&mut self, message: String) {
+        match parse(&self.format) {
+            Ok(parser) => match DateTime::parse(&message, &parser) {
+                Ok(date) => {
+                    self.earliest = min(date, self.earliest);
+                    self.latest = max(date, self.latest);
+                    self.count += 1;
+                    let rate_data = self.determine_rate();
+                    self.rate = rate_data.0;
+                    self.unit = rate_data.1;
+                }
+                Err(why) => {
+                    panic!(why)
+                }
+            },
+            Err(why) => {}
+        }
     }
 
-    fn messages(&self, n: usize) -> Vec<String> {
-        todo!()
+    fn messages(&self, _: usize) -> Vec<String> {
+        vec![
+            format!("Rate: {:.4} {}", self.rate, self.unit),
+            format!("Count: {}", self.count),
+            format!("Earliest: {}", self.earliest),
+            format!("Latest: {}", self.latest),
+        ]
     }
 }
 
-impl<T: Display> Date<T> {}
+impl Date {
+    /// Determine the rate at which messages are received
+    fn determine_rate(&self) -> (f64, String) {
+        let difference = self.latest - self.earliest;
+        let mut denominator = difference.whole_weeks();
+        let mut unit = "week";
+        if difference.whole_days() < self.count {
+            denominator = difference.whole_days();
+            unit = "day"
+        }
+        if difference.whole_hours() < self.count {
+            denominator = difference.whole_hours();
+            unit = "hour"
+        }
+        if difference.whole_minutes() < self.count {
+            denominator = difference.whole_minutes();
+            unit = "minute"
+        }
+        if difference.whole_seconds() < self.count {
+            denominator = difference.whole_seconds();
+            unit = "second"
+        }
+        let mut per_unit = String::from("per ");
+        per_unit.push_str(unit);
+        (self.count as f64 / denominator as f64, per_unit)
+    }
+}
 
 #[cfg(test)]
-mod int_tests {
+mod use_tests {
     use crate::util::aggregators::{
         aggregator::{AggregationMethod, Aggregator},
         date::Date,
@@ -47,7 +101,89 @@ mod int_tests {
 
     #[test]
     fn can_construct() {
-        let date_ag: Date<String> =
-            Date::new(&AggregationMethod::Date("[month]/[day]/[year]".to_string()));
+        let date_ag: Date = Date::new(&AggregationMethod::Date("[month]/[day]/[year]".to_string()));
+    }
+}
+
+#[cfg(test)]
+mod rate_tests {
+    use crate::util::aggregators::{
+        aggregator::{AggregationMethod, Aggregator},
+        date::Date,
+    };
+    use time::Date as DateTime;
+
+    #[test]
+    fn weekly() {
+        let d = Date {
+            format: "".to_string(),
+            earliest: DateTime::from_ordinal_date(2021, 1).unwrap(),
+            latest: DateTime::from_ordinal_date(2021, 15).unwrap(),
+            count: 3,
+            rate: 0.,
+            unit: String::from(""),
+        };
+        assert_eq!(d.determine_rate(), (1.5, "per week".to_string()))
+    }
+
+    #[test]
+    fn daily() {
+        let d = Date {
+            format: "".to_string(),
+            earliest: DateTime::from_ordinal_date(2021, 1).unwrap(),
+            latest: DateTime::from_ordinal_date(2021, 15).unwrap(),
+            count: 15,
+            rate: 0.,
+            unit: String::from(""),
+        };
+        assert_eq!(
+            d.determine_rate(),
+            (1.0714285714285714, "per day".to_string())
+        )
+    }
+
+    #[test]
+    fn hourly() {
+        let d = Date {
+            format: "".to_string(),
+            earliest: DateTime::from_ordinal_date(2021, 1).unwrap(),
+            latest: DateTime::from_ordinal_date(2021, 3).unwrap(),
+            count: 150,
+            rate: 0.,
+            unit: String::from(""),
+        };
+        assert_eq!(d.determine_rate(), (3.125, "per hour".to_string()))
+    }
+
+    #[test]
+    fn minutely() {
+        let d = Date {
+            format: "".to_string(),
+            earliest: DateTime::from_ordinal_date(2021, 1).unwrap(),
+            latest: DateTime::from_ordinal_date(2021, 2).unwrap(),
+            count: 1500,
+            rate: 0.,
+            unit: String::from(""),
+        };
+        assert_eq!(
+            d.determine_rate(),
+            (1.0416666666666667, "per minute".to_string())
+        )
+    }
+
+    #[test]
+    fn secondly() {
+        let d = Date {
+            format: "".to_string(),
+            earliest: DateTime::from_ordinal_date(2021, 1).unwrap(),
+            latest: DateTime::from_ordinal_date(2021, 2).unwrap(),
+            count: 100000,
+            rate: 0.,
+            unit: String::from(""),
+        };
+        assert_eq!(
+            d.determine_rate(),
+            (1.1574074074074074, "per second".to_string())
+        )
     }
 }

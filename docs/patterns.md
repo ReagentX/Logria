@@ -40,7 +40,7 @@ There are two types of patterns: `regex` and `split`. Both use regex, but in dif
   - A map of the name of the parsed message to a method to handle analytics
   - These are mapped internally by index, i.e. the first item in the dict maps to the first match
   - Methods currently include `Mean`, `Mode`, and `Sum`, `Count`, and `Date`.
-    - `Date` methods require a date format description as outlined in the [`time` book](https://time-rs.github.io/book/api/format-description.html) or [`time` docs](https://docs.rs/time/0.3.3/time/struct.Date.html#method.format). 
+    - `Date` methods require a date format description as outlined in the [`time` book](https://time-rs.github.io/book/api/format-description.html) or [`time` docs](https://docs.rs/time/0.3.3/time/struct.Date.html#method.parse). 
 
 ### Regex Patterns
 

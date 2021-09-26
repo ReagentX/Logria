@@ -2,6 +2,15 @@
     "pattern": "([^ ]*) ([^ ]*) ([^ ]*) \\[([^]]*)\\] \"([^\"]*)\" ([^ ]*) ([^ ]*)",
     "pattern_type": "Regex",
     "example": "127.0.0.1 user-identifier user-name [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326",
+    "order": [
+        "Remote Host",
+        "User ID",
+        "Username",
+        "Date",
+        "Request",
+        "Status",
+        "Size"
+    ],
     "analytics": {
         "Remote Host": "Count",
         "User ID": "Count",

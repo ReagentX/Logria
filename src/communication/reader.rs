@@ -63,11 +63,11 @@ pub mod main {
         pub highlight_match: bool, // Determines whether we highlight the matched text to the user
 
         // Parser settings
-        pub parser: Option<Parser>,      // Reference to the current parser
-        pub parser_index: usize,         // Index for the parser to look at
-        pub parser_state: ParserState,   // The state of the current parser
+        pub parser: Option<Parser>,    // Reference to the current parser
+        pub parser_index: usize,       // Index for the parser to look at
+        pub parser_state: ParserState, // The state of the current parser
         // TODO: Part of ParserState?
-        pub aggregation_enabled: bool,     // Whether we are aggregating log data or not
+        pub aggregation_enabled: bool, // Whether we are aggregating log data or not
         pub last_index_processed: usize, // The last index the parsing function saw
 
         // App state
@@ -375,7 +375,8 @@ pub mod main {
             }
 
             // Don't do anything if nothing changed; start at index 0
-            if !self.config.aggregation_enabled && self.config.previous_render == (max(0, start), end)
+            if !self.config.aggregation_enabled
+                && self.config.previous_render == (max(0, start), end)
             {
                 queue!(self.output, cursor::RestorePosition)?;
                 return Ok(());

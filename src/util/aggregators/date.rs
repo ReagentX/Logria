@@ -14,7 +14,7 @@ struct Date<'a, T: Display> {
 }
 
 impl<'a, T: Display> Aggregator<'a, T> for Date<'a, T> {
-    fn new(method: AggregationMethod) -> Self {
+    fn new(method: &AggregationMethod) -> Self {
         if let AggregationMethod::Date(format_string) = method {
             match parse(&format_string) {
                 Ok(formatter) => {

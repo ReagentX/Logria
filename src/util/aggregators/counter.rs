@@ -1,6 +1,6 @@
 use std::{cmp::Eq, collections::HashMap, fmt::Display, hash::Hash};
 
-use crate::util::aggregators::aggregator::Aggregator;
+use crate::util::aggregators::aggregator::{AggregationMethod, Aggregator};
 
 /// Counter struct inspired by Python's stdlib Counter class
 struct Counter<T: Hash + Eq + Clone + Display> {
@@ -8,15 +8,15 @@ struct Counter<T: Hash + Eq + Clone + Display> {
     order: HashMap<u64, Vec<T>>,
 }
 
-impl<T: Hash + Eq + Clone + Display> Aggregator<T> for Counter<T> {
-    fn new() -> Counter<T> {
+impl<'a, T: Hash + Eq + Clone + Display> Aggregator<'a, T> for Counter<T> {
+    fn new(_: &AggregationMethod) -> Counter<T> {
         Counter {
             state: HashMap::new(),
             order: HashMap::new(),
         }
     }
 
-    fn update(&mut self, message: T){
+    fn update(&mut self, message: T) {
         self.increment(message)
     }
 
@@ -131,7 +131,10 @@ impl<T: Hash + Eq + Clone + Display> Counter<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::aggregators::{aggregator::Aggregator, counter::Counter};
+    use crate::util::aggregators::{
+        aggregator::{AggregationMethod::Count, Aggregator},
+        counter::Counter,
+    };
     use std::collections::HashMap;
 
     static A: &str = "a";
@@ -141,12 +144,12 @@ mod tests {
 
     #[test]
     fn can_construct_counter() {
-        let c: Counter<String> = Counter::new();
+        let c: Counter<String> = Counter::new(&Count);
     }
 
     #[test]
     fn can_count_int() {
-        let mut c: Counter<i32> = Counter::new();
+        let mut c: Counter<i32> = Counter::new(&Count);
         c.increment(1);
         c.increment(1);
         c.increment(1);
@@ -167,7 +170,7 @@ mod tests {
 
     #[test]
     fn can_count() {
-        let mut c: Counter<String> = Counter::new();
+        let mut c: Counter<String> = Counter::new(&Count);
         c.increment(A.to_owned());
         c.increment(A.to_owned());
         c.increment(A.to_owned());
@@ -188,7 +191,7 @@ mod tests {
 
     #[test]
     fn can_sum() {
-        let mut c: Counter<String> = Counter::new();
+        let mut c: Counter<String> = Counter::new(&Count);
         c.update(A.to_owned());
         c.update(A.to_owned());
         c.update(A.to_owned());
@@ -204,7 +207,7 @@ mod tests {
 
     #[test]
     fn can_decrement() {
-        let mut c: Counter<String> = Counter::new();
+        let mut c: Counter<String> = Counter::new(&Count);
         c.increment(A.to_owned());
         c.increment(A.to_owned());
         c.increment(A.to_owned());
@@ -225,7 +228,7 @@ mod tests {
 
     #[test]
     fn can_decrement_auto_remove() {
-        let mut c: Counter<String> = Counter::new();
+        let mut c: Counter<String> = Counter::new(&Count);
         c.increment(A.to_owned());
         c.increment(B.to_owned());
         c.increment(B.to_owned());
@@ -243,7 +246,7 @@ mod tests {
 
     #[test]
     fn can_delete() {
-        let mut c: Counter<String> = Counter::new();
+        let mut c: Counter<String> = Counter::new(&Count);
         c.increment(A.to_owned());
         c.increment(A.to_owned());
         c.increment(A.to_owned());
@@ -263,7 +266,7 @@ mod tests {
 
     #[test]
     fn can_get_top_0() {
-        let mut c: Counter<String> = Counter::new();
+        let mut c: Counter<String> = Counter::new(&Count);
         c.increment(A.to_owned());
         c.increment(A.to_owned());
         c.increment(A.to_owned());
@@ -281,7 +284,7 @@ mod tests {
 
     #[test]
     fn can_get_top_1() {
-        let mut c: Counter<String> = Counter::new();
+        let mut c: Counter<String> = Counter::new(&Count);
         c.increment(A.to_owned());
         c.increment(A.to_owned());
         c.increment(A.to_owned());
@@ -299,7 +302,7 @@ mod tests {
 
     #[test]
     fn can_get_top_2() {
-        let mut c: Counter<String> = Counter::new();
+        let mut c: Counter<String> = Counter::new(&Count);
         c.increment(A.to_owned());
         c.increment(A.to_owned());
         c.increment(A.to_owned());
@@ -317,7 +320,7 @@ mod tests {
 
     #[test]
     fn can_get_top_3() {
-        let mut c: Counter<String> = Counter::new();
+        let mut c: Counter<String> = Counter::new(&Count);
         c.increment(A.to_owned());
         c.increment(A.to_owned());
         c.increment(A.to_owned());
@@ -339,7 +342,7 @@ mod tests {
 
     #[test]
     fn can_get_top_4() {
-        let mut c: Counter<String> = Counter::new();
+        let mut c: Counter<String> = Counter::new(&Count);
         c.increment(A.to_owned());
         c.increment(A.to_owned());
         c.increment(A.to_owned());

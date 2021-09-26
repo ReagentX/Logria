@@ -2,7 +2,7 @@ use std::{fmt::Display, ops::AddAssign};
 
 use num_traits::{one, zero, Float, PrimInt};
 
-use crate::util::aggregators::aggregator::Aggregator;
+use crate::util::aggregators::aggregator::{AggregationMethod, Aggregator};
 
 struct IntMean<T: PrimInt + Display> {
     count: T,
@@ -10,8 +10,8 @@ struct IntMean<T: PrimInt + Display> {
 }
 
 /// Integer implementation of Mean
-impl<I: PrimInt + Display> Aggregator<I> for IntMean<I> {
-    fn new() -> IntMean<I> {
+impl<'a, I: PrimInt + Display> Aggregator<'a, I> for IntMean<I> {
+    fn new(_: AggregationMethod) -> IntMean<I> {
         IntMean {
             count: zero(),
             total: zero(),
@@ -47,8 +47,8 @@ struct FloatMean<F: Float + AddAssign + Display> {
 }
 
 /// Float implementation of Mean
-impl<F: Float + AddAssign + Display> Aggregator<F> for FloatMean<F> {
-    fn new() -> FloatMean<F> {
+impl<'a, F: Float + AddAssign + Display> Aggregator<'a, F> for FloatMean<F> {
+    fn new(_: AggregationMethod) -> FloatMean<F> {
         FloatMean {
             count: zero::<F>(),
             total: zero::<F>(),
@@ -90,11 +90,14 @@ impl<F: Float + AddAssign + Display> FloatMean<F> {
 
 #[cfg(test)]
 mod int_tests {
-    use crate::util::aggregators::{aggregator::Aggregator, mean::IntMean};
+    use crate::util::aggregators::{
+        aggregator::{AggregationMethod::Mean, Aggregator},
+        mean::IntMean,
+    };
 
     #[test]
     fn mean() {
-        let mut mean: IntMean<i32> = IntMean::new();
+        let mut mean: IntMean<i32> = IntMean::new(&Mean);
         mean.update(1);
         mean.update(2);
         mean.update(3);
@@ -106,7 +109,7 @@ mod int_tests {
 
     #[test]
     fn display() {
-        let mut mean: IntMean<i32> = IntMean::new();
+        let mut mean: IntMean<i32> = IntMean::new(&Mean);
         mean.update(1);
         mean.update(2);
         mean.update(3);
@@ -123,7 +126,7 @@ mod int_tests {
 
     #[test]
     fn empty_mean() {
-        let mean: IntMean<i8> = IntMean::new();
+        let mean: IntMean<i8> = IntMean::new(&Mean);
 
         assert_eq!(mean.mean(), 0);
         assert_eq!(mean.total, 0);
@@ -132,7 +135,7 @@ mod int_tests {
 
     #[test]
     fn mean_overflow() {
-        let mut mean: IntMean<i32> = IntMean::new();
+        let mut mean: IntMean<i32> = IntMean::new(&Mean);
         mean.update(i32::MAX - 1);
         mean.update(i32::MAX - 1);
 
@@ -144,11 +147,14 @@ mod int_tests {
 
 #[cfg(test)]
 mod float_tests {
-    use crate::util::aggregators::{aggregator::Aggregator, mean::FloatMean};
+    use crate::util::aggregators::{
+        aggregator::{AggregationMethod::Mean, Aggregator},
+        mean::FloatMean,
+    };
 
     #[test]
     fn mean() {
-        let mut mean: FloatMean<f64> = FloatMean::new();
+        let mut mean: FloatMean<f64> = FloatMean::new(&Mean);
         mean.update(1_f64);
         mean.update(2_f64);
         mean.update(3_f64);
@@ -160,7 +166,7 @@ mod float_tests {
 
     #[test]
     fn display() {
-        let mut mean: FloatMean<f64> = FloatMean::new();
+        let mut mean: FloatMean<f64> = FloatMean::new(&Mean);
         mean.update(1_f64);
         mean.update(2_f64);
         mean.update(3_f64);
@@ -177,7 +183,7 @@ mod float_tests {
 
     #[test]
     fn empty_mean() {
-        let mean: FloatMean<f32> = FloatMean::new();
+        let mean: FloatMean<f32> = FloatMean::new(&Mean);
 
         assert!(mean.mean() == 0_f32);
         assert!(mean.total == 0_f32);
@@ -186,7 +192,7 @@ mod float_tests {
 
     #[test]
     fn mean_overflow() {
-        let mut mean: FloatMean<f64> = FloatMean::new();
+        let mut mean: FloatMean<f64> = FloatMean::new(&Mean);
         mean.update(f64::MAX - 1_f64);
         mean.update(f64::MAX - 1_f64);
 

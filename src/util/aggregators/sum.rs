@@ -1,15 +1,15 @@
 use num_traits::{one, zero, Float, PrimInt};
 use std::{fmt::Display, ops::AddAssign};
 
-use crate::util::aggregators::aggregator::Aggregator;
+use crate::util::aggregators::aggregator::{AggregationMethod, Aggregator};
 
 /// Integer sum implementation
 struct IntSum<I: AddAssign + Display + PrimInt> {
     total: I,
 }
 
-impl<I: AddAssign + Display + PrimInt> Aggregator<I> for IntSum<I> {
-    fn new() -> Self {
+impl<'a, I: AddAssign + Display + PrimInt> Aggregator<'a, I> for IntSum<I> {
+    fn new(_: &AggregationMethod) -> Self {
         IntSum { total: zero() }
     }
 
@@ -30,8 +30,8 @@ struct FloatSum<F: AddAssign + Display + Float> {
     total: F,
 }
 
-impl<F: AddAssign + Display + Float> Aggregator<F> for FloatSum<F> {
-    fn new() -> Self {
+impl<'a, F: AddAssign + Display + Float> Aggregator<'a, F> for FloatSum<F> {
+    fn new(_: &AggregationMethod) -> Self {
         FloatSum { total: zero() }
     }
 
@@ -50,11 +50,14 @@ impl<F: AddAssign + Display + Float> Aggregator<F> for FloatSum<F> {
 
 #[cfg(test)]
 mod int_tests {
-    use crate::util::aggregators::{aggregator::Aggregator, sum::IntSum};
+    use crate::util::aggregators::{
+        aggregator::{AggregationMethod::Sum, Aggregator},
+        sum::IntSum,
+    };
 
     #[test]
     fn sum() {
-        let mut sum: IntSum<i32> = IntSum::new();
+        let mut sum: IntSum<i32> = IntSum::new(&Sum);
         sum.update(1);
         sum.update(2);
         sum.update(3);
@@ -64,7 +67,7 @@ mod int_tests {
 
     #[test]
     fn message() {
-        let mut sum: IntSum<i32> = IntSum::new();
+        let mut sum: IntSum<i32> = IntSum::new(&Sum);
         sum.update(1);
         sum.update(2);
         sum.update(3);
@@ -74,14 +77,14 @@ mod int_tests {
 
     #[test]
     fn sum_empty() {
-        let mean: IntSum<u64> = IntSum::new();
+        let mean: IntSum<u64> = IntSum::new(&Sum);
 
         assert_eq!(mean.total, 0);
     }
 
     #[test]
     fn sum_overflow() {
-        let mut sum: IntSum<i8> = IntSum::new();
+        let mut sum: IntSum<i8> = IntSum::new(&Sum);
         sum.update(100);
         sum.update(100);
         sum.update(100);
@@ -92,11 +95,14 @@ mod int_tests {
 
 #[cfg(test)]
 mod float_tests {
-    use crate::util::aggregators::{aggregator::Aggregator, sum::FloatSum};
+    use crate::util::aggregators::{
+        aggregator::{AggregationMethod::Sum, Aggregator},
+        sum::FloatSum,
+    };
 
     #[test]
     fn sum() {
-        let mut sum: FloatSum<f32> = FloatSum::new();
+        let mut sum: FloatSum<f32> = FloatSum::new(&Sum);
         sum.update(1_f32);
         sum.update(2_f32);
         sum.update(3_f32);
@@ -106,7 +112,7 @@ mod float_tests {
 
     #[test]
     fn messages() {
-        let mut sum: FloatSum<f32> = FloatSum::new();
+        let mut sum: FloatSum<f32> = FloatSum::new(&Sum);
         sum.update(1_f32);
         sum.update(2_f32);
         sum.update(3_f32);
@@ -116,14 +122,14 @@ mod float_tests {
 
     #[test]
     fn sum_empty() {
-        let mean: FloatSum<f64> = FloatSum::new();
+        let mean: FloatSum<f64> = FloatSum::new(&Sum);
 
         assert!(mean.total - 0_f64 == 0_f64);
     }
 
     #[test]
     fn sum_overflow() {
-        let mut sum: FloatSum<f64> = FloatSum::new();
+        let mut sum: FloatSum<f64> = FloatSum::new(&Sum);
         sum.update(f64::MAX);
         sum.update(f64::MAX);
 

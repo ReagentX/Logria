@@ -1,13 +1,36 @@
-use crate::util::aggregators::aggregator::Aggregator;
-use time::{format_description::FormatItem, Date as DateTime};
+use std::fmt::Display;
 
-struct Date<'a> {
-    format: FormatItem<'a>,
+use crate::util::aggregators::aggregator::{AggregationMethod, Aggregator};
+use time::{
+    format_description::{parse, FormatItem},
+    Date as DateTime,
+};
+
+struct Date<'a, T: Display> {
+    format: String,
+    formatter: Vec<FormatItem<'a>>,
+    earliest: Option<T>,
+    latest: Option<T>,
 }
 
-impl<T: ToString> Aggregator<T> for Date<'_> {
-    fn new() -> Self {
-        todo!()
+impl<'a, T: Display> Aggregator<'a, T> for Date<'a, T> {
+    fn new(method: AggregationMethod) -> Self {
+        if let AggregationMethod::Date(format_string) = method {
+            match parse(&format_string) {
+                Ok(formatter) => {
+                    let parser: Date<'a, T> = Date {
+                        format: format_string.to_owned(),
+                        formatter,
+                        earliest: None,
+                        latest: None,
+                    };
+                    return parser;
+                }
+                Err(why) => panic!(why),
+            }
+        } else {
+            panic!("Date aggregator constructed with non-date AggregationMethod!")
+        };
     }
 
     fn update(&mut self, message: T) {
@@ -19,13 +42,19 @@ impl<T: ToString> Aggregator<T> for Date<'_> {
     }
 }
 
-impl Date<'_> {}
+impl<'a, T: Display> Date<'a, T> {}
 
 #[cfg(test)]
 mod int_tests {
-    use crate::util::aggregators::{aggregator::Aggregator, date::Date};
+    use crate::util::aggregators::{
+        aggregator::{AggregationMethod, Aggregator},
+        date::Date,
+    };
     use time::Date as DateTime;
 
     #[test]
-    fn mean() {}
+    fn can_construct() {
+        let date_ag: Date<String> =
+            Date::new(&AggregationMethod::Date("[month]/[day]/[year]".to_string()));
+    }
 }

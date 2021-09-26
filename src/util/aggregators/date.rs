@@ -1,6 +1,9 @@
 use std::cmp::{max, min};
 
-use crate::util::aggregators::aggregator::{AggregationMethod, Aggregator};
+use crate::util::{
+    aggregators::aggregator::{AggregationMethod, Aggregator},
+    error::LogriaError,
+};
 use time::{format_description::parse, Date as Dt, PrimitiveDateTime as DateTime, Time as Tm};
 
 enum ParserType {
@@ -53,26 +56,29 @@ impl Aggregator<String> for Date {
         }
     }
 
-    fn update(&mut self, message: String) {
+    fn update(&mut self, message: String) -> Result<(), LogriaError> {
         match parse(&self.format) {
             Ok(parser) => match self.parser_type {
                 ParserType::Date => match Dt::parse(&message, &parser) {
-                    Ok(date) => self.upsert(DateTime::new(date, Tm::MIDNIGHT)),
-                    Err(why) => {
-                        panic!("{}", why.to_string())
+                    Ok(date) => {
+                        self.upsert(DateTime::new(date, Tm::MIDNIGHT));
+                        Ok(())
                     }
+                    Err(why) => Err(LogriaError::CannotParseDate(why.to_string())),
                 },
                 ParserType::Time => match Tm::parse(&message, &parser) {
-                    Ok(time) => self.upsert(DateTime::new(Dt::MIN, time)),
-                    Err(why) => {
-                        panic!("{}", why.to_string())
+                    Ok(time) => {
+                        self.upsert(DateTime::new(Dt::MIN, time));
+                        Ok(())
                     }
+                    Err(why) => Err(LogriaError::CannotParseDate(why.to_string())),
                 },
                 ParserType::DateTime => match DateTime::parse(&message, &parser) {
-                    Ok(date) => self.upsert(date),
-                    Err(why) => {
-                        panic!("{}", why.to_string())
+                    Ok(date) => {
+                        self.upsert(date);
+                        Ok(())
                     }
+                    Err(why) => Err(LogriaError::CannotParseDate(why.to_string())),
                 },
             },
             Err(why) => panic!("{}", why),

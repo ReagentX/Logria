@@ -1,7 +1,10 @@
-use num_traits::{one, zero, Float, PrimInt};
+use num_traits::{zero, Float, PrimInt};
 use std::{fmt::Display, ops::AddAssign};
 
-use crate::util::aggregators::aggregator::{AggregationMethod, Aggregator};
+use crate::util::{
+    aggregators::aggregator::{AggregationMethod, Aggregator},
+    error::LogriaError,
+};
 
 /// Integer sum implementation
 struct IntSum<I: AddAssign + Display + PrimInt> {
@@ -13,11 +16,12 @@ impl<I: AddAssign + Display + PrimInt> Aggregator<I> for IntSum<I> {
         IntSum { total: zero() }
     }
 
-    fn update(&mut self, message: I) {
+    fn update(&mut self, message: I) -> Result<(), LogriaError> {
         self.total = self
             .total
             .checked_add(&message)
             .unwrap_or_else(I::max_value);
+        Ok(())
     }
 
     fn messages(&self, _: usize) -> Vec<String> {
@@ -35,12 +39,13 @@ impl<F: AddAssign + Display + Float> Aggregator<F> for FloatSum<F> {
         FloatSum { total: zero() }
     }
 
-    fn update(&mut self, message: F) {
+    fn update(&mut self, message: F) -> Result<(), LogriaError> {
         if self.total >= F::max_value() {
             self.total = F::max_value()
         } else {
             self.total += message
         };
+        Ok(())
     }
 
     fn messages(&self, _: usize) -> Vec<String> {

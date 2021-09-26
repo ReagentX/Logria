@@ -32,9 +32,9 @@ impl<I: PrimInt + Display> Aggregator<I> for IntMean<I> {
 
     fn messages(&self, _: usize) -> Vec<String> {
         vec![
-            format!("Mean: {}", self.mean()),
-            format!("Count: {}", self.count),
-            format!("Total: {}", self.total),
+            format!("    Mean: {}", self.mean()),
+            format!("    Count: {}", self.count),
+            format!("    Total: {}", self.total),
         ]
     }
 }
@@ -77,9 +77,9 @@ impl<F: Float + AddAssign + Display> Aggregator<F> for FloatMean<F> {
 
     fn messages(&self, _: usize) -> Vec<String> {
         vec![
-            format!("Mean: {}", self.mean()),
-            format!("Count: {}", self.count),
-            format!("Total: {}", self.total),
+            format!("    Mean: {}", self.mean()),
+            format!("    Count: {}", self.count),
+            format!("    Total: {}", self.total),
         ]
     }
 }
@@ -104,9 +104,9 @@ mod int_tests {
     #[test]
     fn mean() {
         let mut mean: IntMean<i32> = IntMean::new(&Mean);
-        mean.update(1);
-        mean.update(2);
-        mean.update(3);
+        mean.update(1).unwrap();
+        mean.update(2).unwrap();
+        mean.update(3).unwrap();
 
         assert_eq!(mean.mean(), 2);
         assert_eq!(mean.total, 6);
@@ -116,16 +116,16 @@ mod int_tests {
     #[test]
     fn display() {
         let mut mean: IntMean<i32> = IntMean::new(&Mean);
-        mean.update(1);
-        mean.update(2);
-        mean.update(3);
+        mean.update(1).unwrap();
+        mean.update(2).unwrap();
+        mean.update(3).unwrap();
 
         assert_eq!(
             mean.messages(1),
             vec![
-                "Mean: 2".to_string(),
-                "Count: 3".to_string(),
-                "Total: 6".to_string(),
+                "    Mean: 2".to_string(),
+                "    Count: 3".to_string(),
+                "    Total: 6".to_string(),
             ]
         );
     }
@@ -142,8 +142,8 @@ mod int_tests {
     #[test]
     fn mean_overflow() {
         let mut mean: IntMean<i32> = IntMean::new(&Mean);
-        mean.update(i32::MAX - 1);
-        mean.update(i32::MAX - 1);
+        mean.update(i32::MAX - 1).unwrap();
+        mean.update(i32::MAX - 1).unwrap();
 
         assert_eq!(mean.mean(), i32::MAX / 2);
         assert_eq!(mean.total, i32::MAX);
@@ -161,9 +161,9 @@ mod float_tests {
     #[test]
     fn mean() {
         let mut mean: FloatMean<f64> = FloatMean::new(&Mean);
-        mean.update(1_f64);
-        mean.update(2_f64);
-        mean.update(3_f64);
+        mean.update(1_f64).unwrap();
+        mean.update(2_f64).unwrap();
+        mean.update(3_f64).unwrap();
 
         assert!((mean.mean() - 2_f64).abs() == 0_f64);
         assert!((mean.total - 6_f64).abs() == 0_f64);
@@ -173,16 +173,16 @@ mod float_tests {
     #[test]
     fn display() {
         let mut mean: FloatMean<f64> = FloatMean::new(&Mean);
-        mean.update(1_f64);
-        mean.update(2_f64);
-        mean.update(3_f64);
+        mean.update(1_f64).unwrap();
+        mean.update(2_f64).unwrap();
+        mean.update(3_f64).unwrap();
 
         assert_eq!(
             mean.messages(1),
             vec![
-                "Mean: 2".to_string(),
-                "Count: 3".to_string(),
-                "Total: 6".to_string(),
+                "    Mean: 2".to_string(),
+                "    Count: 3".to_string(),
+                "    Total: 6".to_string(),
             ]
         );
     }
@@ -199,8 +199,8 @@ mod float_tests {
     #[test]
     fn mean_overflow() {
         let mut mean: FloatMean<f64> = FloatMean::new(&Mean);
-        mean.update(f64::MAX - 1_f64);
-        mean.update(f64::MAX - 1_f64);
+        mean.update(f64::MAX - 1_f64).unwrap();
+        mean.update(f64::MAX - 1_f64).unwrap();
 
         assert!((mean.mean() - f64::MAX / 2_f64).abs() == 0_f64);
         assert!((mean.total - f64::MAX).abs() == 0_f64);

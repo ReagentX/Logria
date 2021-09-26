@@ -52,7 +52,7 @@ impl<T: Hash + Eq + Clone + Display + Ord> Aggregator<T> for Counter<T> {
         for count in counts.iter().rev() {
             let items = self.order.get(count).unwrap();
             for item in items {
-                result.push(format!("{}: {}", item, count));
+                result.push(format!("    {}: {}", item, count));
                 total_added += 1;
                 if total_added == n {
                     return result;
@@ -321,7 +321,7 @@ mod tests {
         c.increment(C.to_owned());
         c.increment(D.to_owned());
 
-        let expected = vec![String::from("a: 3")];
+        let expected = vec![String::from("    a: 3")];
 
         assert_eq!(c.messages(1), expected);
     }
@@ -339,7 +339,7 @@ mod tests {
         c.increment(C.to_owned());
         c.increment(D.to_owned());
 
-        let expected = vec![String::from("a: 3"), String::from("b: 3")];
+        let expected = vec![String::from("    a: 3"), String::from("    b: 3")];
 
         assert_eq!(c.messages(2), expected);
     }
@@ -358,9 +358,9 @@ mod tests {
         c.increment(D.to_owned());
 
         let expected = vec![
-            String::from("a: 3"),
-            String::from("b: 3"),
-            String::from("c: 2"),
+            String::from("    a: 3"),
+            String::from("    b: 3"),
+            String::from("    c: 2"),
         ];
 
         assert_eq!(c.messages(3), expected);
@@ -380,10 +380,10 @@ mod tests {
         c.increment(D.to_owned());
 
         let expected = vec![
-            String::from("a: 3"),
-            String::from("b: 3"),
-            String::from("c: 2"),
-            String::from("d: 1"),
+            String::from("    a: 3"),
+            String::from("    b: 3"),
+            String::from("    c: 2"),
+            String::from("    d: 1"),
         ];
 
         assert_eq!(c.messages(4), expected);

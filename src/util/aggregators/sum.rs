@@ -25,7 +25,7 @@ impl<I: AddAssign + Display + PrimInt> Aggregator<I> for IntSum<I> {
     }
 
     fn messages(&self, _: usize) -> Vec<String> {
-        vec![format!("Total: {}", self.total)]
+        vec![format!("    Total: {}", self.total)]
     }
 }
 
@@ -49,7 +49,7 @@ impl<F: AddAssign + Display + Float> Aggregator<F> for FloatSum<F> {
     }
 
     fn messages(&self, _: usize) -> Vec<String> {
-        vec![format!("Total: {}", self.total)]
+        vec![format!("    Total: {}", self.total)]
     }
 }
 
@@ -63,9 +63,9 @@ mod int_tests {
     #[test]
     fn sum() {
         let mut sum: IntSum<i32> = IntSum::new(&Sum);
-        sum.update(1);
-        sum.update(2);
-        sum.update(3);
+        sum.update(1).unwrap();
+        sum.update(2).unwrap();
+        sum.update(3).unwrap();
 
         assert_eq!(sum.total, 6);
     }
@@ -73,11 +73,11 @@ mod int_tests {
     #[test]
     fn message() {
         let mut sum: IntSum<i32> = IntSum::new(&Sum);
-        sum.update(1);
-        sum.update(2);
-        sum.update(3);
+        sum.update(1).unwrap();
+        sum.update(2).unwrap();
+        sum.update(3).unwrap();
 
-        assert_eq!(sum.messages(1), vec!["Total: 6"]);
+        assert_eq!(sum.messages(1), vec!["    Total: 6"]);
     }
 
     #[test]
@@ -90,9 +90,9 @@ mod int_tests {
     #[test]
     fn sum_overflow() {
         let mut sum: IntSum<i8> = IntSum::new(&Sum);
-        sum.update(100);
-        sum.update(100);
-        sum.update(100);
+        sum.update(100).unwrap();
+        sum.update(100).unwrap();
+        sum.update(100).unwrap();
 
         assert_eq!(sum.total, i8::MAX);
     }
@@ -108,9 +108,9 @@ mod float_tests {
     #[test]
     fn sum() {
         let mut sum: FloatSum<f32> = FloatSum::new(&Sum);
-        sum.update(1_f32);
-        sum.update(2_f32);
-        sum.update(3_f32);
+        sum.update(1_f32).unwrap();
+        sum.update(2_f32).unwrap();
+        sum.update(3_f32).unwrap();
 
         assert!(sum.total - 6_f32 == 0_f32);
     }
@@ -118,11 +118,11 @@ mod float_tests {
     #[test]
     fn messages() {
         let mut sum: FloatSum<f32> = FloatSum::new(&Sum);
-        sum.update(1_f32);
-        sum.update(2_f32);
-        sum.update(3_f32);
+        sum.update(1_f32).unwrap();
+        sum.update(2_f32).unwrap();
+        sum.update(3_f32).unwrap();
 
-        assert_eq!(sum.messages(1), vec!["Total: 6"]);
+        assert_eq!(sum.messages(1), vec!["    Total: 6"]);
     }
 
     #[test]
@@ -135,8 +135,8 @@ mod float_tests {
     #[test]
     fn sum_overflow() {
         let mut sum: FloatSum<f64> = FloatSum::new(&Sum);
-        sum.update(f64::MAX);
-        sum.update(f64::MAX);
+        sum.update(f64::MAX).unwrap();
+        sum.update(f64::MAX).unwrap();
 
         assert!(sum.total - f64::MAX == 0_f64);
     }

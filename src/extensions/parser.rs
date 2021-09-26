@@ -29,7 +29,7 @@ pub struct Parser {
     pub order: Vec<String>,
     pub aggregation_methods: HashMap<String, AggregationMethod>,
     #[serde(skip_serializing, skip_deserializing)]
-    analytics_map: HashMap<String, String>,
+    pub aggregator_map: HashMap<String, String>,
     #[serde(skip_serializing, skip_deserializing)]
     analytics: HashMap<String, String>,
     #[serde(skip_serializing, skip_deserializing)]
@@ -128,7 +128,7 @@ impl Parser {
             example,
             order,
             aggregation_methods,
-            analytics_map: HashMap::new(),
+            aggregator_map: HashMap::new(),
             analytics: HashMap::new(),
             num_to_print: num_to_print.unwrap_or(5),
         }

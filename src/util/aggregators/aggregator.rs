@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub trait Aggregator<'a, T> {
+pub trait Aggregator<T> {
     fn new(method: &AggregationMethod) -> Self;
     fn update(&mut self, message: T);
     fn messages(&self, n: usize) -> Vec<String>;

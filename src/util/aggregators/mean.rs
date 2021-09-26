@@ -10,7 +10,7 @@ struct IntMean<T: PrimInt + Display> {
 }
 
 /// Integer implementation of Mean
-impl<'a, I: PrimInt + Display> Aggregator<'a, I> for IntMean<I> {
+impl<I: PrimInt + Display> Aggregator<I> for IntMean<I> {
     fn new(_: &AggregationMethod) -> IntMean<I> {
         IntMean {
             count: zero(),
@@ -47,7 +47,7 @@ struct FloatMean<F: Float + AddAssign + Display> {
 }
 
 /// Float implementation of Mean
-impl<'a, F: Float + AddAssign + Display> Aggregator<'a, F> for FloatMean<F> {
+impl<F: Float + AddAssign + Display> Aggregator<F> for FloatMean<F> {
     fn new(_: &AggregationMethod) -> FloatMean<F> {
         FloatMean {
             count: zero::<F>(),

@@ -6,31 +6,24 @@ use time::{
     Date as DateTime,
 };
 
-struct Date<'a, T: Display> {
+struct Date<T: Display> {
     format: String,
-    formatter: Vec<FormatItem<'a>>,
     earliest: Option<T>,
     latest: Option<T>,
 }
 
-impl<'a, T: Display> Aggregator<'a, T> for Date<'a, T> {
+impl<T: Display> Aggregator<T> for Date<T> {
     fn new(method: &AggregationMethod) -> Self {
         if let AggregationMethod::Date(format_string) = method {
-            match parse(&format_string) {
-                Ok(formatter) => {
-                    let parser: Date<'a, T> = Date {
-                        format: format_string.to_owned(),
-                        formatter,
-                        earliest: None,
-                        latest: None,
-                    };
-                    return parser;
-                }
-                Err(why) => panic!(why),
-            }
+            let parser: Date<T> = Date {
+                format: format_string.to_owned(),
+                earliest: None,
+                latest: None,
+            };
+            parser
         } else {
             panic!("Date aggregator constructed with non-date AggregationMethod!")
-        };
+        }
     }
 
     fn update(&mut self, message: T) {
@@ -42,7 +35,7 @@ impl<'a, T: Display> Aggregator<'a, T> for Date<'a, T> {
     }
 }
 
-impl<'a, T: Display> Date<'a, T> {}
+impl<T: Display> Date<T> {}
 
 #[cfg(test)]
 mod int_tests {

@@ -8,7 +8,7 @@ struct IntSum<I: AddAssign + Display + PrimInt> {
     total: I,
 }
 
-impl<'a, I: AddAssign + Display + PrimInt> Aggregator<'a, I> for IntSum<I> {
+impl<I: AddAssign + Display + PrimInt> Aggregator<I> for IntSum<I> {
     fn new(_: &AggregationMethod) -> Self {
         IntSum { total: zero() }
     }
@@ -30,7 +30,7 @@ struct FloatSum<F: AddAssign + Display + Float> {
     total: F,
 }
 
-impl<'a, F: AddAssign + Display + Float> Aggregator<'a, F> for FloatSum<F> {
+impl<F: AddAssign + Display + Float> Aggregator<F> for FloatSum<F> {
     fn new(_: &AggregationMethod) -> Self {
         FloatSum { total: zero() }
     }

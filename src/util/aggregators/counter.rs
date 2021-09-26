@@ -8,7 +8,7 @@ struct Counter<T: Hash + Eq + Clone + Display> {
     order: HashMap<u64, Vec<T>>,
 }
 
-impl<'a, T: Hash + Eq + Clone + Display> Aggregator<'a, T> for Counter<T> {
+impl<T: Hash + Eq + Clone + Display> Aggregator<T> for Counter<T> {
     fn new(_: &AggregationMethod) -> Counter<T> {
         Counter {
             state: HashMap::new(),

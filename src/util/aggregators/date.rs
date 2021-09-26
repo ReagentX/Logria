@@ -1,9 +1,4 @@
-use std::{
-    cmp::{max, min},
-    env::consts::DLL_SUFFIX,
-    fmt::Display,
-    time::Duration,
-};
+use std::cmp::{max, min};
 
 use crate::util::aggregators::aggregator::{AggregationMethod, Aggregator};
 use time::{format_description::parse, Date as Dt, PrimitiveDateTime as DateTime, Time as Tm};
@@ -19,7 +14,7 @@ struct Date {
     earliest: DateTime,
     latest: DateTime,
     count: i64,
-    rate: f64,
+    rate: i64,
     unit: String,
     parser_type: ParserType,
 }
@@ -32,7 +27,7 @@ impl Aggregator<String> for Date {
                 earliest: DateTime::new(Dt::MAX, Tm::MIDNIGHT),
                 latest: DateTime::new(Dt::MIN, Tm::MIDNIGHT),
                 count: 0,
-                rate: 0.,
+                rate: 0,
                 unit: String::from(""),
                 parser_type: ParserType::Date,
             },
@@ -41,7 +36,7 @@ impl Aggregator<String> for Date {
                 earliest: DateTime::new(Dt::MIN, Tm::from_hms(23, 59, 59).unwrap()),
                 latest: DateTime::new(Dt::MIN, Tm::MIDNIGHT),
                 count: 0,
-                rate: 0.,
+                rate: 0,
                 unit: String::from(""),
                 parser_type: ParserType::Time,
             },
@@ -50,7 +45,7 @@ impl Aggregator<String> for Date {
                 earliest: DateTime::new(Dt::MAX, Tm::MIDNIGHT),
                 latest: DateTime::new(Dt::MIN, Tm::MIDNIGHT),
                 count: 0,
-                rate: 0.,
+                rate: 0,
                 unit: String::from(""),
                 parser_type: ParserType::DateTime,
             },
@@ -105,7 +100,7 @@ impl Date {
     }
 
     /// Determine the rate at which messages are received
-    fn determine_rate(&self) -> (f64, String) {
+    fn determine_rate(&self) -> (i64, String) {
         let difference = self.latest - self.earliest;
         let mut denominator = difference.whole_weeks();
         let mut unit = "week";
@@ -127,7 +122,7 @@ impl Date {
         }
         let mut per_unit = String::from("per ");
         per_unit.push_str(unit);
-        (self.count as f64 / denominator as f64, per_unit)
+        (self.count.checked_div(denominator).unwrap_or(0), per_unit)
     }
 }
 
@@ -157,7 +152,7 @@ mod use_tests {
             earliest: DateTime::new(Dt::from_ordinal_date(2021, 1).unwrap(), Tm::MIDNIGHT),
             latest: DateTime::new(Dt::from_ordinal_date(2021, 4).unwrap(), Tm::MIDNIGHT),
             count: 4,
-            rate: 1.3333333333333333,
+            rate: 1,
             unit: String::from("per day"),
             parser_type: ParserType::Date,
         };
@@ -167,7 +162,7 @@ mod use_tests {
         assert_eq!(d.latest, expected.latest);
         assert_eq!(d.count, expected.count);
         assert_eq!(d.unit, expected.unit);
-        assert!(d.rate - expected.rate == 0.);
+        assert_eq!(d.rate, expected.rate);
     }
 
     #[test]
@@ -185,7 +180,7 @@ mod use_tests {
             earliest: DateTime::new(Dt::MIN, Tm::from_hms(1, 1, 0).unwrap()),
             latest: DateTime::new(Dt::MIN, Tm::from_hms(4, 1, 0).unwrap()),
             count: 4,
-            rate: 1.3333333333333333,
+            rate: 1,
             unit: String::from("per hour"),
             parser_type: ParserType::Time,
         };
@@ -195,7 +190,7 @@ mod use_tests {
         assert_eq!(d.latest, expected.latest);
         assert_eq!(d.count, expected.count);
         assert_eq!(d.unit, expected.unit);
-        assert!(d.rate - expected.rate == 0.);
+        assert_eq!(d.rate, expected.rate);
     }
 
     #[test]
@@ -219,7 +214,7 @@ mod use_tests {
                 Tm::from_hms(4, 1, 0).unwrap(),
             ),
             count: 4,
-            rate: 1.3333333333333333,
+            rate: 1,
             unit: String::from("per day"),
             parser_type: ParserType::DateTime,
         };
@@ -229,7 +224,7 @@ mod use_tests {
         assert_eq!(d.latest, expected.latest);
         assert_eq!(d.count, expected.count);
         assert_eq!(d.unit, expected.unit);
-        assert!(d.rate - expected.rate == 0.);
+        assert_eq!(d.rate, expected.rate);
     }
 }
 
@@ -244,12 +239,12 @@ mod rate_tests {
             format: "".to_string(),
             earliest: DateTime::new(Dt::from_ordinal_date(2021, 1).unwrap(), Tm::MIDNIGHT),
             latest: DateTime::new(Dt::from_ordinal_date(2021, 15).unwrap(), Tm::MIDNIGHT),
-            count: 3,
-            rate: 0.,
+            count: 10,
+            rate: 0,
             unit: String::from(""),
             parser_type: ParserType::Date,
         };
-        assert_eq!(d.determine_rate(), (1.5, "per week".to_string()))
+        assert_eq!(d.determine_rate(), (5, "per week".to_string()))
     }
 
     #[test]
@@ -259,14 +254,11 @@ mod rate_tests {
             earliest: DateTime::new(Dt::from_ordinal_date(2021, 1).unwrap(), Tm::MIDNIGHT),
             latest: DateTime::new(Dt::from_ordinal_date(2021, 15).unwrap(), Tm::MIDNIGHT),
             count: 15,
-            rate: 0.,
+            rate: 0,
             unit: String::from(""),
             parser_type: ParserType::Date,
         };
-        assert_eq!(
-            d.determine_rate(),
-            (1.0714285714285714, "per day".to_string())
-        )
+        assert_eq!(d.determine_rate(), (1, "per day".to_string()))
     }
 
     #[test]
@@ -276,11 +268,11 @@ mod rate_tests {
             earliest: DateTime::new(Dt::from_ordinal_date(2021, 1).unwrap(), Tm::MIDNIGHT),
             latest: DateTime::new(Dt::from_ordinal_date(2021, 3).unwrap(), Tm::MIDNIGHT),
             count: 150,
-            rate: 0.,
+            rate: 0,
             unit: String::from(""),
             parser_type: ParserType::Date,
         };
-        assert_eq!(d.determine_rate(), (3.125, "per hour".to_string()))
+        assert_eq!(d.determine_rate(), (3, "per hour".to_string()))
     }
 
     #[test]
@@ -290,14 +282,11 @@ mod rate_tests {
             earliest: DateTime::new(Dt::from_ordinal_date(2021, 1).unwrap(), Tm::MIDNIGHT),
             latest: DateTime::new(Dt::from_ordinal_date(2021, 2).unwrap(), Tm::MIDNIGHT),
             count: 1500,
-            rate: 0.,
+            rate: 0,
             unit: String::from(""),
             parser_type: ParserType::Date,
         };
-        assert_eq!(
-            d.determine_rate(),
-            (1.0416666666666667, "per minute".to_string())
-        )
+        assert_eq!(d.determine_rate(), (1, "per minute".to_string()))
     }
 
     #[test]
@@ -307,13 +296,10 @@ mod rate_tests {
             earliest: DateTime::new(Dt::from_ordinal_date(2021, 1).unwrap(), Tm::MIDNIGHT),
             latest: DateTime::new(Dt::from_ordinal_date(2021, 2).unwrap(), Tm::MIDNIGHT),
             count: 100000,
-            rate: 0.,
+            rate: 0,
             unit: String::from(""),
             parser_type: ParserType::Date,
         };
-        assert_eq!(
-            d.determine_rate(),
-            (1.1574074074074074, "per second".to_string())
-        )
+        assert_eq!(d.determine_rate(), (1, "per second".to_string()))
     }
 }

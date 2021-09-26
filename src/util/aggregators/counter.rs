@@ -5,7 +5,7 @@ use crate::util::aggregators::aggregator::{AggregationMethod, Aggregator};
 /// Counter struct inspired by Python's stdlib Counter class
 struct Counter<T: Hash + Eq + Clone + Display> {
     state: HashMap<T, u64>,
-    order: HashMap<u64, Vec<T>>,
+    order: HashMap<u64, Vec<T>>, // TODO: Use Set instead of Vec
 }
 
 impl<T: Hash + Eq + Clone + Display> Aggregator<T> for Counter<T> {

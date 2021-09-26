@@ -8,9 +8,11 @@ pub trait Aggregator<T> {
 
 #[derive(Eq, PartialEq, Serialize, Deserialize, Debug)]
 pub enum AggregationMethod {
-    Mean,         // Done
-    Mode,         // Special case of Count, for most_common(1)
-    Sum,          // Done
-    Count,        // Done
-    Date(String), // TODO: Date
+    Mean,
+    Mode,  // Special case of Count, for most_common(1)
+    Sum,
+    Count,
+    Date(String),
+    Time(String),
+    DateTime(String),
 }

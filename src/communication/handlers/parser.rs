@@ -125,6 +125,11 @@ impl ParserHandler {
             PatternType::Split => Ok(message.split_terminator(&parser.pattern).collect()),
         }
         .unwrap_or_default();
+        for (idx, part) in message_parts.iter().enumerate() {
+            // TODO: Determine what parser based on the index of the message
+            // Since the hashset is not orderedm, we need to make it work
+            todo!()
+        }
         Some(String::from(message))
     }
 
@@ -355,6 +360,7 @@ mod parse_tests {
             String::from(" - "),
             PatternType::Split,
             String::from("1"),
+            vec![String::from("1")],
             map,
             None,
         );
@@ -379,6 +385,7 @@ mod parse_tests {
             String::from("(\\d+)"),
             PatternType::Regex,
             String::from("1"),
+            vec![String::from("1")],
             map,
             None,
         );
@@ -426,6 +433,7 @@ mod regex_tests {
             String::from("([1-9])"),
             PatternType::Regex,
             String::from("1"),
+            vec![String::from("1")],
             map,
             None,
         );
@@ -456,6 +464,7 @@ mod regex_tests {
             String::from("([1-9])"),
             PatternType::Regex,
             String::from("1"),
+            vec![String::from("1")],
             map,
             None,
         );
@@ -488,6 +497,7 @@ mod regex_tests {
             String::from("([1-9])"),
             PatternType::Regex,
             String::from("1"),
+            vec![String::from("1")],
             map,
             None,
         );
@@ -537,6 +547,7 @@ mod split_tests {
             String::from("1"),
             PatternType::Split,
             String::from("1"),
+            vec![String::from("1")],
             map,
             None,
         );
@@ -570,6 +581,7 @@ mod split_tests {
             String::from("1"),
             PatternType::Split,
             String::from("1"),
+            vec![String::from("1")],
             map,
             None,
         );
@@ -596,13 +608,13 @@ mod split_tests {
         let handler = ParserHandler::new();
 
         // Create Parser
-        // TODO: Build working test case and parser
         let mut map = HashMap::new();
         map.insert(String::from("1"), AggregationMethod::Mean);
         let parser = Parser::new(
             String::from("-"),
             PatternType::Split,
             String::from("1"),
+            vec![String::from("1")],
             map,
             None,
         );

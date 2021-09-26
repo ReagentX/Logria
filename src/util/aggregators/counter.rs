@@ -11,7 +11,7 @@ use crate::util::{
 };
 
 /// Counter struct inspired by Python's stdlib Counter class
-struct Counter<T: Hash + Eq + Clone + Display + Ord> {
+pub struct Counter<T: Hash + Eq + Clone + Display + Ord> {
     state: HashMap<T, u64>,
     order: HashMap<u64, BTreeSet<T>>,
 }

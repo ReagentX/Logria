@@ -7,7 +7,7 @@ use crate::util::{
     error::LogriaError,
 };
 
-struct IntMean<T: PrimInt + Display> {
+pub struct IntMean<T: PrimInt + Display> {
     count: T,
     total: T,
 }

@@ -7,7 +7,7 @@ use crate::util::{
 };
 
 /// Integer sum implementation
-struct IntSum<I: AddAssign + Display + PrimInt> {
+pub struct IntSum<I: AddAssign + Display + PrimInt> {
     total: I,
 }
 
@@ -30,7 +30,7 @@ impl<I: AddAssign + Display + PrimInt> Aggregator<I> for IntSum<I> {
 }
 
 /// Flaot sum implementation
-struct FloatSum<F: AddAssign + Display + Float> {
+pub struct FloatSum<F: AddAssign + Display + Float> {
     total: F,
 }
 

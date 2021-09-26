@@ -12,7 +12,7 @@ enum ParserType {
     DateTime,
 }
 
-struct Date {
+pub struct Date {
     format: String,
     earliest: DateTime,
     latest: DateTime,
@@ -25,6 +25,7 @@ struct Date {
 impl Aggregator<String> for Date {
     fn new(method: &AggregationMethod) -> Self {
         match method {
+            // If we only care about the date, set the time to midnight
             AggregationMethod::Date(format_string) => Date {
                 format: format_string.to_owned(),
                 earliest: DateTime::new(Dt::MAX, Tm::MIDNIGHT),
@@ -34,6 +35,7 @@ impl Aggregator<String> for Date {
                 unit: String::from(""),
                 parser_type: ParserType::Date,
             },
+            // If we only care about the time, use the same date and the latest/earliset possible times
             AggregationMethod::Time(format_string) => Date {
                 format: format_string.to_owned(),
                 earliest: DateTime::new(Dt::MIN, Tm::from_hms(23, 59, 59).unwrap()),

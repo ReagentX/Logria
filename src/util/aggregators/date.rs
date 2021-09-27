@@ -1,12 +1,9 @@
 use std::cmp::{max, min};
 
-use crate::util::{
-    aggregators::aggregator::{AggregationMethod, Aggregator},
-    error::LogriaError,
-};
+use crate::util::{aggregators::aggregator::Aggregator, error::LogriaError};
 use time::{format_description::parse, Date as Dt, PrimitiveDateTime as DateTime, Time as Tm};
 
-enum ParserType {
+pub enum DateParserType {
     Date,
     Time,
     DateTime,
@@ -19,63 +16,28 @@ pub struct Date {
     count: i64,
     rate: i64,
     unit: String,
-    parser_type: ParserType,
+    parser_type: DateParserType,
 }
 
-impl Aggregator<String> for Date {
-    fn new(method: &AggregationMethod) -> Self {
-        match method {
-            // If we only care about the date, set the time to midnight
-            AggregationMethod::Date(format_string) => Date {
-                format: format_string.to_owned(),
-                earliest: DateTime::new(Dt::MAX, Tm::MIDNIGHT),
-                latest: DateTime::new(Dt::MIN, Tm::MIDNIGHT),
-                count: 0,
-                rate: 0,
-                unit: String::from(""),
-                parser_type: ParserType::Date,
-            },
-            // If we only care about the time, use the same date and the latest/earliset possible times
-            AggregationMethod::Time(format_string) => Date {
-                format: format_string.to_owned(),
-                earliest: DateTime::new(Dt::MIN, Tm::from_hms(23, 59, 59).unwrap()),
-                latest: DateTime::new(Dt::MIN, Tm::MIDNIGHT),
-                count: 0,
-                rate: 0,
-                unit: String::from(""),
-                parser_type: ParserType::Time,
-            },
-            AggregationMethod::DateTime(format_string) => Date {
-                format: format_string.to_owned(),
-                earliest: DateTime::new(Dt::MAX, Tm::MIDNIGHT),
-                latest: DateTime::new(Dt::MIN, Tm::MIDNIGHT),
-                count: 0,
-                rate: 0,
-                unit: String::from(""),
-                parser_type: ParserType::DateTime,
-            },
-            _ => panic!("Date aggregator constructed with non-date AggregationMethod!"),
-        }
-    }
-
-    fn update(&mut self, message: String) -> Result<(), LogriaError> {
+impl Aggregator for Date {
+    fn update(&mut self, message: &str) -> Result<(), LogriaError> {
         match parse(&self.format) {
             Ok(parser) => match self.parser_type {
-                ParserType::Date => match Dt::parse(&message, &parser) {
+                DateParserType::Date => match Dt::parse(&message, &parser) {
                     Ok(date) => {
                         self.upsert(DateTime::new(date, Tm::MIDNIGHT));
                         Ok(())
                     }
                     Err(why) => Err(LogriaError::CannotParseDate(why.to_string())),
                 },
-                ParserType::Time => match Tm::parse(&message, &parser) {
+                DateParserType::Time => match Tm::parse(&message, &parser) {
                     Ok(time) => {
                         self.upsert(DateTime::new(Dt::MIN, time));
                         Ok(())
                     }
                     Err(why) => Err(LogriaError::CannotParseDate(why.to_string())),
                 },
-                ParserType::DateTime => match DateTime::parse(&message, &parser) {
+                DateParserType::DateTime => match DateTime::parse(&message, &parser) {
                     Ok(date) => {
                         self.upsert(date);
                         Ok(())
@@ -93,15 +55,15 @@ impl Aggregator<String> for Date {
             format!("    Count: {}", self.count),
         ];
         match self.parser_type {
-            ParserType::Date => {
+            DateParserType::Date => {
                 out_v.push(format!("    Earliest: {}", self.earliest.date()));
                 out_v.push(format!("    Latest: {}", self.latest.date()));
             }
-            ParserType::Time => {
+            DateParserType::Time => {
                 out_v.push(format!("    Earliest: {}", self.earliest.time()));
                 out_v.push(format!("    Latest: {}", self.latest.time()));
             }
-            ParserType::DateTime => {
+            DateParserType::DateTime => {
                 out_v.push(format!("    Earliest: {}", self.earliest));
                 out_v.push(format!("    Latest: {}", self.latest));
             }
@@ -111,6 +73,41 @@ impl Aggregator<String> for Date {
 }
 
 impl Date {
+    pub fn new(format: &str, format_type: DateParserType) -> Self {
+        match format_type {
+            // If we only care about the date, set the time to midnight
+            DateParserType::Date => Date {
+                format: format.to_owned(),
+                earliest: DateTime::new(Dt::MAX, Tm::MIDNIGHT),
+                latest: DateTime::new(Dt::MIN, Tm::MIDNIGHT),
+                count: 0,
+                rate: 0,
+                unit: String::from(""),
+                parser_type: DateParserType::Date,
+            },
+            // If we only care about the time, use the same date and the latest/earliset possible times
+            DateParserType::Time => Date {
+                format: format.to_owned(),
+                earliest: DateTime::new(Dt::MIN, Tm::from_hms(23, 59, 59).unwrap()),
+                latest: DateTime::new(Dt::MIN, Tm::MIDNIGHT),
+                count: 0,
+                rate: 0,
+                unit: String::from(""),
+                parser_type: DateParserType::Time,
+            },
+            DateParserType::DateTime => Date {
+                format: format.to_owned(),
+                earliest: DateTime::new(Dt::MAX, Tm::MIDNIGHT),
+                latest: DateTime::new(Dt::MIN, Tm::MIDNIGHT),
+                count: 0,
+                rate: 0,
+                unit: String::from(""),
+                parser_type: DateParserType::DateTime,
+            },
+            _ => panic!("Date aggregator constructed with non-date AggregationMethod!"),
+        }
+    }
+
     fn upsert(&mut self, new_date: DateTime) {
         self.earliest = min(new_date, self.earliest);
         self.latest = max(new_date, self.latest);
@@ -151,22 +148,22 @@ impl Date {
 mod use_tests {
     use crate::util::aggregators::{
         aggregator::{AggregationMethod, Aggregator},
-        date::{Date, ParserType},
+        date::{Date, DateParserType},
     };
     use time::{Date as Dt, PrimitiveDateTime as DateTime, Time as Tm};
 
     #[test]
     fn can_construct() {
-        let d: Date = Date::new(&AggregationMethod::Date("[month]/[day]/[year]".to_string()));
+        let mut d: Date = Date::new("[month]/[day]/[year]", DateParserType::Date);
     }
 
     #[test]
     fn can_update_date() {
-        let mut d: Date = Date::new(&AggregationMethod::Date("[month]/[day]/[year]".to_string()));
-        d.update("01/01/2021".to_string()).unwrap();
-        d.update("01/02/2021".to_string()).unwrap();
-        d.update("01/03/2021".to_string()).unwrap();
-        d.update("01/04/2021".to_string()).unwrap();
+        let mut d: Date = Date::new("[month]/[day]/[year]", DateParserType::Date);
+        d.update("01/01/2021").unwrap();
+        d.update("01/02/2021").unwrap();
+        d.update("01/03/2021").unwrap();
+        d.update("01/04/2021").unwrap();
 
         let expected = Date {
             format: "[month]/[day]/[year]".to_string(),
@@ -175,7 +172,7 @@ mod use_tests {
             count: 4,
             rate: 1,
             unit: String::from("per day"),
-            parser_type: ParserType::Date,
+            parser_type: DateParserType::Date,
         };
 
         assert_eq!(d.format, expected.format);
@@ -188,13 +185,11 @@ mod use_tests {
 
     #[test]
     fn can_update_time() {
-        let mut d: Date = Date::new(&AggregationMethod::Time(
-            "[hour]:[minute]:[second]".to_string(),
-        ));
-        d.update("01:01:00".to_string()).unwrap();
-        d.update("02:01:00".to_string()).unwrap();
-        d.update("03:01:00".to_string()).unwrap();
-        d.update("04:01:00".to_string()).unwrap();
+        let mut d: Date = Date::new("[hour]:[minute]:[second]", DateParserType::Time);
+        d.update("01:01:00").unwrap();
+        d.update("02:01:00").unwrap();
+        d.update("03:01:00").unwrap();
+        d.update("04:01:00").unwrap();
 
         let expected = Date {
             format: "[hour]:[minute]:[second]".to_string(),
@@ -203,7 +198,7 @@ mod use_tests {
             count: 4,
             rate: 1,
             unit: String::from("per hour"),
-            parser_type: ParserType::Time,
+            parser_type: DateParserType::Time,
         };
 
         assert_eq!(d.format, expected.format);
@@ -216,13 +211,15 @@ mod use_tests {
 
     #[test]
     fn can_update_date_time() {
-        let mut d: Date = Date::new(&AggregationMethod::DateTime(
-            "[month]/[day]/[year] [hour]:[minute]:[second]".to_string(),
-        ));
-        d.update("01/01/2021 01:01:00".to_string()).unwrap();
-        d.update("01/02/2021 02:01:00".to_string()).unwrap();
-        d.update("01/03/2021 03:01:00".to_string()).unwrap();
-        d.update("01/04/2021 04:01:00".to_string()).unwrap();
+        let mut d: Date = Date::new(
+            "[month]/[day]/[year] [hour]:[minute]:[second]",
+            DateParserType::DateTime,
+        );
+
+        d.update("01/01/2021 01:01:00").unwrap();
+        d.update("01/02/2021 02:01:00").unwrap();
+        d.update("01/03/2021 03:01:00").unwrap();
+        d.update("01/04/2021 04:01:00").unwrap();
 
         let expected = Date {
             format: "[month]/[day]/[year] [hour]:[minute]:[second]".to_string(),
@@ -237,7 +234,7 @@ mod use_tests {
             count: 4,
             rate: 1,
             unit: String::from("per day"),
-            parser_type: ParserType::DateTime,
+            parser_type: DateParserType::DateTime,
         };
 
         assert_eq!(d.format, expected.format);
@@ -252,17 +249,17 @@ mod use_tests {
 #[cfg(test)]
 mod message_tests {
     use crate::util::aggregators::{
-        aggregator::{AggregationMethod, Aggregator},
-        date::Date,
+        aggregator::Aggregator,
+        date::{Date, DateParserType},
     };
 
     #[test]
     fn can_update_date() {
-        let mut d: Date = Date::new(&AggregationMethod::Date("[month]/[day]/[year]".to_string()));
-        d.update("01/01/2021".to_string()).unwrap();
-        d.update("01/02/2021".to_string()).unwrap();
-        d.update("01/03/2021".to_string()).unwrap();
-        d.update("01/04/2021".to_string()).unwrap();
+        let mut d: Date = Date::new("[month]/[day]/[year]", DateParserType::Date);
+        d.update("01/01/2021").unwrap();
+        d.update("01/02/2021").unwrap();
+        d.update("01/03/2021").unwrap();
+        d.update("01/04/2021").unwrap();
 
         let expected = vec![
             "    Rate: 1 per day".to_string(),
@@ -277,13 +274,11 @@ mod message_tests {
 
     #[test]
     fn can_update_time() {
-        let mut d: Date = Date::new(&AggregationMethod::Time(
-            "[hour]:[minute]:[second]".to_string(),
-        ));
-        d.update("01:01:00".to_string()).unwrap();
-        d.update("02:01:00".to_string()).unwrap();
-        d.update("03:01:00".to_string()).unwrap();
-        d.update("04:01:00".to_string()).unwrap();
+        let mut d: Date = Date::new("[hour]:[minute]:[second]", DateParserType::Time);
+        d.update("01:01:00").unwrap();
+        d.update("02:01:00").unwrap();
+        d.update("03:01:00").unwrap();
+        d.update("04:01:00").unwrap();
 
         let expected = vec![
             "    Rate: 1 per hour".to_string(),
@@ -298,13 +293,14 @@ mod message_tests {
 
     #[test]
     fn can_update_date_time() {
-        let mut d: Date = Date::new(&AggregationMethod::DateTime(
-            "[month]/[day]/[year] [hour]:[minute]:[second]".to_string(),
-        ));
-        d.update("01/01/2021 01:01:00".to_string()).unwrap();
-        d.update("01/02/2021 02:01:00".to_string()).unwrap();
-        d.update("01/03/2021 03:01:00".to_string()).unwrap();
-        d.update("01/04/2021 04:01:00".to_string()).unwrap();
+        let mut d: Date = Date::new(
+            "[month]/[day]/[year] [hour]:[minute]:[second]",
+            DateParserType::DateTime,
+        );
+        d.update("01/01/2021 01:01:00").unwrap();
+        d.update("01/02/2021 02:01:00").unwrap();
+        d.update("01/03/2021 03:01:00").unwrap();
+        d.update("01/04/2021 04:01:00").unwrap();
 
         let expected = vec![
             "    Rate: 1 per day".to_string(),
@@ -320,7 +316,7 @@ mod message_tests {
 
 #[cfg(test)]
 mod rate_tests {
-    use crate::util::aggregators::date::{Date, ParserType};
+    use crate::util::aggregators::date::{Date, DateParserType};
     use time::{Date as Dt, PrimitiveDateTime as DateTime, Time as Tm};
 
     #[test]
@@ -332,7 +328,7 @@ mod rate_tests {
             count: 10,
             rate: 0,
             unit: String::from(""),
-            parser_type: ParserType::Date,
+            parser_type: DateParserType::Date,
         };
         assert_eq!(d.determine_rate(), (5, "per week".to_string()))
     }
@@ -346,7 +342,7 @@ mod rate_tests {
             count: 15,
             rate: 0,
             unit: String::from(""),
-            parser_type: ParserType::Date,
+            parser_type: DateParserType::Date,
         };
         assert_eq!(d.determine_rate(), (1, "per day".to_string()))
     }
@@ -360,7 +356,7 @@ mod rate_tests {
             count: 150,
             rate: 0,
             unit: String::from(""),
-            parser_type: ParserType::Date,
+            parser_type: DateParserType::Date,
         };
         assert_eq!(d.determine_rate(), (3, "per hour".to_string()))
     }
@@ -374,7 +370,7 @@ mod rate_tests {
             count: 1500,
             rate: 0,
             unit: String::from(""),
-            parser_type: ParserType::Date,
+            parser_type: DateParserType::Date,
         };
         assert_eq!(d.determine_rate(), (1, "per minute".to_string()))
     }
@@ -388,7 +384,7 @@ mod rate_tests {
             count: 100000,
             rate: 0,
             unit: String::from(""),
-            parser_type: ParserType::Date,
+            parser_type: DateParserType::Date,
         };
         assert_eq!(d.determine_rate(), (1, "per second".to_string()))
     }

@@ -82,7 +82,7 @@ impl Counter {
 
     /// Update the internal item order HashMap
     fn update_order(&mut self, item: &str, old_count: &u64, new_count: &u64) {
-        self.purge_from_order(&item, old_count);
+        self.purge_from_order(item, old_count);
         match self.order.get_mut(new_count) {
             Some(v) => {
                 v.insert(item.to_owned());
@@ -116,11 +116,11 @@ impl Counter {
                     self.state.insert(item.to_owned(), count);
                     self.update_order(item, &old_count, &count);
                 } else {
-                    self.delete(&item);
+                    self.delete(item);
                 }
             }
             None => {
-                self.delete(&item);
+                self.delete(item);
             }
         };
     }

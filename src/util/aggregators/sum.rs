@@ -1,7 +1,4 @@
-use crate::util::{
-    aggregators::aggregator::{AggregationMethod, Aggregator},
-    error::LogriaError,
-};
+use crate::util::{aggregators::aggregator::Aggregator, error::LogriaError};
 
 pub struct Sum {
     total: f64,

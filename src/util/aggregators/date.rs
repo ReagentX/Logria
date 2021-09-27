@@ -23,21 +23,21 @@ impl Aggregator for Date {
     fn update(&mut self, message: &str) -> Result<(), LogriaError> {
         match parse(&self.format) {
             Ok(parser) => match self.parser_type {
-                DateParserType::Date => match Dt::parse(&message, &parser) {
+                DateParserType::Date => match Dt::parse(message, &parser) {
                     Ok(date) => {
                         self.upsert(DateTime::new(date, Tm::MIDNIGHT));
                         Ok(())
                     }
                     Err(why) => Err(LogriaError::CannotParseDate(why.to_string())),
                 },
-                DateParserType::Time => match Tm::parse(&message, &parser) {
+                DateParserType::Time => match Tm::parse(message, &parser) {
                     Ok(time) => {
                         self.upsert(DateTime::new(Dt::MIN, time));
                         Ok(())
                     }
                     Err(why) => Err(LogriaError::CannotParseDate(why.to_string())),
                 },
-                DateParserType::DateTime => match DateTime::parse(&message, &parser) {
+                DateParserType::DateTime => match DateTime::parse(message, &parser) {
                     Ok(date) => {
                         self.upsert(date);
                         Ok(())
@@ -104,7 +104,6 @@ impl Date {
                 unit: String::from(""),
                 parser_type: DateParserType::DateTime,
             },
-            _ => panic!("Date aggregator constructed with non-date AggregationMethod!"),
         }
     }
 
@@ -147,14 +146,14 @@ impl Date {
 #[cfg(test)]
 mod use_tests {
     use crate::util::aggregators::{
-        aggregator::{AggregationMethod, Aggregator},
+        aggregator::Aggregator,
         date::{Date, DateParserType},
     };
     use time::{Date as Dt, PrimitiveDateTime as DateTime, Time as Tm};
 
     #[test]
     fn can_construct() {
-        let mut d: Date = Date::new("[month]/[day]/[year]", DateParserType::Date);
+        let d: Date = Date::new("[month]/[day]/[year]", DateParserType::Date);
     }
 
     #[test]

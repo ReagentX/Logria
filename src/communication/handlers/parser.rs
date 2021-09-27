@@ -16,7 +16,7 @@ use crate::{
     ui::scroll,
     util::{
         aggregators::{
-            aggregator::{AggregationMethod, Aggregator},
+            aggregator::AggregationMethod,
             counter::Counter,
             date::{Date, DateParserType},
             mean::Mean,
@@ -200,7 +200,7 @@ impl ProcessorMethods for ParserHandler {
                     // TODO: Overflow subtraction
                     for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
                         if let Ok(Some(message)) = self.parse(
-                            &parser,
+                            parser,
                             window.config.parser_index,
                             &window.previous_messages()[index],
                             &window.config.aggregation_enabled,
@@ -420,7 +420,7 @@ mod parse_tests {
         // Create Parser
         let mut map = HashMap::new();
         map.insert(String::from("1"), AggregationMethod::Count);
-        let mut parser = Parser::new(
+        let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
             String::from("1"),
@@ -430,7 +430,7 @@ mod parse_tests {
         );
 
         let parsed_message = handler
-            .parse(&mut parser, 0, "I - Am - A - Test", &false)
+            .parse(&parser, 0, "I - Am - A - Test", &false)
             .unwrap()
             .unwrap();
 
@@ -445,7 +445,7 @@ mod parse_tests {
         // Create Parser
         let mut map = HashMap::new();
         map.insert(String::from("1"), AggregationMethod::Count);
-        let mut parser = Parser::new(
+        let parser = Parser::new(
             String::from("(\\d+)"),
             PatternType::Regex,
             String::from("1"),
@@ -455,7 +455,7 @@ mod parse_tests {
         );
 
         let parsed_message = handler
-            .parse(&mut parser, 0, "Log message part 65 test", &false)
+            .parse(&parser, 0, "Log message part 65 test", &false)
             .unwrap()
             .unwrap();
 

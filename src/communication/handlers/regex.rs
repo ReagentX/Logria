@@ -60,7 +60,7 @@ impl RegexHandler {
 
 impl ProcessorMethods for RegexHandler {
     /// Process matches, loading the buffer of indexes to matched messages in the main buffer
-    fn process_matches(&self, window: &mut MainWindow) -> Result<()> {
+    fn process_matches(&mut self, window: &mut MainWindow) -> Result<()> {
         // TODO: Possibly async? Possibly loading indicator for large jobs?
         match &self.current_pattern {
             Some(_) => {
@@ -250,7 +250,7 @@ mod tests {
     #[should_panic]
     fn test_cant_process_no_pattern() {
         let mut logria = MainWindow::_new_dummy();
-        let handler = super::RegexHandler::new();
+        let mut handler = super::RegexHandler::new();
 
         // Set state to regex mode
         logria.input_type = InputType::Regex;

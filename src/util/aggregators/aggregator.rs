@@ -1,9 +1,8 @@
 use crate::util::error::LogriaError;
 use serde::{Deserialize, Serialize};
 
-pub trait Aggregator<T> {
-    fn new(method: &AggregationMethod) -> Self;
-    fn update(&mut self, message: T) -> Result<(), LogriaError>;
+pub trait Aggregator {
+    fn update(&mut self, message: &str) -> Result<(), LogriaError>;
     fn messages(&self, n: usize) -> Vec<String>;
 }
 

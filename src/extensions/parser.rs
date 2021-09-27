@@ -12,7 +12,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     constants::directories::patterns,
     extensions::extension::ExtensionMethods,
-    util::{aggregators::aggregator::AggregationMethod, error::LogriaError},
+    util::{
+        aggregators::aggregator::{AggregationMethod, Aggregator},
+        error::LogriaError,
+    },
 };
 
 #[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Debug)]
@@ -21,7 +24,7 @@ pub enum PatternType {
     Regex,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct Parser {
     pub pattern: String,
     pub pattern_type: PatternType, // Cannot use `type` for the name as it is reserved
@@ -29,7 +32,7 @@ pub struct Parser {
     pub order: Vec<String>,
     pub aggregation_methods: HashMap<String, AggregationMethod>,
     #[serde(skip_serializing, skip_deserializing)]
-    pub aggregator_map: HashMap<String, String>,
+    pub aggregator_map: HashMap<String, Box<dyn Aggregator>>,
     #[serde(skip_serializing, skip_deserializing)]
     analytics: HashMap<String, String>,
     #[serde(skip_serializing, skip_deserializing)]

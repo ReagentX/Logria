@@ -18,15 +18,15 @@ use crate::{
         aggregators::{
             aggregator::{AggregationMethod, Aggregator},
             counter::Counter,
-            date::Date,
-            mean::IntMean,
-            sum::IntSum,
+            date::{Date, DateParserType},
+            mean::Mean,
+            sum::Sum,
         },
         error::LogriaError,
     },
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ParserState {
     Disabled,
     NeedsParser,
@@ -38,6 +38,7 @@ pub struct ParserHandler {
     mc_handler: MultipleChoiceHandler,
     redraw: bool,   // True if we should redraw the choices in the window
     status: String, // Stores the current parser and index for the user
+    parser: Option<Parser>,
 }
 
 impl ParserHandler {
@@ -63,7 +64,7 @@ impl ParserHandler {
 
     /// Set which index of the parsed message to render
     fn select_index(&mut self, window: &mut MainWindow) -> Result<()> {
-        if let Some(parser) = &window.config.parser {
+        if let Some(parser) = &self.parser {
             match parser.get_example() {
                 Ok(examples) => {
                     self.mc_handler.set_choices(&examples);
@@ -139,17 +140,6 @@ impl ParserHandler {
             let method = parser.aggregation_methods.get(item).unwrap();
             if parser.aggregator_map.contains_key(item) {
                 todo!();
-            } else {
-                let aggregator = match method {
-                    AggregationMethod::Mean => IntMean::new(method),
-                    AggregationMethod::Mode => Counter::new(method),
-                    AggregationMethod::Sum => IntSum::new(method),
-                    AggregationMethod::Count => Counter::new(method),
-                    AggregationMethod::Date(_) => Date::new(method),
-                    AggregationMethod::Time(_) => Date::new(method),
-                    AggregationMethod::DateTime(_) => Date::new(method),
-                };
-                parser.aggregator_map.insert(item.to_owned(), method);
             }
             todo!()
         }
@@ -157,11 +147,11 @@ impl ParserHandler {
     }
 
     /// Reset parser
-    fn reset(&self, window: &mut MainWindow) {
+    fn reset(&mut self, window: &mut MainWindow) {
         // Parser still active, but not set up
         window.config.parser_state = ParserState::NeedsParser;
         window.config.auxiliary_messages.clear();
-        window.config.parser = None;
+        self.parser = None;
         window.config.parser_index = 0;
         window.config.did_switch = true;
     }
@@ -184,7 +174,7 @@ impl ProcessorMethods for ParserHandler {
     /// Clear the parsed messages from the message buffer
     fn clear_matches(&mut self, window: &mut MainWindow) -> Result<()> {
         // TODO: Determine if regex while parsing still works after parser deactivation
-        window.config.parser = None;
+        self.parser = None;
         window.config.auxiliary_messages.clear();
         window.config.last_index_processed = 0;
         self.status.clear();
@@ -193,11 +183,11 @@ impl ProcessorMethods for ParserHandler {
     }
 
     /// Parse messages, loading the buffer of parsed messages in the main window
-    fn process_matches(&self, window: &mut MainWindow) -> Result<()> {
+    fn process_matches(&mut self, window: &mut MainWindow) -> Result<()> {
         // Only process if the parser is set up properly
         if let ParserState::Full = window.config.parser_state {
             // TODO: Possibly async? Possibly loading indicator for large jobs?
-            match &window.config.parser {
+            match &self.parser {
                 Some(parser) => {
                     // Start from where we left off to the most recent message
                     let buf_range = (
@@ -210,7 +200,7 @@ impl ProcessorMethods for ParserHandler {
                     // TODO: Overflow subtraction
                     for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
                         if let Ok(Some(message)) = self.parse(
-                            parser,
+                            &parser,
                             window.config.parser_index,
                             &window.previous_messages()[index],
                             &window.config.aggregation_enabled,
@@ -237,6 +227,7 @@ impl Handler for ParserHandler {
             mc_handler: MultipleChoiceHandler::new(),
             redraw: true,
             status: String::new(),
+            parser: None,
         }
     }
 
@@ -253,15 +244,65 @@ impl Handler for ParserHandler {
             ParserState::Disabled | ParserState::NeedsParser => {
                 match self.mc_handler.get_choice() {
                     Some(item) => match Parser::load(item) {
-                        Ok(parser) => {
+                        Ok(mut parser) => {
                             // Tell the parser to redraw on the next tick
                             self.redraw = true;
 
                             // Update the status string
                             self.status.push_str(&format!("Parsing with {}", item));
 
+                            // Update the parser struct's aggregation map
+                            for method_name in &parser.order {
+                                if let Some(method) = parser.aggregation_methods.get(method_name) {
+                                    match method {
+                                        AggregationMethod::Mean => {
+                                            parser
+                                                .aggregator_map
+                                                .insert(item.to_string(), Box::new(Mean::new()));
+                                        }
+                                        AggregationMethod::Mode => {
+                                            parser
+                                                .aggregator_map
+                                                .insert(item.to_string(), Box::new(Counter::new()));
+                                        }
+                                        AggregationMethod::Sum => {
+                                            parser
+                                                .aggregator_map
+                                                .insert(item.to_string(), Box::new(Sum::new()));
+                                        }
+                                        AggregationMethod::Count => {
+                                            parser
+                                                .aggregator_map
+                                                .insert(item.to_string(), Box::new(Counter::new()));
+                                        }
+                                        AggregationMethod::Date(format) => {
+                                            parser.aggregator_map.insert(
+                                                item.to_string(),
+                                                Box::new(Date::new(format, DateParserType::Date)),
+                                            );
+                                        }
+                                        AggregationMethod::Time(format) => {
+                                            parser.aggregator_map.insert(
+                                                item.to_string(),
+                                                Box::new(Date::new(format, DateParserType::Time)),
+                                            );
+                                        }
+                                        AggregationMethod::DateTime(format) => {
+                                            parser.aggregator_map.insert(
+                                                item.to_string(),
+                                                Box::new(Date::new(
+                                                    format,
+                                                    DateParserType::DateTime,
+                                                )),
+                                            );
+                                        }
+                                    };
+                                }
+                            }
+
                             // Set the new parser and parser state
-                            window.config.parser = Some(parser);
+                            self.parser = Some(parser);
+
                             window.config.parser_state = ParserState::NeedsIndex;
 
                             // Remove the redraw command for deleted items
@@ -379,7 +420,7 @@ mod parse_tests {
         // Create Parser
         let mut map = HashMap::new();
         map.insert(String::from("1"), AggregationMethod::Count);
-        let parser = Parser::new(
+        let mut parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
             String::from("1"),
@@ -389,7 +430,7 @@ mod parse_tests {
         );
 
         let parsed_message = handler
-            .parse(&parser, 0, "I - Am - A - Test", &false)
+            .parse(&mut parser, 0, "I - Am - A - Test", &false)
             .unwrap()
             .unwrap();
 
@@ -404,7 +445,7 @@ mod parse_tests {
         // Create Parser
         let mut map = HashMap::new();
         map.insert(String::from("1"), AggregationMethod::Count);
-        let parser = Parser::new(
+        let mut parser = Parser::new(
             String::from("(\\d+)"),
             PatternType::Regex,
             String::from("1"),
@@ -414,7 +455,7 @@ mod parse_tests {
         );
 
         let parsed_message = handler
-            .parse(&parser, 0, "Log message part 65 test", &false)
+            .parse(&mut parser, 0, "Log message part 65 test", &false)
             .unwrap()
             .unwrap();
 
@@ -447,7 +488,7 @@ mod regex_tests {
     fn test_can_setup_with_session_first_index() {
         // Update window config
         let mut logria = MainWindow::_new_dummy();
-        let handler = ParserHandler::new();
+        let mut handler = ParserHandler::new();
 
         // Create Parser
         let mut map = HashMap::new();
@@ -461,7 +502,7 @@ mod regex_tests {
             None,
         );
 
-        logria.config.parser = Some(parser);
+        handler.parser = Some(parser);
         logria.config.parser_state = ParserState::Full;
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 0;
@@ -478,7 +519,7 @@ mod regex_tests {
     #[test]
     fn test_can_setup_with_session_second_index() {
         let mut logria = MainWindow::_new_dummy();
-        let handler = ParserHandler::new();
+        let mut handler = ParserHandler::new();
 
         // Create Parser
         let mut map = HashMap::new();
@@ -493,7 +534,7 @@ mod regex_tests {
         );
 
         // Update window config
-        logria.config.parser = Some(parser);
+        handler.parser = Some(parser);
         logria.config.parser_state = ParserState::Full;
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 1;
@@ -510,7 +551,7 @@ mod regex_tests {
     #[test]
     fn test_can_setup_with_session_aggregated() {
         let mut logria = MainWindow::_new_dummy();
-        let handler = ParserHandler::new();
+        let mut handler = ParserHandler::new();
 
         // Create Parser
         let mut map = HashMap::new();
@@ -526,7 +567,7 @@ mod regex_tests {
         );
 
         // Update window config
-        logria.config.parser = Some(parser);
+        handler.parser = Some(parser);
         logria.config.parser_state = ParserState::Full;
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 1;
@@ -561,7 +602,7 @@ mod split_tests {
     fn test_can_setup_with_session_first_index() {
         // Update window config
         let mut logria = MainWindow::_new_dummy();
-        let handler = ParserHandler::new();
+        let mut handler = ParserHandler::new();
 
         // Create Parser
         let mut map = HashMap::new();
@@ -575,7 +616,7 @@ mod split_tests {
             None,
         );
 
-        logria.config.parser = Some(parser);
+        handler.parser = Some(parser);
         logria.config.parser_state = ParserState::Full;
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 0;
@@ -595,7 +636,7 @@ mod split_tests {
     #[test]
     fn test_can_setup_with_session_second_index() {
         let mut logria = MainWindow::_new_dummy();
-        let handler = ParserHandler::new();
+        let mut handler = ParserHandler::new();
 
         // Create Parser
         let mut map = HashMap::new();
@@ -610,7 +651,7 @@ mod split_tests {
         );
 
         // Update window config
-        logria.config.parser = Some(parser);
+        handler.parser = Some(parser);
         logria.config.parser_state = ParserState::Full;
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 1;
@@ -628,7 +669,7 @@ mod split_tests {
     fn test_can_setup_with_session_aggregated() {
         let mut logria = MainWindow::_new_dummy();
         // Add some messages that can be easily parsed
-        let handler = ParserHandler::new();
+        let mut handler = ParserHandler::new();
 
         // Create Parser
         let mut map = HashMap::new();
@@ -643,7 +684,7 @@ mod split_tests {
         );
 
         // Update window config
-        logria.config.parser = Some(parser);
+        handler.parser = Some(parser);
         logria.config.parser_state = ParserState::Full;
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 1;

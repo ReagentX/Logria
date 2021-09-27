@@ -70,7 +70,7 @@ impl<T: Hash + Eq + Clone + Display + Ord> Counter<T> {
         self.state.values().into_iter().sum()
     }
 
-    /// Remove an item from the internal order store
+    /// Remove an item from the internal order
     fn purge_from_order(&mut self, item: &T, count: &u64) {
         if let Some(order) = self.order.get_mut(count) {
             // If there was data there, remove the existing item
@@ -83,6 +83,7 @@ impl<T: Hash + Eq + Clone + Display + Ord> Counter<T> {
         };
     }
 
+    /// Remove an item from the internal state
     fn purge_from_state(&mut self, item: &T) {
         self.state.remove(item);
     }

@@ -63,7 +63,6 @@ pub mod main {
         pub highlight_match: bool, // Determines whether we highlight the matched text to the user
 
         // Parser settings
-        pub parser: Option<Parser>,    // Reference to the current parser
         pub parser_index: usize,       // Index for the parser to look at
         pub parser_state: ParserState, // The state of the current parser
         // TODO: Part of ParserState?
@@ -146,7 +145,6 @@ pub mod main {
                         crate::constants::cli::patterns::ANSI_COLOR_PATTERN,
                     )
                     .unwrap(),
-                    parser: None,
                     parser_index: 0,
                     parser_state: ParserState::Disabled,
                     aggregation_enabled: false,
@@ -185,7 +183,7 @@ pub mod main {
                     }
                 }
                 InputType::Parser => {
-                    if self.config.parser.is_some() {
+                    if self.config.parser_state == ParserState::Full {
                         self.config.auxiliary_messages.len()
                     } else {
                         self.messages().len()
@@ -769,7 +767,7 @@ pub mod main {
                             }
                         }
                         InputType::Parser => {
-                            if self.config.parser.is_some() {
+                            if self.config.parser_state == ParserState::Full {
                                 parser_handler.process_matches(self)?;
                             }
                             if self.config.did_switch {

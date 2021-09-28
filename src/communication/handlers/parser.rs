@@ -114,7 +114,11 @@ impl ParserHandler {
     }
 
     /// Handle aggregation logic for a single message
-    fn aggregate_handle(&mut self, message: &str, num_to_get: &usize) -> Option<Vec<String>> {
+    fn aggregate_handle(
+        &mut self,
+        message: &str,
+        num_to_get: &usize,
+    ) -> std::result::Result<Vec<String>, LogriaError> {
         match &self.parser {
             Some(parser) => {
                 // Split message into a Vec<&str> of its parts
@@ -148,15 +152,17 @@ impl ParserHandler {
                     if let Some(aggregator) =
                         self.parser.as_mut().unwrap().aggregator_map.get_mut(&item)
                     {
-                        aggregator.update(part);
+                        aggregator.update(part)?;
                         aggregated_data.push(item);
                         aggregated_data.extend(aggregator.messages(num_to_get));
                     }
                 }
                 // TODO: populate auxiliary messages with the aggregator's data
-                Some(aggregated_data)
+                Ok(aggregated_data)
             }
-            None => None,
+            None => Err(LogriaError::CannotParseMessage(
+                "No parser selected!".to_string(),
+            )),
         }
     }
 
@@ -213,7 +219,7 @@ impl ProcessorMethods for ParserHandler {
                 // TODO: Overflow subtraction
                 for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
                     if window.config.aggregation_enabled {
-                        if let Some(aggregated_messages) = self.aggregate_handle(
+                        if let Ok(aggregated_messages) = self.aggregate_handle(
                             &window.previous_messages()[index],
                             &window.config.num_to_aggregate,
                         ) {

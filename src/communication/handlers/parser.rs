@@ -88,20 +88,14 @@ impl ParserHandler {
         &mut self,
         index: usize,
         message: &str,
-        aggregate: &bool,
     ) -> std::result::Result<Option<String>, LogriaError> {
-        if *aggregate {
-            // Perform analytics here
-            Ok(self.aggregate_handle(message))
-        } else {
-            match self.parser.as_ref().unwrap().pattern_type {
-                PatternType::Regex => match self.parser.as_ref().unwrap().get_regex() {
-                    Ok(pattern) => Ok(self.regex_handle(message, index, pattern)),
-                    Err(why) => Err(why),
-                },
-                PatternType::Split => {
-                    Ok(self.split_handle(message, index, &self.parser.as_ref().unwrap().pattern))
-                }
+        match self.parser.as_ref().unwrap().pattern_type {
+            PatternType::Regex => match self.parser.as_ref().unwrap().get_regex() {
+                Ok(pattern) => Ok(self.regex_handle(message, index, pattern)),
+                Err(why) => Err(why),
+            },
+            PatternType::Split => {
+                Ok(self.split_handle(message, index, &self.parser.as_ref().unwrap().pattern))
             }
         }
     }
@@ -120,7 +114,7 @@ impl ParserHandler {
     }
 
     /// Handle aggregation logic for a single message
-    fn aggregate_handle(&mut self, message: &str) -> Option<String> {
+    fn aggregate_handle(&mut self, message: &str, num_to_get: &usize) -> Option<Vec<String>> {
         match &self.parser {
             Some(parser) => {
                 // Split message into a Vec<&str> of its parts
@@ -130,6 +124,7 @@ impl ParserHandler {
                             .captures(message)
                             .unwrap() // TODO: validate this
                             .iter()
+                            .skip(1)
                             .flatten()
                             .map(|f| f.as_str())
                             .collect()),
@@ -138,6 +133,9 @@ impl ParserHandler {
                     PatternType::Split => Ok(message.split_terminator(&parser.pattern).collect()),
                 }
                 .unwrap_or_default();
+
+                // If we got this far, allocate the return value
+                let mut aggregated_data = vec![];
                 for (idx, part) in message_parts.iter().enumerate() {
                     let item = self
                         .parser
@@ -151,10 +149,12 @@ impl ParserHandler {
                         self.parser.as_mut().unwrap().aggregator_map.get_mut(&item)
                     {
                         aggregator.update(part);
+                        aggregated_data.push(item);
+                        aggregated_data.extend(aggregator.messages(num_to_get));
                     }
                 }
-                // TODO: populate auxilery messages with the aggregator's data
-                Some(String::from(message))
+                // TODO: populate auxiliary messages with the aggregator's data
+                Some(aggregated_data)
             }
             None => None,
         }
@@ -212,16 +212,25 @@ impl ProcessorMethods for ParserHandler {
                 // TODO: Something to indicate progress
                 // TODO: Overflow subtraction
                 for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
-                    if let Ok(Some(message)) = self.parse(
-                        window.config.parser_index,
-                        &window.previous_messages()[index],
-                        &window.config.aggregation_enabled,
-                    ) {
-                        window.config.auxiliary_messages.push(message);
-                    }
+                    if window.config.aggregation_enabled {
+                        if let Some(aggregated_messages) = self.aggregate_handle(
+                            &window.previous_messages()[index],
+                            &window.config.num_to_aggregate,
+                        ) {
+                            window.config.auxiliary_messages.clear();
+                            window.config.auxiliary_messages.extend(aggregated_messages);
+                        }
+                    } else {
+                        if let Ok(Some(message)) = self.parse(
+                            window.config.parser_index,
+                            &window.previous_messages()[index],
+                        ) {
+                            window.config.auxiliary_messages.push(message);
+                        }
 
-                    // Update the last spot so we know where to start next time
-                    window.config.last_index_processed = index + 1;
+                        // Update the last spot so we know where to start next time
+                        window.config.last_index_processed = index + 1;
+                    }
                 }
             }
         };
@@ -434,14 +443,10 @@ mod parse_tests {
             String::from("1"),
             vec![String::from("1")],
             map,
-            None,
         );
         handler.parser = Some(parser);
 
-        let parsed_message = handler
-            .parse(0, "I - Am - A - Test", &false)
-            .unwrap()
-            .unwrap();
+        let parsed_message = handler.parse(0, "I - Am - A - Test").unwrap().unwrap();
 
         assert_eq!(parsed_message, String::from("I"))
     }
@@ -460,12 +465,11 @@ mod parse_tests {
             String::from("1"),
             vec![String::from("1")],
             map,
-            None,
         );
         handler.parser = Some(parser);
 
         let parsed_message = handler
-            .parse(0, "Log message part 65 test", &false)
+            .parse(0, "Log message part 65 test")
             .unwrap()
             .unwrap();
 
@@ -491,7 +495,7 @@ mod regex_tests {
             reader::main::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
-        util::aggregators::aggregator::AggregationMethod,
+        util::aggregators::{aggregator::AggregationMethod, mean::Mean},
     };
 
     #[test]
@@ -509,7 +513,6 @@ mod regex_tests {
             String::from("1"),
             vec![String::from("1")],
             map,
-            None,
         );
 
         handler.parser = Some(parser);
@@ -540,7 +543,6 @@ mod regex_tests {
             String::from("1"),
             vec![String::from("1")],
             map,
-            None,
         );
 
         // Update window config
@@ -561,19 +563,39 @@ mod regex_tests {
     #[test]
     fn test_can_setup_with_session_aggregated() {
         let mut logria = MainWindow::_new_dummy_parse();
+        // Add some messages that can be easily parsed
         let mut handler = ParserHandler::new();
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), AggregationMethod::Mean);
-        let parser = Parser::new(
-            String::from("([1-9])"),
+        map.insert(String::from("full"), AggregationMethod::Mean);
+        map.insert(String::from("minus_1"), AggregationMethod::Mean);
+        map.insert(String::from("minus_2"), AggregationMethod::Mean);
+        map.insert(String::from("minus_3"), AggregationMethod::Mean);
+        let mut parser = Parser::new(
+            String::from("(\\d*?) - (\\d*?) - (\\d*?) - (\\d*?)$"),
             PatternType::Regex,
-            String::from("1"),
-            vec![String::from("1")],
+            String::from("1 - 2 - 3 - 4"),
+            vec![
+                String::from("full"),
+                String::from("minus_1"),
+                String::from("minus_2"),
+                String::from("minus_3"),
+            ],
             map,
-            None,
         );
+        parser
+            .aggregator_map
+            .insert(String::from("full"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_1"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_2"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_3"), Box::new(Mean::new()));
 
         // Update window config
         handler.parser = Some(parser);
@@ -584,10 +606,26 @@ mod regex_tests {
         logria.config.aggregation_enabled = true;
 
         handler.process_matches(&mut logria).unwrap();
-
         assert_eq!(
-            logria.config.auxiliary_messages[0..10],
-            vec!["1", "2", "3", "4", "5", "6", "7", "8", "9", "1"]
+            logria.config.auxiliary_messages,
+            vec![
+                "full",
+                "    Mean: 59.5",
+                "    Count: 100",
+                "    Total: 5950",
+                "minus_1",
+                "    Mean: 58.5",
+                "    Count: 100",
+                "    Total: 5850",
+                "minus_2",
+                "    Mean: 57.5",
+                "    Count: 100",
+                "    Total: 5750",
+                "minus_3",
+                "    Mean: 56.5",
+                "    Count: 100",
+                "    Total: 5650"
+            ]
         );
     }
 }
@@ -622,7 +660,6 @@ mod split_tests {
             String::from("1"),
             vec![String::from("1")],
             map,
-            None,
         );
 
         handler.parser = Some(parser);
@@ -656,7 +693,6 @@ mod split_tests {
             String::from("1"),
             vec![String::from("1")],
             map,
-            None,
         );
 
         // Update window config
@@ -697,7 +733,6 @@ mod split_tests {
                 String::from("minus_3"),
             ],
             map,
-            None,
         );
         parser
             .aggregator_map
@@ -722,9 +757,25 @@ mod split_tests {
 
         handler.process_matches(&mut logria).unwrap();
         assert_eq!(
-            logria.config.auxiliary_messages[0..10],
-            vec!["0", "", "2", "3", "4", "5", "6", "7", "8", "9"]
+            logria.config.auxiliary_messages,
+            vec![
+                "full",
+                "    Mean: 59.5",
+                "    Count: 100",
+                "    Total: 5950",
+                "minus_1",
+                "    Mean: 58.5",
+                "    Count: 100",
+                "    Total: 5850",
+                "minus_2",
+                "    Mean: 57.5",
+                "    Count: 100",
+                "    Total: 5750",
+                "minus_3",
+                "    Mean: 56.5",
+                "    Count: 100",
+                "    Total: 5650"
+            ]
         );
-        assert_eq!(logria.config.auxiliary_messages.len(), 10)
     }
 }

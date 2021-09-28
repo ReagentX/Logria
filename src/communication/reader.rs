@@ -68,6 +68,7 @@ pub mod main {
         // TODO: Part of ParserState?
         pub aggregation_enabled: bool, // Whether we are aggregating log data or not
         pub last_index_processed: usize, // The last index the parsing function saw
+        pub num_to_aggregate: usize,   // The number of items to get when aggregating a Counter
 
         // App state
         loop_time: Instant, // How long a loop of the main app takes
@@ -169,6 +170,7 @@ pub mod main {
                     parser_index: 0,
                     parser_state: ParserState::Disabled,
                     aggregation_enabled: false,
+                    num_to_aggregate: 5,
                     last_index_processed: 0,
                     insert_mode: false,
                     highlight_match: false,

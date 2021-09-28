@@ -509,7 +509,8 @@ pub mod main {
 
         /// Move the cursor to the CLI window
         pub fn go_to_cli(&mut self) -> Result<()> {
-            queue!(self.output, cursor::MoveTo(1, self.config.height - 2))?;
+            let cli_position = self.config.height - 2;
+            queue!(self.output, cursor::MoveTo(1, cli_position))?;
             Ok(())
         }
 
@@ -536,12 +537,13 @@ pub mod main {
 
         /// Overwrites the output window with empty space
         /// TODO: faster?
-        /// Unused currently because it is too slow and causes flickering
+        ///! Unused currently because it is too slow and causes flickering
         pub fn reset_output(&mut self) -> Result<()> {
+            let last_row = self.config.last_row - 1;
             execute!(self.output, cursor::SavePosition)?;
             queue!(
                 self.output,
-                cursor::MoveTo(1, self.config.last_row - 1),
+                cursor::MoveTo(1, last_row),
                 Clear(ClearType::CurrentLine),
                 Clear(ClearType::FromCursorUp),
             )?;
@@ -583,9 +585,12 @@ pub mod main {
                 InputType::Regex => content.unwrap_or(cli_chars::REGEX_CHAR),
                 InputType::Parser => content.unwrap_or(cli_chars::PARSER_CHAR),
             };
+
+            // Write the CLI cursor in the command line bounding box
+            let cli_char_vertical = self.config.last_row + 1;
             execute!(
                 self.output,
-                cursor::MoveTo(0, self.config.last_row + 1),
+                cursor::MoveTo(0, cli_char_vertical),
                 style::Print(first_char)
             )?;
             Ok(())

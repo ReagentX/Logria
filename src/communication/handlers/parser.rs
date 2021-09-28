@@ -85,22 +85,23 @@ impl ParserHandler {
 
     /// Parse a message with the current parser rules
     fn parse(
-        &self,
-        parser: &Parser,
+        &mut self,
         index: usize,
         message: &str,
         aggregate: &bool,
     ) -> std::result::Result<Option<String>, LogriaError> {
         if *aggregate {
             // Perform analytics here
-            Ok(self.aggregate_handle(parser, message))
+            Ok(self.aggregate_handle(message))
         } else {
-            match parser.pattern_type {
-                PatternType::Regex => match parser.get_regex() {
+            match self.parser.as_ref().unwrap().pattern_type {
+                PatternType::Regex => match self.parser.as_ref().unwrap().get_regex() {
                     Ok(pattern) => Ok(self.regex_handle(message, index, pattern)),
                     Err(why) => Err(why),
                 },
-                PatternType::Split => Ok(self.split_handle(message, index, &parser.pattern)),
+                PatternType::Split => {
+                    Ok(self.split_handle(message, index, &self.parser.as_ref().unwrap().pattern))
+                }
             }
         }
     }
@@ -119,31 +120,44 @@ impl ParserHandler {
     }
 
     /// Handle aggregation logic for a single message
-    fn aggregate_handle(&self, parser: &Parser, message: &str) -> Option<String> {
-        // Split message into a Vec<&str> of its parts
-        let message_parts: Vec<&str> = match parser.pattern_type {
-            PatternType::Regex => match parser.get_regex() {
-                Ok(pattern) => Ok(pattern
-                    .captures(message)
-                    .unwrap()
-                    .iter()
-                    .flatten()
-                    .map(|f| f.as_str())
-                    .collect()),
-                Err(why) => Err(why),
-            },
-            PatternType::Split => Ok(message.split_terminator(&parser.pattern).collect()),
-        }
-        .unwrap_or_default();
-        for (idx, part) in message_parts.iter().enumerate() {
-            let item = parser.order.get(idx).unwrap();
-            let method = parser.aggregation_methods.get(item).unwrap();
-            if parser.aggregator_map.contains_key(item) {
-                todo!();
+    fn aggregate_handle(&mut self, message: &str) -> Option<String> {
+        match &self.parser {
+            Some(parser) => {
+                // Split message into a Vec<&str> of its parts
+                let message_parts: Vec<&str> = match parser.pattern_type {
+                    PatternType::Regex => match parser.get_regex() {
+                        Ok(pattern) => Ok(pattern
+                            .captures(message)
+                            .unwrap() // TODO: validate this
+                            .iter()
+                            .flatten()
+                            .map(|f| f.as_str())
+                            .collect()),
+                        Err(why) => Err(why),
+                    },
+                    PatternType::Split => Ok(message.split_terminator(&parser.pattern).collect()),
+                }
+                .unwrap_or_default();
+                for (idx, part) in message_parts.iter().enumerate() {
+                    let item = self
+                        .parser
+                        .as_ref()
+                        .unwrap()
+                        .order
+                        .get(idx)
+                        .unwrap()
+                        .to_owned();
+                    if let Some(aggregator) =
+                        self.parser.as_mut().unwrap().aggregator_map.get_mut(&item)
+                    {
+                        aggregator.update(part);
+                    }
+                }
+                // TODO: populate auxilery messages with the aggregator's data
+                Some(String::from(message))
             }
-            todo!()
+            None => None,
         }
-        Some(String::from(message))
     }
 
     /// Reset parser
@@ -187,36 +201,30 @@ impl ProcessorMethods for ParserHandler {
         // Only process if the parser is set up properly
         if let ParserState::Full = window.config.parser_state {
             // TODO: Possibly async? Possibly loading indicator for large jobs?
-            match &self.parser {
-                Some(parser) => {
-                    // Start from where we left off to the most recent message
-                    let buf_range = (
-                        window.config.last_index_processed,
-                        window.previous_messages().len(),
-                    );
+            if self.parser.is_some() {
+                // Start from where we left off to the most recent message
+                let buf_range = (
+                    window.config.last_index_processed,
+                    window.previous_messages().len(),
+                );
 
-                    // Iterate "forever", skipping to the start and taking up till end-start
-                    // TODO: Something to indicate progress
-                    // TODO: Overflow subtraction
-                    for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
-                        if let Ok(Some(message)) = self.parse(
-                            parser,
-                            window.config.parser_index,
-                            &window.previous_messages()[index],
-                            &window.config.aggregation_enabled,
-                        ) {
-                            window.config.auxiliary_messages.push(message);
-                        }
-
-                        // Update the last spot so we know where to start next time
-                        window.config.last_index_processed = index + 1;
+                // Iterate "forever", skipping to the start and taking up till end-start
+                // TODO: Something to indicate progress
+                // TODO: Overflow subtraction
+                for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
+                    if let Ok(Some(message)) = self.parse(
+                        window.config.parser_index,
+                        &window.previous_messages()[index],
+                        &window.config.aggregation_enabled,
+                    ) {
+                        window.config.auxiliary_messages.push(message);
                     }
+
+                    // Update the last spot so we know where to start next time
+                    window.config.last_index_processed = index + 1;
                 }
-                None => {
-                    panic!("Parser state is Full but there is no Parser!");
-                }
-            };
-        }
+            }
+        };
         Ok(())
     }
 }
@@ -415,7 +423,7 @@ mod parse_tests {
     #[test]
     fn test_does_split() {
         // Create handler
-        let handler = ParserHandler::new();
+        let mut handler = ParserHandler::new();
 
         // Create Parser
         let mut map = HashMap::new();
@@ -428,9 +436,10 @@ mod parse_tests {
             map,
             None,
         );
+        handler.parser = Some(parser);
 
         let parsed_message = handler
-            .parse(&parser, 0, "I - Am - A - Test", &false)
+            .parse(0, "I - Am - A - Test", &false)
             .unwrap()
             .unwrap();
 
@@ -440,7 +449,7 @@ mod parse_tests {
     #[test]
     fn test_does_regex() {
         // Create handler
-        let handler = ParserHandler::new();
+        let mut handler = ParserHandler::new();
 
         // Create Parser
         let mut map = HashMap::new();
@@ -453,9 +462,10 @@ mod parse_tests {
             map,
             None,
         );
+        handler.parser = Some(parser);
 
         let parsed_message = handler
-            .parse(&parser, 0, "Log message part 65 test", &false)
+            .parse(0, "Log message part 65 test", &false)
             .unwrap()
             .unwrap();
 
@@ -550,12 +560,11 @@ mod regex_tests {
 
     #[test]
     fn test_can_setup_with_session_aggregated() {
-        let mut logria = MainWindow::_new_dummy();
+        let mut logria = MainWindow::_new_dummy_parse();
         let mut handler = ParserHandler::new();
 
         // Create Parser
         let mut map = HashMap::new();
-        // TODO: Build working test case and parser
         map.insert(String::from("1"), AggregationMethod::Mean);
         let parser = Parser::new(
             String::from("([1-9])"),
@@ -595,7 +604,7 @@ mod split_tests {
             reader::main::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
-        util::aggregators::aggregator::AggregationMethod,
+        util::aggregators::{aggregator::AggregationMethod, mean::Mean},
     };
 
     #[test]
@@ -667,21 +676,41 @@ mod split_tests {
 
     #[test]
     fn test_can_setup_with_session_aggregated() {
-        let mut logria = MainWindow::_new_dummy();
+        let mut logria = MainWindow::_new_dummy_parse();
         // Add some messages that can be easily parsed
         let mut handler = ParserHandler::new();
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), AggregationMethod::Mean);
-        let parser = Parser::new(
-            String::from("-"),
+        map.insert(String::from("full"), AggregationMethod::Mean);
+        map.insert(String::from("minus_1"), AggregationMethod::Mean);
+        map.insert(String::from("minus_2"), AggregationMethod::Mean);
+        map.insert(String::from("minus_3"), AggregationMethod::Mean);
+        let mut parser = Parser::new(
+            String::from(" - "),
             PatternType::Split,
             String::from("1"),
-            vec![String::from("1")],
+            vec![
+                String::from("full"),
+                String::from("minus_1"),
+                String::from("minus_2"),
+                String::from("minus_3"),
+            ],
             map,
             None,
         );
+        parser
+            .aggregator_map
+            .insert(String::from("full"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_1"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_2"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_3"), Box::new(Mean::new()));
 
         // Update window config
         handler.parser = Some(parser);

@@ -29,9 +29,26 @@ impl CommandHandler {
     fn resolve_poll_rate(&self, command: &str) -> std::result::Result<u64, LogriaError> {
         let parts: Vec<&str> = command.split(' ').collect(); // ["poll", "42", ...]
         if parts.len() < 2 {
-            return Err(LogriaError::InvalidCommand(format!("{:?}", parts)));
+            return Err(LogriaError::InvalidCommand(format!(
+                "No poll delay provided {:?}",
+                parts
+            )));
         }
         match parts[1].parse::<u64>() {
+            Ok(parsed) => Ok(parsed),
+            Err(why) => Err(LogriaError::InvalidCommand(format!("{:?}", why))),
+        }
+    }
+
+    fn resolve_aggregation_count(&self, command: &str) -> std::result::Result<usize, LogriaError> {
+        let parts: Vec<&str> = command.split(' ').collect(); // ["agg", "42", ...]
+        if parts.len() < 2 {
+            return Err(LogriaError::InvalidCommand(format!(
+                "No aggregation count provided: {:?}",
+                parts
+            )));
+        }
+        match parts[1].parse::<usize>() {
             Ok(parsed) => Ok(parsed),
             Err(why) => Err(LogriaError::InvalidCommand(format!("{:?}", why))),
         }
@@ -154,6 +171,19 @@ impl CommandHandler {
         // Go back to start screen
         else if command.starts_with("restart") {
             window.write_to_command_line("Restart")?
+        } else if command.starts_with("agg") {
+            match self.resolve_aggregation_count(command) {
+                Ok(val) => {
+                    window.config.num_to_aggregate = val;
+                    // TODO: This wont cause the screen to re-render until there is a new message to get parsed
+                }
+                Err(why) => {
+                    window.write_to_command_line(&format!(
+                        "Failed to parse remove command: {:?}",
+                        why
+                    ))?;
+                }
+            }
         } else {
             window.write_to_command_line(&format!("Invalid command: {:?}", command))?;
         }

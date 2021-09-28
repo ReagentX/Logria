@@ -11,7 +11,7 @@
         "Status",
         "Size"
     ],
-    "analytics": {
+    "aggregation_methods": {
         "Remote Host": "Count",
         "User ID": "Count",
         "Username": "Count",

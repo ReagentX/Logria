@@ -8,7 +8,7 @@
         "Level",
         "Message"
     ],
-    "analytics": {
+    "aggregation_methods": {
         "Timestamp": {
             "Date": "[year]-[month]-[day]"
         },

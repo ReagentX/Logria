@@ -118,7 +118,6 @@ impl Parser {
         example: String,
         order: Vec<String>,
         aggregation_methods: HashMap<String, AggregationMethod>,
-        num_to_print: Option<i32>,
     ) -> Parser {
         Parser::verify_path();
         Parser {
@@ -231,7 +230,6 @@ mod tests {
                 "Message".to_string(),
             ],
             map,
-            None,
         );
         parser.save("Hyphen Separated Test 3").unwrap();
 
@@ -263,7 +261,6 @@ mod tests {
                 "Message".to_string(),
             ],
             map,
-            None,
         );
         parser.save("Hyphen Separated Test 3").unwrap();
 
@@ -300,7 +297,6 @@ mod tests {
                 "Message".to_string(),
             ],
             map2,
-            None,
         );
         parser.save("Hyphen Separated Test 2").unwrap();
 
@@ -317,7 +313,6 @@ mod tests {
                 "Message".to_string(),
             ],
             map,
-            None,
         );
         assert_eq!(read_parser.pattern, expected_parser.pattern);
         assert_eq!(read_parser.pattern_type, expected_parser.pattern_type);
@@ -343,7 +338,6 @@ mod tests {
             String::from("127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326"),
             vec!["Remote Host".to_string(), "User ID".to_string(), "Username".to_string(), "Date".to_string(), "Request".to_string(), "Status".to_string(), "Size".to_string()],
             map,
-            None
         );
         parser.save("Common Log Format Test 2").unwrap();
 
@@ -374,7 +368,6 @@ mod tests {
                 "Message".to_string(),
             ],
             map,
-            None,
         );
         parser.save("Hyphen Separated Test 1").unwrap();
 
@@ -400,7 +393,6 @@ mod tests {
             String::from("127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326"),
             vec!["Remote Host".to_string(), "User ID".to_string(), "Username".to_string(), "Date".to_string(), "Request".to_string(), "Status".to_string(), "Size".to_string()],
             map,
-            None
         );
         parser.save("Common Log Format Test 1").unwrap();
 
@@ -441,7 +433,6 @@ mod tests {
                 "Message".to_string(),
             ],
             map,
-            None,
         );
         parser.save("Hyphen Separated Test 2").unwrap();
 

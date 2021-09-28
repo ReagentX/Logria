@@ -1,4 +1,7 @@
-use crate::util::{aggregators::aggregator::Aggregator, error::LogriaError};
+use crate::util::{
+    aggregators::aggregator::{extact_number, Aggregator},
+    error::LogriaError,
+};
 
 pub struct Sum {
     total: f64,
@@ -6,11 +9,10 @@ pub struct Sum {
 
 impl Aggregator for Sum {
     fn update(&mut self, message: &str) -> Result<(), LogriaError> {
-        // TODO: Parse message
         if self.total >= f64::MAX {
             self.total = f64::MAX;
-        } else {
-            self.total += self.parse(message);
+        } else if let Some(number) = self.parse(message) {
+            self.total += number;
         };
         Ok(())
     }
@@ -25,8 +27,8 @@ impl Sum {
         Sum { total: 0. }
     }
 
-    fn parse(&self, message: &str) -> f64 {
-        todo!()
+    fn parse(&self, message: &str) -> Option<f64> {
+        extact_number(message)
     }
 }
 

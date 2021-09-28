@@ -1,4 +1,7 @@
-use crate::util::{aggregators::aggregator::Aggregator, error::LogriaError};
+use crate::util::{
+    aggregators::aggregator::{extact_number, Aggregator},
+    error::LogriaError,
+};
 
 pub struct Mean {
     count: f64,
@@ -17,7 +20,14 @@ impl Aggregator for Mean {
         if self.total >= f64::MAX {
             self.total = f64::MAX;
         } else {
-            self.total += self.parse(message);
+            match self.parse(message) {
+                Some(number) => {
+                    self.total += number;
+                },
+                None => {
+                    self.count -= 1.;
+                }
+            }
         };
 
         Ok(())
@@ -40,8 +50,8 @@ impl Mean {
         }
     }
 
-    fn parse(&self, message: &str) -> f64 {
-        todo!()
+    fn parse(&self, message: &str) -> Option<f64> {
+        extact_number(message)
     }
 
     fn mean(&self) -> f64 {

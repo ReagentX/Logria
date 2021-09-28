@@ -14,10 +14,10 @@ impl Aggregator for Counter {
         Ok(())
     }
 
-    fn messages(&self, n: usize) -> Vec<String> {
+    fn messages(&self, n: &usize) -> Vec<String> {
         // Place to store the result
-        let mut result = Vec::with_capacity(n);
-        if n == 0 {
+        let mut result = Vec::with_capacity(*n);
+        if *n == 0_usize {
             return result;
         }
 
@@ -39,7 +39,7 @@ impl Aggregator for Counter {
             for item in items {
                 result.push(format!("    {}: {}", item, count));
                 total_added += 1;
-                if total_added == n {
+                if total_added == *n {
                     return result;
                 }
             }
@@ -295,7 +295,7 @@ mod tests {
 
         let expected: Vec<String> = vec![];
 
-        assert_eq!(c.messages(0), expected);
+        assert_eq!(c.messages(&0), expected);
     }
 
     #[test]
@@ -313,7 +313,7 @@ mod tests {
 
         let expected = vec![String::from("    a: 3")];
 
-        assert_eq!(c.messages(1), expected);
+        assert_eq!(c.messages(&1), expected);
     }
 
     #[test]
@@ -331,7 +331,7 @@ mod tests {
 
         let expected = vec![String::from("    a: 3"), String::from("    b: 3")];
 
-        assert_eq!(c.messages(2), expected);
+        assert_eq!(c.messages(&2), expected);
     }
 
     #[test]
@@ -353,7 +353,7 @@ mod tests {
             String::from("    c: 2"),
         ];
 
-        assert_eq!(c.messages(3), expected);
+        assert_eq!(c.messages(&3), expected);
     }
 
     #[test]
@@ -376,6 +376,6 @@ mod tests {
             String::from("    d: 1"),
         ];
 
-        assert_eq!(c.messages(4), expected);
+        assert_eq!(c.messages(&4), expected);
     }
 }

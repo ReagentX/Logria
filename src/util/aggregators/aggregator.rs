@@ -29,7 +29,7 @@ pub fn extact_number(message: &str) -> Option<f64> {
 
 pub trait Aggregator {
     fn update(&mut self, message: &str) -> Result<(), LogriaError>;
-    fn messages(&self, n: usize) -> Vec<String>;
+    fn messages(&self, n: &usize) -> Vec<String>;
 }
 
 #[derive(Eq, PartialEq, Serialize, Deserialize, Debug)]

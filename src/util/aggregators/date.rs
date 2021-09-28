@@ -49,7 +49,7 @@ impl Aggregator for Date {
         }
     }
 
-    fn messages(&self, _: usize) -> Vec<String> {
+    fn messages(&self, _: &usize) -> Vec<String> {
         let mut out_v = vec![
             format!("    Rate: {:.4} {}", self.rate, self.unit),
             format!("    Count: {}", self.count),
@@ -266,7 +266,7 @@ mod message_tests {
             "    Earliest: 2021-01-01".to_string(),
             "    Latest: 2021-01-04".to_string(),
         ];
-        let messages = d.messages(1);
+        let messages = d.messages(&1);
 
         assert_eq!(messages, expected);
     }
@@ -285,7 +285,7 @@ mod message_tests {
             "    Earliest: 1:01:00.0".to_string(),
             "    Latest: 4:01:00.0".to_string(),
         ];
-        let messages = d.messages(1);
+        let messages = d.messages(&1);
 
         assert_eq!(messages, expected);
     }
@@ -307,7 +307,7 @@ mod message_tests {
             "    Earliest: 2021-01-01 1:01:00.0".to_string(),
             "    Latest: 2021-01-04 4:01:00.0".to_string(),
         ];
-        let messages = d.messages(1);
+        let messages = d.messages(&1);
 
         assert_eq!(messages, expected);
     }

@@ -17,7 +17,7 @@ impl Aggregator for Sum {
         Ok(())
     }
 
-    fn messages(&self, _: usize) -> Vec<String> {
+    fn messages(&self, _: &usize) -> Vec<String> {
         vec![format!("    Total: {}", self.total)]
     }
 }
@@ -53,7 +53,7 @@ mod float_tests {
         sum.update("2_f32").unwrap();
         sum.update("3_f32").unwrap();
 
-        assert_eq!(sum.messages(1), vec!["    Total: 6"]);
+        assert_eq!(sum.messages(&1), vec!["    Total: 6"]);
     }
 
     #[test]

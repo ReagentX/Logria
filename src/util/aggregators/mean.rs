@@ -33,7 +33,7 @@ impl Aggregator for Mean {
         Ok(())
     }
 
-    fn messages(&self, _: usize) -> Vec<String> {
+    fn messages(&self, _: &usize) -> Vec<String> {
         vec![
             format!("    Mean: {}", self.mean()),
             format!("    Count: {}", self.count),
@@ -87,7 +87,7 @@ mod float_tests {
         mean.update("3_f64").unwrap();
 
         assert_eq!(
-            mean.messages(1),
+            mean.messages(&1),
             vec![
                 "    Mean: 2".to_string(),
                 "    Count: 3".to_string(),

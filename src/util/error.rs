@@ -13,6 +13,7 @@ pub enum LogriaError {
     CannotParseDate(String),
     InvalidCommand(String),
     CannotParseMessage(String),
+    InvalidParserState(String),
 }
 
 impl Display for LogriaError {
@@ -45,6 +46,9 @@ impl Display for LogriaError {
             }
             LogriaError::CannotParseMessage(msg) => {
                 write!(fmt, "Unable to parse message: {}", msg)
+            }
+            LogriaError::InvalidParserState(msg) => {
+                write!(fmt, "Invalid parser state: {}", msg)
             }
         }
     }

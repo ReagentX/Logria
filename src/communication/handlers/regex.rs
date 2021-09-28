@@ -30,7 +30,7 @@ impl RegexHandler {
         }
     }
 
-    /// Save the user input pattern to the main window conig
+    /// Save the user input pattern to the main window config
     fn set_pattern(&mut self, window: &mut MainWindow) -> Result<()> {
         let pattern = match self.input_handler.gather(window) {
             Ok(pattern) => pattern,
@@ -116,7 +116,7 @@ impl Handler for RegexHandler {
         }
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
+    fn receive_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
         match &self.current_pattern {
             Some(_) => match key {
                 // Scroll
@@ -159,7 +159,7 @@ impl Handler for RegexHandler {
                     window.redraw()?;
                 }
                 KeyCode::Esc => self.return_to_normal(window)?,
-                key => self.input_handler.recieve_input(window, key)?,
+                key => self.input_handler.receive_input(window, key)?,
             },
         }
         Ok(())
@@ -286,7 +286,7 @@ mod tests {
 
         // Simulate keystroke for command mode
         handler
-            .recieve_input(&mut logria, KeyCode::Char(':'))
+            .receive_input(&mut logria, KeyCode::Char(':'))
             .unwrap();
 
         // Ensure we have the same amount of messages as when the regex was active

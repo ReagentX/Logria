@@ -1,5 +1,5 @@
 use crate::util::{
-    aggregators::aggregator::{extact_number, Aggregator},
+    aggregators::aggregator::{extract_number, Aggregator},
     error::LogriaError,
 };
 
@@ -28,7 +28,7 @@ impl Sum {
     }
 
     fn parse(&self, message: &str) -> Option<f64> {
-        extact_number(message)
+        extract_number(message)
     }
 }
 

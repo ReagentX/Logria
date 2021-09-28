@@ -181,7 +181,7 @@ impl Handler for UserInputHandler {
         handler
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
+    fn receive_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
         queue!(window.output, cursor::Show)?;
         match key {
             // Remove data

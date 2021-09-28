@@ -12,7 +12,7 @@ use crate::{
 };
 
 pub struct CommandHandler {
-    input_hander: UserInputHandler,
+    input_handler: UserInputHandler,
 }
 
 impl CommandHandler {
@@ -195,15 +195,15 @@ impl CommandHandler {
 impl Handler for CommandHandler {
     fn new() -> CommandHandler {
         CommandHandler {
-            input_hander: UserInputHandler::new(),
+            input_handler: UserInputHandler::new(),
         }
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
+    fn receive_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
         match key {
             // Execute the command
             KeyCode::Enter => {
-                let command = match self.input_hander.gather(window) {
+                let command = match self.input_handler.gather(window) {
                     Ok(command) => command,
                     Err(why) => panic!("Unable to gather text: {:?}", why),
                 };
@@ -211,7 +211,7 @@ impl Handler for CommandHandler {
             }
             // Go back to the previous state
             KeyCode::Esc => self.return_to_prev_state(window)?,
-            key => self.input_hander.recieve_input(window, key)?,
+            key => self.input_handler.receive_input(window, key)?,
         }
         Ok(())
     }

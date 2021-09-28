@@ -42,7 +42,7 @@ pub mod main {
         util::{poll::RollingMean, sanitizers::length::LengthFinder, types::Del},
     };
 
-    pub struct LogiraConfig {
+    pub struct LogriaConfig {
         pub width: u16,         // Window width
         pub height: u16,        // Window height
         pub last_row: u16, // The last row we can render, aka number of lines visible in the tty
@@ -90,7 +90,7 @@ pub mod main {
     }
 
     pub struct MainWindow {
-        pub config: LogiraConfig,
+        pub config: LogriaConfig,
         pub input_type: InputType,
         pub previous_input_type: InputType,
         pub output: Stdout,
@@ -147,7 +147,7 @@ pub mod main {
                 output: stdout(),
                 length_finder: LengthFinder::new(),
                 mc_handler: MultipleChoiceHandler::new(),
-                config: LogiraConfig {
+                config: LogriaConfig {
                     poll_rate: DEFAULT,
                     smart_poll_rate,
                     use_history: history,
@@ -331,7 +331,7 @@ pub mod main {
         /// Highlight the regex matched text with an ASCII escape code
         fn highlight_match(&self, message: String) -> String {
             // Regex out any existing color codes
-            // We use a bytes regex becasue we cannot compile the pattern using normal regex
+            // We use a bytes regex because we cannot compile the pattern using normal regex
             let clean_message = self
                 .config
                 .color_replace_regex
@@ -444,7 +444,7 @@ pub mod main {
                 }
 
                 // Adding padding and printing over the rest of the line is better than
-                // clearing the screen and writing again. This is becuase we can only fit
+                // clearing the screen and writing again. This is because we can only fit
                 // a few items into the render queue. Because the queue is flushed
                 // automatically when it is full, we end up having a lot of partial screen
                 // renders, i.e. a lot of flickering, which makes for bad UX. This is not
@@ -468,7 +468,7 @@ pub mod main {
             if current_row > 0 {
                 let clear_line = " ".repeat(width);
                 (0..current_row).for_each(|row| {
-                    // No `?` here becuase it is inside of a closure
+                    // No `?` here because it is inside of a closure
                     queue!(
                         self.output,
                         cursor::MoveTo(0, row),
@@ -556,7 +556,7 @@ pub mod main {
         /// Empty the command line
         pub fn reset_command_line(&mut self) -> Result<()> {
             // Leave padding for surrounding rectangle, we cannot use deleteln because it destroys the rectangle
-            // TODO: Store this string as a class attribute, recalc on resize
+            // TODO: Store this string as a class attribute, re-calculate on resize
             let clear = " ".repeat((self.config.width - 3) as usize);
             self.go_to_cli()?;
 
@@ -652,7 +652,7 @@ pub mod main {
             // Build the app
             if let Some(c) = commands {
                 // Build streams from the command used to launch Logria
-                // If we cannot save to the disk, write to the command line and start wtihout saving
+                // If we cannot save to the disk, write to the command line and start without saving
                 let possible_streams = build_streams_from_input(&c, true);
                 match possible_streams {
                     Ok(streams) => self.config.streams = streams,
@@ -689,7 +689,7 @@ pub mod main {
         }
 
         /// Update stderr and stdout buffers from every stream's queue
-        fn recieve_streams(&mut self) -> u64 {
+        fn receive_streams(&mut self) -> u64 {
             let mut total_messages = 0;
             for stream in &self.config.streams {
                 // Read from streams until there is no more input
@@ -730,7 +730,7 @@ pub mod main {
             self.go_to_cli()?;
 
             // Initial message collection
-            self.recieve_streams();
+            self.receive_streams();
 
             // Default is StdErr, swap based on number of messages
             if self.config.stdout_messages.len() > self.config.stderr_messages.len() {
@@ -744,7 +744,7 @@ pub mod main {
             loop {
                 // Update streams and poll rate
                 // let t_0 = Instant::now();
-                let num_new_messages = self.recieve_streams();
+                let num_new_messages = self.receive_streams();
                 self.handle_smart_poll_rate(self.config.loop_time.elapsed(), num_new_messages);
                 // self.write_to_command_line(&format!(
                 //     "{} in {:?}",
@@ -762,19 +762,19 @@ pub mod main {
                             // Otherwise, match input to action
                             match self.input_type {
                                 InputType::Normal => {
-                                    normal_handler.recieve_input(self, input.code)?
+                                    normal_handler.receive_input(self, input.code)?
                                 }
                                 InputType::Command => {
-                                    command_handler.recieve_input(self, input.code)?
+                                    command_handler.receive_input(self, input.code)?
                                 }
                                 InputType::Regex => {
-                                    regex_handler.recieve_input(self, input.code)?
+                                    regex_handler.receive_input(self, input.code)?
                                 }
                                 InputType::Parser => {
-                                    parser_handler.recieve_input(self, input.code)?
+                                    parser_handler.receive_input(self, input.code)?
                                 }
                                 InputType::Startup => {
-                                    startup_handler.recieve_input(self, input.code)?
+                                    startup_handler.receive_input(self, input.code)?
                                 }
                             }
                         }
@@ -800,8 +800,8 @@ pub mod main {
                             }
                             if self.config.did_switch {
                                 // 2 ticks, one to process the current input and another to refresh
-                                parser_handler.recieve_input(self, refresh_key)?;
-                                parser_handler.recieve_input(self, refresh_key)?;
+                                parser_handler.receive_input(self, refresh_key)?;
+                                parser_handler.receive_input(self, refresh_key)?;
                                 self.config.did_switch = false;
                             }
                         }
@@ -1026,7 +1026,7 @@ pub mod main {
 
             assert_eq!(logria.config.poll_rate, 10);
 
-            // Update the poll rate, dont go to 1000
+            // Update the poll rate, don't go to 1000
             logria.handle_smart_poll_rate(Duration::new(0, 10000000), 0);
 
             assert_eq!(logria.config.poll_rate, 13);

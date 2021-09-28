@@ -254,7 +254,7 @@ impl Handler for ParserHandler {
         }
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> crossterm::Result<()> {
+    fn receive_input(&mut self, window: &mut MainWindow, key: KeyCode) -> crossterm::Result<()> {
         // Enable command mode for parsers
         if key == KeyCode::Char(':') {
             window.set_command_mode(Some(Parser::del))?;
@@ -334,7 +334,7 @@ impl Handler for ParserHandler {
                             // Move the cursor back to the start of the line
                             window.go_to_cli()?;
 
-                            // Update the auxilery messages for the second setup step
+                            // Update the auxillary messages for the second setup step
                             self.select_index(window)?;
                         }
                         Err(why) => {
@@ -353,7 +353,7 @@ impl Handler for ParserHandler {
                         }
                         window.render_auxiliary_text()?;
                         self.select_parser(window)?;
-                        self.mc_handler.recieve_input(window, key)?;
+                        self.mc_handler.receive_input(window, key)?;
                     }
                 }
             }
@@ -370,7 +370,7 @@ impl Handler for ParserHandler {
                         window.config.parser_index = item;
                         window.config.parser_state = ParserState::Full;
 
-                        // Clear auxilery messages for next use
+                        // Clear auxillary messages for next use
                         window.config.auxiliary_messages.clear();
 
                         // Process messages
@@ -387,7 +387,7 @@ impl Handler for ParserHandler {
                         window.write_status()?;
                     }
                     None => {
-                        self.mc_handler.recieve_input(window, key)?;
+                        self.mc_handler.receive_input(window, key)?;
                     }
                 }
             }

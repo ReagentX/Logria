@@ -12,6 +12,7 @@ pub enum LogriaError {
     CannotRemove(String, String),
     CannotParseDate(String),
     InvalidCommand(String),
+    CannotParseMessage(String),
 }
 
 impl Display for LogriaError {
@@ -38,9 +39,12 @@ impl Display for LogriaError {
             }
             LogriaError::CannotParseDate(msg) => {
                 write!(fmt, "Invalid format description: {}", msg)
-            },
+            }
             LogriaError::InvalidCommand(msg) => {
                 write!(fmt, "Invalid poll command: {}", msg)
+            }
+            LogriaError::CannotParseMessage(msg) => {
+                write!(fmt, "Unable to parse message: {}", msg)
             }
         }
     }

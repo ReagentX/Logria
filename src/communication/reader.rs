@@ -98,7 +98,7 @@ pub mod main {
     }
 
     impl MainWindow {
-        /// Construct sample window for testing
+        /// Construct sample window for testing simple actions
         pub fn _new_dummy() -> MainWindow {
             let mut app = MainWindow::new(true, true);
 
@@ -113,6 +113,27 @@ pub mod main {
 
             // Set fake messages
             app.config.stderr_messages = (0..100).map(|x| x.to_string()).collect();
+
+            app
+        }
+
+        /// Construct sample window for testing parsers
+        pub fn _new_dummy_parse() -> MainWindow {
+            let mut app = MainWindow::new(true, true);
+
+            // Set fake dimensions
+            app.config.height = 10;
+            app.config.width = 100;
+            app.config.stream_type = StreamType::StdErr;
+            app.config.previous_stream_type = StreamType::StdOut;
+
+            // Set fake previous render
+            app.config.last_row = app.config.height - 3; // simulate the last row we can render to
+
+            // Set fake messages
+            app.config.stderr_messages = (10..110)
+                .map(|x| format!("{} - {} - {} - {}", x, x - 1, x - 2, x - 3))
+                .collect();
 
             app
         }

@@ -33,10 +33,6 @@ pub struct Parser {
     pub aggregation_methods: HashMap<String, AggregationMethod>,
     #[serde(skip_serializing, skip_deserializing)]
     pub aggregator_map: HashMap<String, Box<dyn Aggregator>>,
-    #[serde(skip_serializing, skip_deserializing)]
-    analytics: HashMap<String, String>,
-    #[serde(skip_serializing, skip_deserializing)]
-    num_to_print: i32,
 }
 
 impl ExtensionMethods for Parser {
@@ -132,8 +128,6 @@ impl Parser {
             order,
             aggregation_methods,
             aggregator_map: HashMap::new(),
-            analytics: HashMap::new(),
-            num_to_print: num_to_print.unwrap_or(5),
         }
     }
 

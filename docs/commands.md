@@ -11,6 +11,7 @@
 | `:history off` | go back to the main app from history mode |
 | `:r #` | when launching logria or viewing sessions, this will delete item # |
 | `:restart` | go back to the setup screen to change sessions |
+| `:agg #` | set the limit for aggregation counters be `top #`, i.e. `top 5` or `top 1` |
 
 ## Notes
 

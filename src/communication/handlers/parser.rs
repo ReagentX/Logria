@@ -155,7 +155,6 @@ impl ParserHandler {
                         aggregated_data.extend(aggregator.messages(num_to_get));
                     }
                 }
-                // TODO: populate auxiliary messages with the aggregator's data
                 Ok(aggregated_data)
             }
             None => Err(LogriaError::CannotParseMessage(

@@ -120,45 +120,58 @@ impl ParserHandler {
         match &self.parser {
             Some(parser) => {
                 // Split message into a Vec<&str> of its parts
-                let message_parts: Vec<&str> = match parser.pattern_type {
+                let message_parts: std::result::Result<Vec<&str>, LogriaError> = match parser
+                    .pattern_type
+                {
                     PatternType::Regex => match parser.get_regex() {
-                        Ok(pattern) => Ok(pattern
-                            .captures(message)
-                            .unwrap() // TODO: validate this
-                            .iter()
-                            .skip(1)
-                            .flatten()
-                            .map(|f| f.as_str())
-                            .collect()),
+                        Ok(pattern) => {
+                            if let Some(captures) = pattern.captures(message) {
+                                Ok(captures
+                                    .iter()
+                                    .skip(1)
+                                    .flatten()
+                                    .map(|f| f.as_str())
+                                    .collect())
+                            } else {
+                                Err(LogriaError::CannotParseMessage(
+                                    "regex did not match message!".to_string(),
+                                ))
+                            }
+                        }
                         Err(why) => Err(why),
                     },
                     PatternType::Split => Ok(message.split_terminator(&parser.pattern).collect()),
-                }
-                .unwrap_or_default();
+                };
 
-                // If we got this far, allocate the return value
-                let mut aggregated_data = vec![];
-                for (idx, part) in message_parts.iter().enumerate() {
-                    let item = self
-                        .parser
-                        .as_ref()
-                        .unwrap()
-                        .order
-                        .get(idx)
-                        .unwrap()
-                        .to_owned();
-                    if let Some(aggregator) =
-                        self.parser.as_mut().unwrap().aggregator_map.get_mut(&item)
-                    {
-                        aggregator.update(part)?;
-                        aggregated_data.push(item);
-                        aggregated_data.extend(aggregator.messages(num_to_get));
+                match message_parts {
+                    Ok(message_parts) => {
+                        // If we got this far, allocate the return value
+                        let mut aggregated_data = vec![];
+                        for (idx, part) in message_parts.iter().enumerate() {
+                            if let Some(item) =
+                                self.parser.as_ref().unwrap().order.get(idx).cloned()
+                            {
+                                if let Some(aggregator) =
+                                    self.parser.as_mut().unwrap().aggregator_map.get_mut(&item)
+                                {
+                                    aggregator.update(part)?;
+                                    aggregated_data.push(item);
+                                    aggregated_data.extend(aggregator.messages(num_to_get));
+                                }
+                            } else {
+                                return Err(LogriaError::CannotParseMessage(
+                                    "number of aggregation methods not equal to number of matches!"
+                                        .to_string(),
+                                ));
+                            }
+                        }
+                        Ok(aggregated_data)
                     }
+                    Err(why) => Err(why),
                 }
-                Ok(aggregated_data)
             }
             None => Err(LogriaError::CannotParseMessage(
-                "No parser selected!".to_string(),
+                "no parser selected!".to_string(),
             )),
         }
     }

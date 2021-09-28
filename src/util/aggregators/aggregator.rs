@@ -1,8 +1,8 @@
 use crate::util::error::LogriaError;
 use serde::{Deserialize, Serialize};
 
-/// Attempts to quicly extrat a float from a string, may have weird effects if numbers
-/// are poorly formatted or are immediately next to each other.
+/// Attempts to quickly extract a float from a string; may have weird effects
+/// if numbers are poorly formatted or are immediately next to each other.
 pub fn extact_number(message: &str) -> Option<f64> {
     // Result float to parse
     let mut result = String::new();

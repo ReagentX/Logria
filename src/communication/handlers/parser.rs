@@ -148,6 +148,7 @@ impl ParserHandler {
                         // If we got this far, allocate the return value
                         let mut aggregated_data = vec![];
                         for (idx, part) in message_parts.iter().enumerate() {
+                            // Clone here so we can use a mutable reference later
                             if let Some(item) =
                                 self.parser.as_ref().unwrap().order.get(idx).cloned()
                             {
@@ -157,6 +158,11 @@ impl ParserHandler {
                                     aggregator.update(part)?;
                                     aggregated_data.push(item);
                                     aggregated_data.extend(aggregator.messages(num_to_get));
+                                } else {
+                                    return Err(LogriaError::InvalidParserState(format!(
+                                        "aggregator missing for {}!",
+                                        item
+                                    )));
                                 }
                             } else {
                                 return Err(LogriaError::CannotParseMessage(
@@ -170,7 +176,7 @@ impl ParserHandler {
                     Err(why) => Err(why),
                 }
             }
-            None => Err(LogriaError::CannotParseMessage(
+            None => Err(LogriaError::InvalidParserState(
                 "no parser selected!".to_string(),
             )),
         }
@@ -229,12 +235,21 @@ impl ProcessorMethods for ParserHandler {
                 // TODO: Overflow subtraction
                 for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
                     if window.config.aggregation_enabled {
-                        if let Ok(aggregated_messages) = self.aggregate_handle(
+                        match self.aggregate_handle(
                             &window.previous_messages()[index],
                             &window.config.num_to_aggregate,
                         ) {
-                            window.config.auxiliary_messages.clear();
-                            window.config.auxiliary_messages.extend(aggregated_messages);
+                            Ok(aggregated_messages) => {
+                                window.config.auxiliary_messages.clear();
+                                window.config.auxiliary_messages.extend(aggregated_messages);
+                            }
+                            Err(why) => {
+                                // If the message failed parsing, it might just be a different format, so we ignore it
+                                // If the parser is in an invalid state, alert the user
+                                if let LogriaError::InvalidParserState(error) = why {
+                                    window.write_to_command_line(&error)?;
+                                }
+                            }
                         }
                     } else {
                         if let Ok(Some(message)) = self.parse(
@@ -793,5 +808,119 @@ mod split_tests {
                 "    Total: 5650"
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod failure_tests {
+    use super::ParserHandler;
+    use std::collections::HashMap;
+
+    use crate::{
+        communication::{
+            handlers::{handler::Handler, parser::ParserState, processor::ProcessorMethods},
+            input::{input_type::InputType, stream_type::StreamType},
+            reader::main::MainWindow,
+        },
+        extensions::parser::{Parser, PatternType},
+        util::aggregators::{aggregator::AggregationMethod, mean::Mean},
+    };
+
+    #[test]
+    fn test_no_matches_for_order() {
+        let mut logria = MainWindow::_new_dummy_parse();
+        // Add some messages that can be easily parsed
+        let mut handler = ParserHandler::new();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("full"), AggregationMethod::Mean);
+        map.insert(String::from("minus_1"), AggregationMethod::Mean);
+        map.insert(String::from("minus_2"), AggregationMethod::Mean);
+        map.insert(String::from("minus_3"), AggregationMethod::Mean);
+
+        let mut parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from("1"),
+            vec![
+                String::from("full"),
+                String::from("minus_1"),
+                String::from("minus_2"),
+            ],
+            map,
+        );
+
+        parser
+            .aggregator_map
+            .insert(String::from("full"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_1"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_2"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_3"), Box::new(Mean::new()));
+
+        // Update window config
+        handler.parser = Some(parser);
+        logria.config.parser_state = ParserState::Full;
+        logria.input_type = InputType::Parser;
+        logria.config.parser_index = 1;
+        logria.config.previous_stream_type = StreamType::StdErr;
+        logria.config.aggregation_enabled = true;
+
+        handler.process_matches(&mut logria).unwrap();
+        assert_eq!(logria.config.auxiliary_messages, Vec::<String>::new());
+    }
+
+    #[test]
+    fn test_unbalanced_aggregation_methods() {
+        let mut logria = MainWindow::_new_dummy_parse();
+        // Add some messages that can be easily parsed
+        let mut handler = ParserHandler::new();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("full"), AggregationMethod::Mean);
+        map.insert(String::from("minus_1"), AggregationMethod::Mean);
+        map.insert(String::from("minus_2"), AggregationMethod::Mean);
+        map.insert(String::from("minus_3"), AggregationMethod::Mean);
+        let mut parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from("1"),
+            vec![
+                String::from("full"),
+                String::from("minus_1"),
+                String::from("minus_2"),
+                String::from("minus_3"),
+            ],
+            map,
+        );
+
+        // Only 3 aggregators, not enough for 4 matches
+        parser
+            .aggregator_map
+            .insert(String::from("full"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_1"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_2"), Box::new(Mean::new()));
+
+        // Update window config
+        handler.parser = Some(parser);
+        logria.config.parser_state = ParserState::Full;
+        logria.input_type = InputType::Parser;
+        logria.config.parser_index = 1;
+        logria.config.previous_stream_type = StreamType::StdErr;
+        logria.config.aggregation_enabled = true;
+
+        handler.process_matches(&mut logria).unwrap();
+        assert_eq!(logria.config.auxiliary_messages, Vec::<String>::new());
     }
 }

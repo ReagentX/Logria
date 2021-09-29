@@ -389,7 +389,7 @@ impl Handler for ParserHandler {
                     Some(item) => {
                         // Tell the parser to redraw on the next tick
                         self.redraw = true;
-                        // TODO: More graceful clearing of the mc handler value
+
                         // get_choice() clears the item from the mc handler)
                         self.mc_handler.get_choice();
 

@@ -47,7 +47,6 @@ impl RegexHandler {
                 Some(regex)
             }
             Err(e) => {
-                // TODO: Alert user of invalid regex somehow?
                 window.write_to_command_line(&format!("Invalid regex: /{}/ ({})", pattern, e))?;
                 None
             }

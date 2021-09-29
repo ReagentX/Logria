@@ -57,7 +57,6 @@ impl ExtensionMethods for Session {
             let file_name = &files[*i];
             match remove_file(file_name) {
                 Ok(_) => {}
-                // TODO: Make this return a LogriaError
                 Err(why) => {
                     return Err(LogriaError::CannotRemove(
                         file_name.to_owned(),

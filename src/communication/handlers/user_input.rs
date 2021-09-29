@@ -193,7 +193,6 @@ impl Handler for UserInputHandler {
             KeyCode::Left => self.move_left(window)?,
             KeyCode::Right => self.move_right(window)?,
 
-            // TODO: History tape
             KeyCode::Up => self.tape_back(window)?,
             KeyCode::Down => self.tape_forward(window)?,
 

@@ -9,7 +9,6 @@ pub mod poll_rate {
 }
 
 pub mod patterns {
-    // TODO: this line need to exist
     pub const ANSI_COLOR_PATTERN: &str = r"(?-u)(\x9b|\x1b\[)[0-?]*[ -/]*[@-~]";
 }
 

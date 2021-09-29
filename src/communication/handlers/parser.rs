@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use crossterm::{event::KeyCode, Result};
 use regex::Regex;
 
@@ -244,6 +246,7 @@ impl ProcessorMethods for ParserHandler {
                             Ok(aggregated_messages) => {
                                 window.config.auxiliary_messages.clear();
                                 window.config.auxiliary_messages.extend(aggregated_messages);
+                                // TODO: there is a bug here where auxiliary_messages isnt getting updated/rendered
                             }
                             Err(why) => {
                                 // If the message failed parsing, it might just be a different format, so we ignore it
@@ -296,7 +299,8 @@ impl Handler for ParserHandler {
                             self.redraw = true;
 
                             // Update the status string
-                            self.status.push_str(&format!("Parsing with {}", item));
+                            let name = Path::new(item).file_name().unwrap().to_str().unwrap();
+                            self.status.push_str(&format!("Parsing with {}", name));
 
                             // Update the parser struct's aggregation map
                             for method_name in &parser.order {
@@ -440,6 +444,8 @@ impl Handler for ParserHandler {
                     // Swap to and from analytics mode
                     KeyCode::Char('a') => {
                         window.config.aggregation_enabled = !window.config.aggregation_enabled;
+                        window.config.last_index_processed = 0;
+                        window.config.auxiliary_messages.clear();
                     }
 
                     // Return to normal

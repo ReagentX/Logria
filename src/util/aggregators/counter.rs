@@ -50,7 +50,6 @@ impl Aggregator for Counter {
                 }
             }
         }
-
         result
     }
 }

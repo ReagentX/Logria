@@ -253,17 +253,14 @@ impl ProcessorMethods for ParserHandler {
                                 }
                             }
                         }
-                    } else {
-                        if let Ok(Some(message)) = self.parse(
-                            window.config.parser_index,
-                            &window.previous_messages()[index],
-                        ) {
-                            window.config.auxiliary_messages.push(message);
-                        }
-
-                        // Update the last spot so we know where to start next time
-                        window.config.last_index_processed = index + 1;
+                    } else if let Ok(Some(message)) = self.parse(
+                        window.config.parser_index,
+                        &window.previous_messages()[index],
+                    ) {
+                        window.config.auxiliary_messages.push(message);
                     }
+                    // Update the last spot so we know where to start next time
+                    window.config.last_index_processed = index + 1;
                 }
             }
         };

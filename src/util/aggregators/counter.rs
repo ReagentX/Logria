@@ -1,6 +1,6 @@
 use std::collections::{BTreeSet, HashMap};
 
-use crate::util::{aggregators::aggregator::Aggregator, error::LogriaError};
+use crate::util::{aggregators::aggregator::{Aggregator, format_number}, error::LogriaError};
 
 /// Counter struct inspired by Python's stdlib Counter class
 pub struct Counter {
@@ -41,7 +41,7 @@ impl Aggregator for Counter {
                 result.push(format!(
                     "    {}: {} ({:.0}%)",
                     item,
-                    count,
+                    format_number(count),
                     (*count as f64 / total) * 100_f64
                 ));
                 total_added += 1;

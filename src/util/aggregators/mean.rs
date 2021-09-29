@@ -1,5 +1,5 @@
 use crate::util::{
-    aggregators::aggregator::{extract_number, Aggregator},
+    aggregators::aggregator::{extract_number, format_number, Aggregator},
     error::LogriaError,
 };
 
@@ -23,7 +23,7 @@ impl Aggregator for Mean {
             match self.parse(message) {
                 Some(number) => {
                     self.total += number;
-                },
+                }
                 None => {
                     self.count -= 1.;
                 }
@@ -35,9 +35,9 @@ impl Aggregator for Mean {
 
     fn messages(&self, _: &usize) -> Vec<String> {
         vec![
-            format!("    Mean: {}", self.mean()),
-            format!("    Count: {}", self.count),
-            format!("    Total: {}", self.total),
+            format!("    Mean: {:.2}", self.mean()),
+            format!("    Count: {}", format_number(&(self.count as i64))),
+            format!("    Total: {}", format_number(&(self.total as i64))),
         ]
     }
 }
@@ -89,7 +89,7 @@ mod float_tests {
         assert_eq!(
             mean.messages(&1),
             vec![
-                "    Mean: 2".to_string(),
+                "    Mean: 2.00".to_string(),
                 "    Count: 3".to_string(),
                 "    Total: 6".to_string(),
             ]

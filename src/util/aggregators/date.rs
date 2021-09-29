@@ -1,6 +1,9 @@
 use std::cmp::{max, min};
 
-use crate::util::{aggregators::aggregator::Aggregator, error::LogriaError};
+use crate::util::{
+    aggregators::aggregator::{format_number, Aggregator},
+    error::LogriaError,
+};
 use time::{format_description::parse, Date as Dt, PrimitiveDateTime as DateTime, Time as Tm};
 
 pub enum DateParserType {
@@ -51,8 +54,8 @@ impl Aggregator for Date {
 
     fn messages(&self, _: &usize) -> Vec<String> {
         let mut out_v = vec![
-            format!("    Rate: {:.4} {}", self.rate, self.unit),
-            format!("    Count: {}", self.count),
+            format!("    Rate: {:.4} {}", format_number(&self.rate), self.unit),
+            format!("    Count: {}", format_number(&self.count)),
         ];
         match self.parser_type {
             DateParserType::Date => {

@@ -10,7 +10,6 @@ pub enum ScrollState {
 }
 
 pub fn up(window: &mut MainWindow) {
-    // TODO: Smart Poll Rate
     window.config.scroll_state = ScrollState::Free;
 
     // TODO: handle underflow
@@ -21,7 +20,6 @@ pub fn up(window: &mut MainWindow) {
 }
 
 pub fn down(window: &mut MainWindow) {
-    // TODO: Smart Poll Rate
     window.config.scroll_state = ScrollState::Free;
 
     // Get number of messages we can scroll
@@ -49,7 +47,10 @@ pub fn top(window: &mut MainWindow) {
 
 #[cfg(test)]
 mod tests {
-    use crate::{communication::{reader::main::MainWindow, input::input_type::InputType::Regex}, ui::scroll};
+    use crate::{
+        communication::{input::input_type::InputType::Regex, reader::main::MainWindow},
+        ui::scroll,
+    };
 
     #[test]
     fn test_render_final_items_scroll_down() {
@@ -186,7 +187,7 @@ mod tests {
 
         // Set existing status
         logria.config.current_end = 10;
-        
+
         // Set state to regex mode
         logria.config.matched_rows = (0..5).collect();
         logria.config.regex_pattern = Some(regex::bytes::Regex::new("fa.ke").unwrap());
@@ -214,7 +215,7 @@ mod tests {
         logria.input_type = Regex;
         logria.config.regex_pattern = Some(regex::bytes::Regex::new("fa.ke").unwrap());
         logria.config.matched_rows = (0..20).collect();
-        
+
         // Scroll action
         scroll::down(&mut logria);
 
@@ -236,7 +237,7 @@ mod tests {
         // Set state to regex mode
         logria.input_type = Regex;
         logria.config.matched_rows = (0..20).collect();
-        
+
         // Scroll action
         scroll::up(&mut logria);
 

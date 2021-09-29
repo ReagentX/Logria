@@ -37,7 +37,6 @@ pub mod main {
             messages::{NO_MESSAGE_IN_BUFFER_NORMAL, NO_MESSAGE_IN_BUFFER_PARSER},
             poll_rate::{DEFAULT, FASTEST, SLOWEST},
         },
-        extensions::parser::Parser,
         ui::{interface::build, scroll::ScrollState},
         util::{poll::RollingMean, sanitizers::length::LengthFinder, types::Del},
     };
@@ -63,15 +62,14 @@ pub mod main {
         pub highlight_match: bool, // Determines whether we highlight the matched text to the user
 
         // Parser settings
-        pub parser_index: usize,       // Index for the parser to look at
-        pub parser_state: ParserState, // The state of the current parser
-        pub aggregation_enabled: bool, // Whether we are aggregating log data or not
+        pub parser_index: usize,         // Index for the parser to look at
+        pub parser_state: ParserState,   // The state of the current parser
+        pub aggregation_enabled: bool,   // Whether we are aggregating log data or not
         pub last_index_processed: usize, // The last index the parsing function saw
-        pub num_to_aggregate: usize,   // The number of items to get when aggregating a Counter
+        pub num_to_aggregate: usize,     // The number of items to get when aggregating a Counter
 
         // App state
         loop_time: Instant, // How long a loop of the main app takes
-        insert_mode: bool,  // Default to insert mode (like vim) off
         pub poll_rate: u64, // The rate at which we check for new messages
         pub message_speed_tracker: RollingMean, // A deque based moving average tracker
         smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
@@ -171,7 +169,6 @@ pub mod main {
                     aggregation_enabled: false,
                     num_to_aggregate: 5,
                     last_index_processed: 0,
-                    insert_mode: false,
                     highlight_match: false,
                     last_row: 0,
                     scroll_state: ScrollState::Bottom,
@@ -776,8 +773,10 @@ pub mod main {
                                 }
                             }
                         }
-                        Event::Mouse(event) => {} // Probably remove
-                        Event::Resize(width, height) => {} // Call self.dimensions() and some other stuff
+                        Event::Mouse(_) => {} // Probably remove
+                        Event::Resize(_, _) => {
+                            self.update_dimensions()?;
+                        } // Call self.dimensions() and some other stuff
                     }
                 }
                 // possibly sleep, cleanup, etc

@@ -232,8 +232,10 @@ impl ProcessorMethods for ParserHandler {
 
                 // Iterate "forever", skipping to the start and taking up till end-start
                 // TODO: Something to indicate progress
-                // TODO: Overflow subtraction
-                for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
+                for index in (0..)
+                    .skip(buf_range.0)
+                    .take(buf_range.1.checked_sub(buf_range.0).unwrap_or(buf_range.0))
+                {
                     if window.config.aggregation_enabled {
                         match self.aggregate_handle(
                             &window.previous_messages()[index],

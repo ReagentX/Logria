@@ -1,4 +1,5 @@
 use crate::util::error::LogriaError;
+use num_format::{SystemLocale, ToFormattedString};
 use serde::{Deserialize, Serialize};
 
 /// Attempts to quickly extract a float from a string; may have weird effects
@@ -25,6 +26,12 @@ pub fn extract_number(message: &str) -> Option<f64> {
         }
     }
     result.parse::<f64>().ok()
+}
+
+pub fn format_number<T: ToFormattedString>(num: &T) -> String {
+    num.to_formatted_string(
+        &SystemLocale::default().unwrap_or_else(|_| SystemLocale::from_name("en_US").unwrap()),
+    )
 }
 
 pub trait Aggregator {

@@ -444,8 +444,20 @@ impl Handler for ParserHandler {
 
                     // Swap to and from analytics mode
                     KeyCode::Char('a') => {
-                        window.config.aggregation_enabled = !window.config.aggregation_enabled;
+                        if !window.config.aggregation_enabled {
+                            let new_status = self.status.to_owned();
+                            window.config.current_status = Some(new_status.replace(
+                                &format!("field {}", window.config.parser_index),
+                                "aggregation mode",
+                            ));
+                            window.write_status()?;
+                            window.config.aggregation_enabled = true;
+                        } else {
+                            window.config.current_status = Some(self.status.to_owned());
+                            window.config.aggregation_enabled = false;
+                        }
                         window.config.last_index_processed = 0;
+                        window.write_status()?;
                         window.config.auxiliary_messages.clear();
                     }
 

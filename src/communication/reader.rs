@@ -65,7 +65,6 @@ pub mod main {
         // Parser settings
         pub parser_index: usize,       // Index for the parser to look at
         pub parser_state: ParserState, // The state of the current parser
-        // TODO: Part of ParserState?
         pub aggregation_enabled: bool, // Whether we are aggregating log data or not
         pub last_index_processed: usize, // The last index the parsing function saw
         pub num_to_aggregate: usize,   // The number of items to get when aggregating a Counter
@@ -155,9 +154,9 @@ pub mod main {
                     width: 0,
                     loop_time: Instant::now(),
                     previous_render: (0, 0),
-                    stderr_messages: vec![],    // TODO: fix
-                    stdout_messages: vec![],    // TODO: fix
-                    auxiliary_messages: vec![], // TODO: fix
+                    stderr_messages: vec![],
+                    stdout_messages: vec![],
+                    auxiliary_messages: vec![],
                     stream_type: StreamType::Auxiliary,
                     previous_stream_type: StreamType::Auxiliary,
                     regex_pattern: None,
@@ -252,7 +251,6 @@ pub mod main {
                         };
 
                         // Determine if we can fit the next message
-                        // TODO: Fix Cast here
                         let message_length = self.length_finder.get_real_length(message);
                         rows += max(
                             1,

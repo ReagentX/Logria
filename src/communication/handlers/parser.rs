@@ -215,6 +215,7 @@ impl ProcessorMethods for ParserHandler {
         self.parser = None;
         window.config.auxiliary_messages.clear();
         window.config.last_index_processed = 0;
+        window.config.aggregation_enabled = false;
         self.status.clear();
         window.reset_command_line()?;
         Ok(())
@@ -251,7 +252,7 @@ impl ProcessorMethods for ParserHandler {
                             Err(why) => {
                                 // If the message failed parsing, it might just be a different format, so we ignore it
                                 // If the parser is in an invalid state, alert the user
-                                if let LogriaError::InvalidParserState(error) = why {
+                                if let LogriaError::CannotParseMessage(error) = why {
                                     window.write_to_command_line(&error)?;
                                 }
                             }
@@ -650,21 +651,21 @@ mod regex_tests {
             logria.config.auxiliary_messages,
             vec![
                 "full",
-                "    Mean: 59.5",
+                "    Mean: 59.50",
                 "    Count: 100",
-                "    Total: 5950",
+                "    Total: 5,950",
                 "minus_1",
-                "    Mean: 58.5",
+                "    Mean: 58.50",
                 "    Count: 100",
-                "    Total: 5850",
+                "    Total: 5,850",
                 "minus_2",
-                "    Mean: 57.5",
+                "    Mean: 57.50",
                 "    Count: 100",
-                "    Total: 5750",
+                "    Total: 5,750",
                 "minus_3",
-                "    Mean: 56.5",
+                "    Mean: 56.50",
                 "    Count: 100",
-                "    Total: 5650"
+                "    Total: 5,650"
             ]
         );
     }
@@ -800,21 +801,21 @@ mod split_tests {
             logria.config.auxiliary_messages,
             vec![
                 "full",
-                "    Mean: 59.5",
+                "    Mean: 59.50",
                 "    Count: 100",
-                "    Total: 5950",
+                "    Total: 5,950",
                 "minus_1",
-                "    Mean: 58.5",
+                "    Mean: 58.50",
                 "    Count: 100",
-                "    Total: 5850",
+                "    Total: 5,850",
                 "minus_2",
-                "    Mean: 57.5",
+                "    Mean: 57.50",
                 "    Count: 100",
-                "    Total: 5750",
+                "    Total: 5,750",
                 "minus_3",
-                "    Mean: 56.5",
+                "    Mean: 56.50",
                 "    Count: 100",
-                "    Total: 5650"
+                "    Total: 5,650"
             ]
         );
     }

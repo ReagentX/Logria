@@ -322,6 +322,60 @@ mod tests {
     }
 
     #[test]
+    fn serialize_deserialize_session_datetime() {
+        let mut map = HashMap::new();
+        map.insert(
+            String::from("DateTime"),
+            AggregationMethod::DateTime(String::from("[year]-[month]-[day] [hour]:[month]:[second]")),
+        );
+        map.insert(String::from("Method"), AggregationMethod::Count);
+        map.insert(String::from("Level"), AggregationMethod::Count);
+        map.insert(String::from("Message"), AggregationMethod::Sum);
+        let mut map2 = HashMap::new();
+        map2.insert(
+            String::from("DateTime"),
+            AggregationMethod::DateTime(String::from("[year]-[month]-[day] [hour]:[month]:[second]")),
+        );
+        map2.insert(String::from("Method"), AggregationMethod::Count);
+        map2.insert(String::from("Level"), AggregationMethod::Count);
+        map2.insert(String::from("Message"), AggregationMethod::Sum);
+        let parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
+            map2,
+        );
+        parser.save("Hyphen Separated Test 2").unwrap();
+
+        let file_name = format!("{}/{}", patterns(), "Hyphen Separated Test 2");
+        let read_parser = Parser::load(&file_name).unwrap();
+        let expected_parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
+            map,
+        );
+        assert_eq!(read_parser.pattern, expected_parser.pattern);
+        assert_eq!(read_parser.pattern_type, expected_parser.pattern_type);
+        assert_eq!(
+            read_parser.aggregation_methods,
+            expected_parser.aggregation_methods
+        );
+    }
+
+    #[test]
     fn can_get_regex() {
         let mut map = HashMap::new();
         map.insert(String::from("Remote Host"), AggregationMethod::Count);

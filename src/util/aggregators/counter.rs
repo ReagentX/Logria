@@ -37,7 +37,13 @@ impl Aggregator for Counter {
         for count in counts.iter().rev() {
             let items = self.order.get(count).unwrap();
             for item in items {
-                result.push(format!("    {}: {}", item, count));
+                let total = self.total() as f64;
+                result.push(format!(
+                    "    {}: {} ({:.0}%)",
+                    item,
+                    count,
+                    (*count as f64 / total) * 100_f64
+                ));
                 total_added += 1;
                 if total_added == *n {
                     return result;
@@ -134,14 +140,12 @@ impl Counter {
 }
 
 #[cfg(test)]
-mod tests {
+mod behavior_tests {
     use crate::util::aggregators::{aggregator::Aggregator, counter::Counter};
     use std::collections::{BTreeSet, HashMap};
 
     static A: &str = "a";
     static B: &str = "b";
-    static C: &str = "c";
-    static D: &str = "d";
 
     #[test]
     fn can_construct_counter() {
@@ -279,6 +283,16 @@ mod tests {
         assert_eq!(c.state, expected_count);
         assert_eq!(c.order, expected_order);
     }
+}
+
+#[cfg(test)]
+mod message_tests {
+    use crate::util::aggregators::{aggregator::Aggregator, counter::Counter};
+
+    static A: &str = "a";
+    static B: &str = "b";
+    static C: &str = "c";
+    static D: &str = "d";
 
     #[test]
     fn can_get_top_0() {
@@ -311,7 +325,7 @@ mod tests {
         c.increment(C);
         c.increment(D);
 
-        let expected = vec![String::from("    a: 3")];
+        let expected = vec![String::from("    a: 3 (33%)")];
 
         assert_eq!(c.messages(&1), expected);
     }
@@ -329,7 +343,10 @@ mod tests {
         c.increment(C);
         c.increment(D);
 
-        let expected = vec![String::from("    a: 3"), String::from("    b: 3")];
+        let expected = vec![
+            String::from("    a: 3 (33%)"),
+            String::from("    b: 3 (33%)"),
+        ];
 
         assert_eq!(c.messages(&2), expected);
     }
@@ -348,9 +365,9 @@ mod tests {
         c.increment(D);
 
         let expected = vec![
-            String::from("    a: 3"),
-            String::from("    b: 3"),
-            String::from("    c: 2"),
+            String::from("    a: 3 (33%)"),
+            String::from("    b: 3 (33%)"),
+            String::from("    c: 2 (22%)"),
         ];
 
         assert_eq!(c.messages(&3), expected);
@@ -370,10 +387,10 @@ mod tests {
         c.increment(D);
 
         let expected = vec![
-            String::from("    a: 3"),
-            String::from("    b: 3"),
-            String::from("    c: 2"),
-            String::from("    d: 1"),
+            String::from("    a: 3 (33%)"),
+            String::from("    b: 3 (33%)"),
+            String::from("    c: 2 (22%)"),
+            String::from("    d: 1 (11%)"),
         ];
 
         assert_eq!(c.messages(&4), expected);

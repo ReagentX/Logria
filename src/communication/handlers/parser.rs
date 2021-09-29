@@ -22,6 +22,7 @@ use crate::{
             counter::Counter,
             date::{Date, DateParserType},
             mean::Mean,
+            none::NoneAg,
             sum::Sum,
         },
         error::LogriaError,
@@ -350,6 +351,12 @@ impl Handler for ParserHandler {
                                                     format,
                                                     DateParserType::DateTime,
                                                 )),
+                                            );
+                                        }
+                                        AggregationMethod::None => {
+                                            parser.aggregator_map.insert(
+                                                method_name.to_string(),
+                                                Box::new(NoneAg::new()),
                                             );
                                         }
                                     };

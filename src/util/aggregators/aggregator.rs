@@ -48,6 +48,7 @@ pub enum AggregationMethod {
     Date(String),
     Time(String),
     DateTime(String),
+    None,
 }
 
 #[cfg(test)]

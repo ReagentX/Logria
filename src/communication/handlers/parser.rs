@@ -306,40 +306,44 @@ impl Handler for ParserHandler {
                                 if let Some(method) = parser.aggregation_methods.get(method_name) {
                                     match method {
                                         AggregationMethod::Mean => {
-                                            parser
-                                                .aggregator_map
-                                                .insert(item.to_string(), Box::new(Mean::new()));
+                                            parser.aggregator_map.insert(
+                                                method_name.to_string(),
+                                                Box::new(Mean::new()),
+                                            );
                                         }
                                         AggregationMethod::Mode => {
-                                            parser
-                                                .aggregator_map
-                                                .insert(item.to_string(), Box::new(Counter::new()));
+                                            parser.aggregator_map.insert(
+                                                method_name.to_string(),
+                                                Box::new(Counter::new()),
+                                            );
                                         }
                                         AggregationMethod::Sum => {
-                                            parser
-                                                .aggregator_map
-                                                .insert(item.to_string(), Box::new(Sum::new()));
+                                            parser.aggregator_map.insert(
+                                                method_name.to_string(),
+                                                Box::new(Sum::new()),
+                                            );
                                         }
                                         AggregationMethod::Count => {
-                                            parser
-                                                .aggregator_map
-                                                .insert(item.to_string(), Box::new(Counter::new()));
+                                            parser.aggregator_map.insert(
+                                                method_name.to_string(),
+                                                Box::new(Counter::new()),
+                                            );
                                         }
                                         AggregationMethod::Date(format) => {
                                             parser.aggregator_map.insert(
-                                                item.to_string(),
+                                                method_name.to_string(),
                                                 Box::new(Date::new(format, DateParserType::Date)),
                                             );
                                         }
                                         AggregationMethod::Time(format) => {
                                             parser.aggregator_map.insert(
-                                                item.to_string(),
+                                                method_name.to_string(),
                                                 Box::new(Date::new(format, DateParserType::Time)),
                                             );
                                         }
                                         AggregationMethod::DateTime(format) => {
                                             parser.aggregator_map.insert(
-                                                item.to_string(),
+                                                method_name.to_string(),
                                                 Box::new(Date::new(
                                                     format,
                                                     DateParserType::DateTime,

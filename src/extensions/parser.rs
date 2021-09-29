@@ -132,17 +132,16 @@ impl Parser {
 
     /// Create Parser struct from a parser file
     pub fn load(file_name: &str) -> Result<Parser, LogriaError> {
-        let parser_json = match read_to_string(file_name) {
-            Ok(json) => json,
-            Err(why) => {
-                return Err(LogriaError::CannotRead(
-                    file_name.to_owned(),
-                    <dyn Error>::to_string(&why),
-                ))
-            }
-        };
-        let session: Parser = serde_json::from_str(&parser_json).unwrap();
-        Ok(session)
+        match read_to_string(file_name) {
+            Ok(json) => match serde_json::from_str(&json) {
+                Ok(parser) => Ok(parser),
+                Err(why) => Err(LogriaError::InvalidParserState(why.to_string())),
+            },
+            Err(why) => Err(LogriaError::CannotRead(
+                file_name.to_owned(),
+                why.to_string(),
+            )),
+        }
     }
 
     pub fn get_regex(&self) -> Result<Regex, LogriaError> {

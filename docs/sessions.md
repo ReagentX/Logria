@@ -18,7 +18,7 @@ Sessions are stored as `JSON` in `$LOGRIA_ROOT/sessions` and do not have file ex
             "sample_streams/generate_test_logs_2.py"
         ]
     ],
-    "stream_type": Command"
+    "stream_type": "Command"
 }
 ```
 

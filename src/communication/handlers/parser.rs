@@ -119,6 +119,7 @@ impl ParserHandler {
         &mut self,
         message: &str,
         num_to_get: &usize,
+        render: bool,
     ) -> std::result::Result<Vec<String>, LogriaError> {
         match &self.parser {
             Some(parser) => {
@@ -159,8 +160,10 @@ impl ParserHandler {
                                     self.parser.as_mut().unwrap().aggregator_map.get_mut(&item)
                                 {
                                     aggregator.update(part)?;
-                                    aggregated_data.push(item);
-                                    aggregated_data.extend(aggregator.messages(num_to_get));
+                                    if render {
+                                        aggregated_data.push(item);
+                                        aggregated_data.extend(aggregator.messages(num_to_get));
+                                    }
                                 } else {
                                     return Err(LogriaError::InvalidParserState(format!(
                                         "aggregator missing for {}!",
@@ -236,6 +239,7 @@ impl ProcessorMethods for ParserHandler {
 
                 // Iterate "forever", skipping to the start and taking up till end-start
                 // TODO: Something to indicate progress
+                let last = buf_range.1.checked_sub(1).unwrap_or(buf_range.0);
                 for index in (0..)
                     .skip(buf_range.0)
                     .take(buf_range.1.checked_sub(buf_range.0).unwrap_or(buf_range.0))
@@ -244,11 +248,13 @@ impl ProcessorMethods for ParserHandler {
                         match self.aggregate_handle(
                             &window.previous_messages()[index],
                             &window.config.num_to_aggregate,
+                            index == last,
                         ) {
                             Ok(aggregated_messages) => {
-                                window.config.auxiliary_messages.clear();
-                                window.config.auxiliary_messages.extend(aggregated_messages);
-                                // TODO: there is a bug here where auxiliary_messages isnt getting updated/rendered
+                                if !aggregated_messages.is_empty() {
+                                    window.config.auxiliary_messages.clear();
+                                    window.config.auxiliary_messages.extend(aggregated_messages);
+                                }
                             }
                             Err(why) => {
                                 // If the message failed parsing, it might just be a different format, so we ignore it

@@ -19,7 +19,7 @@ Patterns are stored as `JSON` in `$LOGRIA_ROOT/patterns` and do not have file ex
     ],
     "aggregation_methods": {
         "Timestamp": {
-            "DateTime": "[year]-[month]-[day] [hour]:[minute]:[second],[millisecond]"
+            "DateTime": "[year]-[month]-[day] [hour]:[minute]:[second],[subsecond]"
         },
         "Method": "Count",
         "Level": "Count",
@@ -98,7 +98,7 @@ A `split` pattern uses [str::split](https://doc.rust-lang.org/std/primitive.str.
     ],
     "aggregation_methods": {
         "Timestamp": {
-            "DateTime": "[year]-[month]-[day] [hour]:[minute]:[second],[millisecond]"
+            "DateTime": "[year]-[month]-[day] [hour]:[minute]:[second],[subsecond]"
         },
         "Method": "Count",
         "Level": "Count",

@@ -1,7 +1,8 @@
 use crate::util::{
-    aggregators::aggregator::{extract_number, format_number, Aggregator},
+    aggregators::aggregator::{extract_number, Aggregator},
     error::LogriaError,
 };
+use format_num::format_num;
 
 pub struct Mean {
     count: f64,
@@ -36,8 +37,8 @@ impl Aggregator for Mean {
     fn messages(&self, _: &usize) -> Vec<String> {
         vec![
             format!("    Mean: {:.2}", self.mean()),
-            format!("    Count: {}", format_number(&(self.count as i64))),
-            format!("    Total: {}", format_number(&(self.total as i64))),
+            format!("    Count: {}", format_num!(",d", self.count)),
+            format!("    Total: {}", format_num!(",d", self.total)),
         ]
     }
 }

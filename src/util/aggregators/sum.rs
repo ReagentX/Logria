@@ -1,7 +1,8 @@
 use crate::util::{
-    aggregators::aggregator::{extract_number, format_number, Aggregator},
+    aggregators::aggregator::{extract_number, Aggregator},
     error::LogriaError,
 };
+use format_num::format_num;
 
 pub struct Sum {
     total: f64,
@@ -18,10 +19,7 @@ impl Aggregator for Sum {
     }
 
     fn messages(&self, _: &usize) -> Vec<String> {
-        vec![format!(
-            "    Total: {}",
-            format_number(&(self.total as i64))
-        )]
+        vec![format!("    Total: {}", format_num!(",d", self.total))]
     }
 }
 

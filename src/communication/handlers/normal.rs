@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use crossterm::{cursor, event::KeyCode, queue, Result};
 
 use super::handler::Handler;

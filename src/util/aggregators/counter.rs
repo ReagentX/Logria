@@ -1,8 +1,8 @@
 use std::collections::{BTreeSet, HashMap};
 
-use crate::util::{
-    aggregators::aggregator::{Aggregator},
-    error::LogriaError,
+use crate::{
+    constants::cli::colors::RESET_COLOR,
+    util::{aggregators::aggregator::Aggregator, error::LogriaError},
 };
 use format_num::format_num;
 
@@ -43,8 +43,9 @@ impl Aggregator for Counter {
             for item in items {
                 let total = self.total() as f64;
                 result.push(format!(
-                    "    {}: {} ({:.0}%)",
-                    item,
+                    "    {}{}: {} ({:.0}%)",
+                    item.trim(),
+                    RESET_COLOR,
                     format_num!(",d", *count as f64),
                     (*count as f64 / total) * 100_f64
                 ));
@@ -328,7 +329,7 @@ mod message_tests {
         c.increment(C);
         c.increment(D);
 
-        let expected = vec![String::from("    a: 3 (33%)")];
+        let expected = vec![String::from("    a\u{1b}[0m: 3 (33%)")];
 
         assert_eq!(c.messages(&1), expected);
     }
@@ -347,8 +348,8 @@ mod message_tests {
         c.increment(D);
 
         let expected = vec![
-            String::from("    a: 3 (33%)"),
-            String::from("    b: 3 (33%)"),
+            String::from("    a\u{1b}[0m: 3 (33%)"),
+            String::from("    b\u{1b}[0m: 3 (33%)"),
         ];
 
         assert_eq!(c.messages(&2), expected);
@@ -368,9 +369,9 @@ mod message_tests {
         c.increment(D);
 
         let expected = vec![
-            String::from("    a: 3 (33%)"),
-            String::from("    b: 3 (33%)"),
-            String::from("    c: 2 (22%)"),
+            String::from("    a\u{1b}[0m: 3 (33%)"),
+            String::from("    b\u{1b}[0m: 3 (33%)"),
+            String::from("    c\u{1b}[0m: 2 (22%)"),
         ];
 
         assert_eq!(c.messages(&3), expected);
@@ -390,10 +391,10 @@ mod message_tests {
         c.increment(D);
 
         let expected = vec![
-            String::from("    a: 3 (33%)"),
-            String::from("    b: 3 (33%)"),
-            String::from("    c: 2 (22%)"),
-            String::from("    d: 1 (11%)"),
+            String::from("    a\u{1b}[0m: 3 (33%)"),
+            String::from("    b\u{1b}[0m: 3 (33%)"),
+            String::from("    c\u{1b}[0m: 2 (22%)"),
+            String::from("    d\u{1b}[0m: 1 (11%)"),
         ];
 
         assert_eq!(c.messages(&4), expected);

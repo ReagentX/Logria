@@ -33,7 +33,7 @@ pub mod main {
             },
         },
         constants::cli::{
-            cli_chars,
+            cli_chars, colors,
             messages::{NO_MESSAGE_IN_BUFFER_NORMAL, NO_MESSAGE_IN_BUFFER_PARSER},
             poll_rate::{DEFAULT, FASTEST, SLOWEST},
         },
@@ -346,10 +346,10 @@ pub mod main {
             {
                 new_msg.extend(clean_message[last_end..capture.start()].to_vec());
                 // Add start color string
-                new_msg.extend("\x1b[35m".as_bytes().to_vec());
+                new_msg.extend(colors::HIGHLIGHT_COLOR.as_bytes().to_vec());
                 new_msg.extend(clean_message[capture.start()..capture.end()].to_vec());
                 // Add end color string
-                new_msg.extend("\x1b[0m".as_bytes().to_vec());
+                new_msg.extend(colors::RESET_COLOR.as_bytes().to_vec());
                 // Store the ending in case we have multiple matches so we can add the end later
                 last_end = capture.end();
             }

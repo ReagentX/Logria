@@ -2,14 +2,14 @@
 
 # Logria
 
-A powerful CLI tool that puts log analytics at your fingertips. This is a Rust implementation of my [Python](https://github.com/ReagentX/Logria-py) proof-of-concept.
+A powerful CLI tool that puts log aggregation at your fingertips.
 
 ## tl;dr
 
-- Live filtering of data from other processes, replacing `grep`
+- Live filtering/parsing of data from other processes
 - Use shell commands or files as input, save sessions and come back later
 - Replace regex/filter without killing the process or losing the stream's history
-- Parse logs using user-defined rules, apply analytics methods on top
+- Parse logs using user-defined rules, apply aggregation methods on top
 
 ## Installation
 
@@ -46,7 +46,7 @@ For more details, see [Sample Usage Session](docs/README.md#sample-usage-session
 | `h` | if regex active, toggle highlighting of matches |
 | `s` | swap reading `stderr` and `stdout` |
 | `p` | activate parser |
-| `a` | toggle analytics mode when parser is active |
+| `a` | toggle aggregation mode when parser is active |
 | `z` | deactivate parser |
 | ↑ | scroll buffer up one line |
 | ↓ | scroll buffer down one line |
@@ -61,7 +61,7 @@ Here are some of the ways you can leverage Logria:
 
 ![logria](/resources/screenshots/logria.png)
 
-### Interactive, live, editable grep
+### Interactive, live, editable regex search
 
 ![regex](/resources/screenshots/regex.png)
 
@@ -69,9 +69,9 @@ Here are some of the ways you can leverage Logria:
 
 ![parser](/resources/screenshots/parser.png)
 
-### Live analytics/statistics tracking
+### Live aggregation/statistics tracking
 
-![analytics](/resources/screenshots/analytics.png)
+![aggregation](/resources/screenshots/aggregation.png)
 
 ### User-defined saved sessions
 
@@ -81,6 +81,20 @@ See [session](/docs/sessions.md) docs.
 
 See [patterns](/docs/patterns.md) docs.
 
+## Notes
+
+This is a Rust implementation of my [Python](https://github.com/ReagentX/Logria-py) proof-of-concept.
+
+### What is Logria For
+
+Logria is best leveraged to watch live logs from multiple processes and filter them for events you want to see. My most common use case is watching logs from multiple Linode/EC2 instances via `ssh` or multiple CloudWatch streams using [`awslogs`](https://github.com/jorgebastida/awslogs).
+
+I also use it to analyze the logs from my Apache web servers that print logs in the common log format.
+
+### What is Logria Not For
+
+Logria is not a tool for detailed log analytics. [`lnav`](https://lnav.org/features) or [`angle-grinder`](https://github.com/rcoh/angle-grinder/) will both do the job better.
+
 ## Special Thanks
 
 - [Voidsphere](https://voidsphere.bandcamp.com), for providing all the hacking music I could want.
@@ -88,3 +102,4 @@ See [patterns](/docs/patterns.md) docs.
 - [@rhamorim](https://twitter.com/rhamorim), for [suggesting](https://twitter.com/rhamorim/status/1333856615624306692) an alternative for non-blocking IO without `O_NONBLOCK`.
 - [@andy_crab_gear](https://twitter.com/andy_crab_gear), for [suggesting](https://twitter.com/andy_crab_gear/status/1333866079555239936) an alternative for non-blocking IO without `O_NONBLOCK`.
 - [yonkeltron](https://github.com/yonkeltron), for advice and help learning Rust.
+- [Simone Vittori](https://www.simonewebdesign.it), for a great [blog post](https://www.simonewebdesign.it/rust-hashmap-insert-values-multiple-types/) on storing multiple value types in a `HashMap`.

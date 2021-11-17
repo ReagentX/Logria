@@ -10,8 +10,12 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    constants::directories::patterns, extensions::extension::ExtensionMethods,
-    util::error::LogriaError,
+    constants::directories::patterns,
+    extensions::extension::ExtensionMethods,
+    util::{
+        aggregators::aggregator::{AggregationMethod, Aggregator},
+        error::LogriaError,
+    },
 };
 
 #[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Debug)]
@@ -20,18 +24,15 @@ pub enum PatternType {
     Regex,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct Parser {
     pub pattern: String,
     pub pattern_type: PatternType, // Cannot use `type` for the name as it is reserved
     pub example: String,
-    pub analytics_methods: HashMap<String, String>,
+    pub order: Vec<String>,
+    pub aggregation_methods: HashMap<String, AggregationMethod>,
     #[serde(skip_serializing, skip_deserializing)]
-    analytics_map: HashMap<String, String>,
-    #[serde(skip_serializing, skip_deserializing)]
-    analytics: HashMap<String, String>,
-    #[serde(skip_serializing, skip_deserializing)]
-    num_to_print: i32,
+    pub aggregator_map: HashMap<String, Box<dyn Aggregator>>,
 }
 
 impl ExtensionMethods for Parser {
@@ -115,34 +116,32 @@ impl Parser {
         pattern: String,
         pattern_type: PatternType,
         example: String,
-        analytics_methods: HashMap<String, String>,
-        num_to_print: Option<i32>,
+        order: Vec<String>,
+        aggregation_methods: HashMap<String, AggregationMethod>,
     ) -> Parser {
         Parser::verify_path();
         Parser {
             pattern,
             pattern_type,
             example,
-            analytics_methods,
-            analytics_map: HashMap::new(),
-            analytics: HashMap::new(),
-            num_to_print: num_to_print.unwrap_or(5),
+            order,
+            aggregation_methods,
+            aggregator_map: HashMap::new(),
         }
     }
 
     /// Create Parser struct from a parser file
     pub fn load(file_name: &str) -> Result<Parser, LogriaError> {
-        let parser_json = match read_to_string(file_name) {
-            Ok(json) => json,
-            Err(why) => {
-                return Err(LogriaError::CannotRead(
-                    file_name.to_owned(),
-                    <dyn Error>::to_string(&why),
-                ))
-            }
-        };
-        let session: Parser = serde_json::from_str(&parser_json).unwrap();
-        Ok(session)
+        match read_to_string(file_name) {
+            Ok(json) => match serde_json::from_str(&json) {
+                Ok(parser) => Ok(parser),
+                Err(why) => Err(LogriaError::InvalidParserState(why.to_string())),
+            },
+            Err(why) => Err(LogriaError::CannotRead(
+                file_name.to_owned(),
+                why.to_string(),
+            )),
+        }
     }
 
     pub fn get_regex(&self) -> Result<Regex, LogriaError> {
@@ -186,10 +185,10 @@ impl Parser {
         };
 
         // Validate the size of the generated text
-        if example.len() != self.analytics_methods.len() {
+        if example.len() != self.aggregation_methods.len() {
             return Err(LogriaError::InvalidExampleSplit(
                 example.len(),
-                self.analytics_methods.len(),
+                self.aggregation_methods.len(),
             ));
         }
         Ok(example)
@@ -204,7 +203,7 @@ mod tests {
         constants::directories::patterns,
         extensions::{
             extension::ExtensionMethods,
-            parser::{Parser, PatternType},
+            parser::{AggregationMethod, Parser, PatternType},
         },
     };
 
@@ -212,16 +211,24 @@ mod tests {
     fn test_list_full() {
         // Create a parser for use by this test
         let mut map = HashMap::new();
-        map.insert(String::from("Date"), String::from("date"));
-        map.insert(String::from("Caller"), String::from("count"));
-        map.insert(String::from("Level"), String::from("count"));
-        map.insert(String::from("Message"), String::from("sum"));
+        map.insert(
+            String::from("Date"),
+            AggregationMethod::Date(String::from("[year]-[month]-[day]")),
+        );
+        map.insert(String::from("Method"), AggregationMethod::Count);
+        map.insert(String::from("Level"), AggregationMethod::Count);
+        map.insert(String::from("Message"), AggregationMethod::Sum);
         let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
             map,
-            None,
         );
         parser.save("Hyphen Separated Test 3").unwrap();
 
@@ -235,16 +242,24 @@ mod tests {
     fn test_list_clean() {
         // Create a parser for use by this test
         let mut map = HashMap::new();
-        map.insert(String::from("Date"), String::from("date"));
-        map.insert(String::from("Caller"), String::from("count"));
-        map.insert(String::from("Level"), String::from("count"));
-        map.insert(String::from("Message"), String::from("sum"));
+        map.insert(
+            String::from("Date"),
+            AggregationMethod::Date(String::from("[year]-[month]-[day]")),
+        );
+        map.insert(String::from("Method"), AggregationMethod::Count);
+        map.insert(String::from("Level"), AggregationMethod::Count);
+        map.insert(String::from("Message"), AggregationMethod::Sum);
         let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
             map,
-            None,
         );
         parser.save("Hyphen Separated Test 3").unwrap();
 
@@ -255,16 +270,86 @@ mod tests {
     #[test]
     fn serialize_deserialize_session() {
         let mut map = HashMap::new();
-        map.insert(String::from("Date"), String::from("date"));
-        map.insert(String::from("Caller"), String::from("count"));
-        map.insert(String::from("Level"), String::from("count"));
-        map.insert(String::from("Message"), String::from("sum"));
+        map.insert(
+            String::from("Date"),
+            AggregationMethod::Date(String::from("[year]-[month]-[day]")),
+        );
+        map.insert(String::from("Method"), AggregationMethod::Count);
+        map.insert(String::from("Level"), AggregationMethod::Count);
+        map.insert(String::from("Message"), AggregationMethod::Sum);
+        let mut map2 = HashMap::new();
+        map2.insert(
+            String::from("Date"),
+            AggregationMethod::Date(String::from("[year]-[month]-[day]")),
+        );
+        map2.insert(String::from("Method"), AggregationMethod::Count);
+        map2.insert(String::from("Level"), AggregationMethod::Count);
+        map2.insert(String::from("Message"), AggregationMethod::Sum);
         let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
-            map.to_owned(),
-            None,
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
+            map2,
+        );
+        parser.save("Hyphen Separated Test 4").unwrap();
+
+        let file_name = format!("{}/{}", patterns(), "Hyphen Separated Test 4");
+        let read_parser = Parser::load(&file_name).unwrap();
+        let expected_parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
+            map,
+        );
+        assert_eq!(read_parser.pattern, expected_parser.pattern);
+        assert_eq!(read_parser.pattern_type, expected_parser.pattern_type);
+        assert_eq!(
+            read_parser.aggregation_methods,
+            expected_parser.aggregation_methods
+        );
+    }
+
+    #[test]
+    fn serialize_deserialize_session_datetime() {
+        let mut map = HashMap::new();
+        map.insert(
+            String::from("DateTime"),
+            AggregationMethod::DateTime(String::from("[year]-[month]-[day] [hour]:[month]:[second]")),
+        );
+        map.insert(String::from("Method"), AggregationMethod::Count);
+        map.insert(String::from("Level"), AggregationMethod::Count);
+        map.insert(String::from("Message"), AggregationMethod::Sum);
+        let mut map2 = HashMap::new();
+        map2.insert(
+            String::from("DateTime"),
+            AggregationMethod::DateTime(String::from("[year]-[month]-[day] [hour]:[month]:[second]")),
+        );
+        map2.insert(String::from("Method"), AggregationMethod::Count);
+        map2.insert(String::from("Level"), AggregationMethod::Count);
+        map2.insert(String::from("Message"), AggregationMethod::Sum);
+        let parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
+            map2,
         );
         parser.save("Hyphen Separated Test 2").unwrap();
 
@@ -274,33 +359,38 @@ mod tests {
             String::from(" - "),
             PatternType::Split,
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
             map,
-            None,
         );
         assert_eq!(read_parser.pattern, expected_parser.pattern);
         assert_eq!(read_parser.pattern_type, expected_parser.pattern_type);
         assert_eq!(
-            read_parser.analytics_methods,
-            expected_parser.analytics_methods
+            read_parser.aggregation_methods,
+            expected_parser.aggregation_methods
         );
     }
 
     #[test]
     fn can_get_regex() {
         let mut map = HashMap::new();
-        map.insert(String::from("Remote Host"), String::from("count"));
-        map.insert(String::from("User ID"), String::from("count"));
-        map.insert(String::from("Username"), String::from("count"));
-        map.insert(String::from("Date"), String::from("count"));
-        map.insert(String::from("Request"), String::from("count"));
-        map.insert(String::from("Status"), String::from("count"));
-        map.insert(String::from("Size"), String::from("count"));
+        map.insert(String::from("Remote Host"), AggregationMethod::Count);
+        map.insert(String::from("User ID"), AggregationMethod::Count);
+        map.insert(String::from("Username"), AggregationMethod::Count);
+        map.insert(String::from("Date"), AggregationMethod::Count);
+        map.insert(String::from("Request"), AggregationMethod::Count);
+        map.insert(String::from("Status"), AggregationMethod::Count);
+        map.insert(String::from("Size"), AggregationMethod::Count);
         let parser = Parser::new(
             String::from("([^ ]*) ([^ ]*) ([^ ]*) \\[([^]]*)\\] \"([^\"]*)\" ([^ ]*) ([^ ]*)"),
             PatternType::Regex,
             String::from("127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326"),
+            vec!["Remote Host".to_string(), "User ID".to_string(), "Username".to_string(), "Date".to_string(), "Request".to_string(), "Status".to_string(), "Size".to_string()],
             map,
-            None
         );
         parser.save("Common Log Format Test 2").unwrap();
 
@@ -313,16 +403,24 @@ mod tests {
     #[test]
     fn cannot_get_regex() {
         let mut map = HashMap::new();
-        map.insert(String::from("Date"), String::from("date"));
-        map.insert(String::from("Caller"), String::from("count"));
-        map.insert(String::from("Level"), String::from("count"));
-        map.insert(String::from("Message"), String::from("sum"));
+        map.insert(
+            String::from("Date"),
+            AggregationMethod::Date(String::from("[year]-[month]-[day]")),
+        );
+        map.insert(String::from("Method"), AggregationMethod::Count);
+        map.insert(String::from("Level"), AggregationMethod::Count);
+        map.insert(String::from("Message"), AggregationMethod::Sum);
         let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
             map,
-            None,
         );
         parser.save("Hyphen Separated Test 1").unwrap();
 
@@ -335,19 +433,19 @@ mod tests {
     #[test]
     fn can_get_example_regex() {
         let mut map = HashMap::new();
-        map.insert(String::from("Remote Host"), String::from("count"));
-        map.insert(String::from("User ID"), String::from("count"));
-        map.insert(String::from("Username"), String::from("count"));
-        map.insert(String::from("Date"), String::from("count"));
-        map.insert(String::from("Request"), String::from("count"));
-        map.insert(String::from("Status"), String::from("count"));
-        map.insert(String::from("Size"), String::from("count"));
+        map.insert(String::from("Remote Host"), AggregationMethod::Count);
+        map.insert(String::from("User ID"), AggregationMethod::Count);
+        map.insert(String::from("Username"), AggregationMethod::Count);
+        map.insert(String::from("Date"), AggregationMethod::Count);
+        map.insert(String::from("Request"), AggregationMethod::Count);
+        map.insert(String::from("Status"), AggregationMethod::Count);
+        map.insert(String::from("Size"), AggregationMethod::Count);
         let parser = Parser::new(
             String::from("([^ ]*) ([^ ]*) ([^ ]*) \\[([^]]*)\\] \"([^\"]*)\" ([^ ]*) ([^ ]*)"),
             PatternType::Regex,
             String::from("127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326"),
+            vec!["Remote Host".to_string(), "User ID".to_string(), "Username".to_string(), "Date".to_string(), "Request".to_string(), "Status".to_string(), "Size".to_string()],
             map,
-            None
         );
         parser.save("Common Log Format Test 1").unwrap();
 
@@ -370,16 +468,24 @@ mod tests {
     #[test]
     fn can_get_example_split() {
         let mut map = HashMap::new();
-        map.insert(String::from("Date"), String::from("date"));
-        map.insert(String::from("Caller"), String::from("count"));
-        map.insert(String::from("Level"), String::from("count"));
-        map.insert(String::from("Message"), String::from("sum"));
+        map.insert(
+            String::from("Date"),
+            AggregationMethod::Date(String::from("[year]-[month]-[day]")),
+        );
+        map.insert(String::from("Method"), AggregationMethod::Count);
+        map.insert(String::from("Level"), AggregationMethod::Count);
+        map.insert(String::from("Message"), AggregationMethod::Sum);
         let parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
             String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
             map,
-            None,
         );
         parser.save("Hyphen Separated Test 2").unwrap();
 

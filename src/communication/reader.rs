@@ -33,16 +33,15 @@ pub mod main {
             },
         },
         constants::cli::{
-            cli_chars,
+            cli_chars, colors,
             messages::{NO_MESSAGE_IN_BUFFER_NORMAL, NO_MESSAGE_IN_BUFFER_PARSER},
             poll_rate::{DEFAULT, FASTEST, SLOWEST},
         },
-        extensions::parser::Parser,
         ui::{interface::build, scroll::ScrollState},
         util::{poll::RollingMean, sanitizers::length::LengthFinder, types::Del},
     };
 
-    pub struct LogiraConfig {
+    pub struct LogriaConfig {
         pub width: u16,         // Window width
         pub height: u16,        // Window height
         pub last_row: u16, // The last row we can render, aka number of lines visible in the tty
@@ -63,15 +62,14 @@ pub mod main {
         pub highlight_match: bool, // Determines whether we highlight the matched text to the user
 
         // Parser settings
-        pub parser: Option<Parser>,      // Reference to the current parser
         pub parser_index: usize,         // Index for the parser to look at
         pub parser_state: ParserState,   // The state of the current parser
-        pub analytics_enabled: bool,     // Whether we are calcualting stats or not
+        pub aggregation_enabled: bool,   // Whether we are aggregating log data or not
         pub last_index_processed: usize, // The last index the parsing function saw
+        pub num_to_aggregate: usize,     // The number of items to get when aggregating a Counter
 
         // App state
         loop_time: Instant, // How long a loop of the main app takes
-        insert_mode: bool,  // Default to insert mode (like vim) off
         pub poll_rate: u64, // The rate at which we check for new messages
         pub message_speed_tracker: RollingMean, // A deque based moving average tracker
         smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
@@ -89,7 +87,7 @@ pub mod main {
     }
 
     pub struct MainWindow {
-        pub config: LogiraConfig,
+        pub config: LogriaConfig,
         pub input_type: InputType,
         pub previous_input_type: InputType,
         pub output: Stdout,
@@ -98,7 +96,7 @@ pub mod main {
     }
 
     impl MainWindow {
-        /// Construct sample window for testing
+        /// Construct sample window for testing simple actions
         pub fn _new_dummy() -> MainWindow {
             let mut app = MainWindow::new(true, true);
 
@@ -117,6 +115,27 @@ pub mod main {
             app
         }
 
+        /// Construct sample window for testing parsers
+        pub fn _new_dummy_parse() -> MainWindow {
+            let mut app = MainWindow::new(true, true);
+
+            // Set fake dimensions
+            app.config.height = 10;
+            app.config.width = 100;
+            app.config.stream_type = StreamType::StdErr;
+            app.config.previous_stream_type = StreamType::StdOut;
+
+            // Set fake previous render
+            app.config.last_row = app.config.height - 3; // simulate the last row we can render to
+
+            // Set fake messages
+            app.config.stderr_messages = (10..110)
+                .map(|x| format!("{} - {} - {} - {}", x, x - 1, x - 2, x - 3))
+                .collect();
+
+            app
+        }
+
         pub fn new(history: bool, smart_poll_rate: bool) -> MainWindow {
             // Build streams here
             MainWindow {
@@ -125,7 +144,7 @@ pub mod main {
                 output: stdout(),
                 length_finder: LengthFinder::new(),
                 mc_handler: MultipleChoiceHandler::new(),
-                config: LogiraConfig {
+                config: LogriaConfig {
                     poll_rate: DEFAULT,
                     smart_poll_rate,
                     use_history: history,
@@ -133,9 +152,9 @@ pub mod main {
                     width: 0,
                     loop_time: Instant::now(),
                     previous_render: (0, 0),
-                    stderr_messages: vec![],    // TODO: fix
-                    stdout_messages: vec![],    // TODO: fix
-                    auxiliary_messages: vec![], // TODO: fix
+                    stderr_messages: vec![],
+                    stdout_messages: vec![],
+                    auxiliary_messages: vec![],
                     stream_type: StreamType::Auxiliary,
                     previous_stream_type: StreamType::Auxiliary,
                     regex_pattern: None,
@@ -145,12 +164,11 @@ pub mod main {
                         crate::constants::cli::patterns::ANSI_COLOR_PATTERN,
                     )
                     .unwrap(),
-                    parser: None,
                     parser_index: 0,
                     parser_state: ParserState::Disabled,
-                    analytics_enabled: false,
+                    aggregation_enabled: false,
+                    num_to_aggregate: 5,
                     last_index_processed: 0,
-                    insert_mode: false,
                     highlight_match: false,
                     last_row: 0,
                     scroll_state: ScrollState::Bottom,
@@ -184,7 +202,7 @@ pub mod main {
                     }
                 }
                 InputType::Parser => {
-                    if self.config.parser.is_some() {
+                    if self.config.parser_state == ParserState::Full {
                         self.config.auxiliary_messages.len()
                     } else {
                         self.messages().len()
@@ -230,7 +248,6 @@ pub mod main {
                         };
 
                         // Determine if we can fit the next message
-                        // TODO: Fix Cast here
                         let message_length = self.length_finder.get_real_length(message);
                         rows += max(
                             1,
@@ -309,7 +326,7 @@ pub mod main {
         /// Highlight the regex matched text with an ASCII escape code
         fn highlight_match(&self, message: String) -> String {
             // Regex out any existing color codes
-            // We use a bytes regex becasue we cannot compile the pattern using normal regex
+            // We use a bytes regex because we cannot compile the pattern using normal regex
             let clean_message = self
                 .config
                 .color_replace_regex
@@ -329,10 +346,10 @@ pub mod main {
             {
                 new_msg.extend(clean_message[last_end..capture.start()].to_vec());
                 // Add start color string
-                new_msg.extend("\x1b[35m".as_bytes().to_vec());
+                new_msg.extend(colors::HIGHLIGHT_COLOR.as_bytes().to_vec());
                 new_msg.extend(clean_message[capture.start()..capture.end()].to_vec());
                 // Add end color string
-                new_msg.extend("\x1b[0m".as_bytes().to_vec());
+                new_msg.extend(colors::RESET_COLOR.as_bytes().to_vec());
                 // Store the ending in case we have multiple matches so we can add the end later
                 last_end = capture.end();
             }
@@ -374,7 +391,8 @@ pub mod main {
             }
 
             // Don't do anything if nothing changed; start at index 0
-            if !self.config.analytics_enabled && self.config.previous_render == (max(0, start), end)
+            if !self.config.aggregation_enabled
+                && self.config.previous_render == (max(0, start), end)
             {
                 queue!(self.output, cursor::RestorePosition)?;
                 return Ok(());
@@ -421,7 +439,7 @@ pub mod main {
                 }
 
                 // Adding padding and printing over the rest of the line is better than
-                // clearing the screen and writing again. This is becuase we can only fit
+                // clearing the screen and writing again. This is because we can only fit
                 // a few items into the render queue. Because the queue is flushed
                 // automatically when it is full, we end up having a lot of partial screen
                 // renders, i.e. a lot of flickering, which makes for bad UX. This is not
@@ -445,7 +463,7 @@ pub mod main {
             if current_row > 0 {
                 let clear_line = " ".repeat(width);
                 (0..current_row).for_each(|row| {
-                    // No `?` here becuase it is inside of a closure
+                    // No `?` here because it is inside of a closure
                     queue!(
                         self.output,
                         cursor::MoveTo(0, row),
@@ -488,7 +506,8 @@ pub mod main {
 
         /// Move the cursor to the CLI window
         pub fn go_to_cli(&mut self) -> Result<()> {
-            queue!(self.output, cursor::MoveTo(1, self.config.height - 2))?;
+            let cli_position = self.config.height - 2;
+            queue!(self.output, cursor::MoveTo(1, cli_position))?;
             Ok(())
         }
 
@@ -515,12 +534,13 @@ pub mod main {
 
         /// Overwrites the output window with empty space
         /// TODO: faster?
-        /// Unused currently because it is too slow and causes flickering
+        ///! Unused currently because it is too slow and causes flickering
         pub fn reset_output(&mut self) -> Result<()> {
+            let last_row = self.config.last_row - 1;
             execute!(self.output, cursor::SavePosition)?;
             queue!(
                 self.output,
-                cursor::MoveTo(1, self.config.last_row - 1),
+                cursor::MoveTo(1, last_row),
                 Clear(ClearType::CurrentLine),
                 Clear(ClearType::FromCursorUp),
             )?;
@@ -531,7 +551,7 @@ pub mod main {
         /// Empty the command line
         pub fn reset_command_line(&mut self) -> Result<()> {
             // Leave padding for surrounding rectangle, we cannot use deleteln because it destroys the rectangle
-            // TODO: Store this string as a class attribute, recalc on resize
+            // TODO: Store this string as a class attribute, re-calculate on resize
             let clear = " ".repeat((self.config.width - 3) as usize);
             self.go_to_cli()?;
 
@@ -562,9 +582,12 @@ pub mod main {
                 InputType::Regex => content.unwrap_or(cli_chars::REGEX_CHAR),
                 InputType::Parser => content.unwrap_or(cli_chars::PARSER_CHAR),
             };
+
+            // Write the CLI cursor in the command line bounding box
+            let cli_char_vertical = self.config.last_row + 1;
             execute!(
                 self.output,
-                cursor::MoveTo(0, self.config.last_row + 1),
+                cursor::MoveTo(0, cli_char_vertical),
                 style::Print(first_char)
             )?;
             Ok(())
@@ -588,6 +611,7 @@ pub mod main {
             self.config.height = h;
             self.config.width = w;
             self.config.last_row = self.config.height.checked_sub(3).unwrap_or(h);
+            build(self)?;
             Ok(())
         }
 
@@ -624,7 +648,7 @@ pub mod main {
             // Build the app
             if let Some(c) = commands {
                 // Build streams from the command used to launch Logria
-                // If we cannot save to the disk, write to the command line and start wtihout saving
+                // If we cannot save to the disk, write to the command line and start without saving
                 let possible_streams = build_streams_from_input(&c, true);
                 match possible_streams {
                     Ok(streams) => self.config.streams = streams,
@@ -661,7 +685,7 @@ pub mod main {
         }
 
         /// Update stderr and stdout buffers from every stream's queue
-        fn recieve_streams(&mut self) -> u64 {
+        fn receive_streams(&mut self) -> u64 {
             let mut total_messages = 0;
             for stream in &self.config.streams {
                 // Read from streams until there is no more input
@@ -702,7 +726,7 @@ pub mod main {
             self.go_to_cli()?;
 
             // Initial message collection
-            self.recieve_streams();
+            self.receive_streams();
 
             // Default is StdErr, swap based on number of messages
             if self.config.stdout_messages.len() > self.config.stderr_messages.len() {
@@ -716,7 +740,7 @@ pub mod main {
             loop {
                 // Update streams and poll rate
                 // let t_0 = Instant::now();
-                let num_new_messages = self.recieve_streams();
+                let num_new_messages = self.receive_streams();
                 self.handle_smart_poll_rate(self.config.loop_time.elapsed(), num_new_messages);
                 // self.write_to_command_line(&format!(
                 //     "{} in {:?}",
@@ -734,24 +758,27 @@ pub mod main {
                             // Otherwise, match input to action
                             match self.input_type {
                                 InputType::Normal => {
-                                    normal_handler.recieve_input(self, input.code)?
+                                    normal_handler.receive_input(self, input.code)?
                                 }
                                 InputType::Command => {
-                                    command_handler.recieve_input(self, input.code)?
+                                    command_handler.receive_input(self, input.code)?
                                 }
                                 InputType::Regex => {
-                                    regex_handler.recieve_input(self, input.code)?
+                                    regex_handler.receive_input(self, input.code)?
                                 }
                                 InputType::Parser => {
-                                    parser_handler.recieve_input(self, input.code)?
+                                    parser_handler.receive_input(self, input.code)?
                                 }
                                 InputType::Startup => {
-                                    startup_handler.recieve_input(self, input.code)?
+                                    startup_handler.receive_input(self, input.code)?
                                 }
                             }
                         }
-                        Event::Mouse(event) => {} // Probably remove
-                        Event::Resize(width, height) => {} // Call self.dimensions() and some other stuff
+                        Event::Mouse(_) => {} // Probably remove
+                        Event::Resize(_, _) => {
+                            self.update_dimensions()?;
+                            self.redraw()?;
+                        }
                     }
                 }
                 // possibly sleep, cleanup, etc
@@ -767,13 +794,14 @@ pub mod main {
                             }
                         }
                         InputType::Parser => {
-                            if self.config.parser.is_some() {
+                            if self.config.parser_state == ParserState::Full {
                                 parser_handler.process_matches(self)?;
                             }
                             if self.config.did_switch {
                                 // 2 ticks, one to process the current input and another to refresh
-                                parser_handler.recieve_input(self, refresh_key)?;
-                                parser_handler.recieve_input(self, refresh_key)?;
+                                // Did I just write a hack for my own app?
+                                parser_handler.receive_input(self, refresh_key)?;
+                                parser_handler.receive_input(self, refresh_key)?;
                                 self.config.did_switch = false;
                             }
                         }
@@ -998,7 +1026,7 @@ pub mod main {
 
             assert_eq!(logria.config.poll_rate, 10);
 
-            // Update the poll rate, dont go to 1000
+            // Update the poll rate, don't go to 1000
             logria.handle_smart_poll_rate(Duration::new(0, 10000000), 0);
 
             assert_eq!(logria.config.poll_rate, 13);

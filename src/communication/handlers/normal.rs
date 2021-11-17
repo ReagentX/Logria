@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use crossterm::{cursor, event::KeyCode, queue, Result};
 
 use super::handler::Handler;
@@ -59,7 +57,7 @@ impl Handler for NormalHandler {
         NormalHandler {}
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
+    fn receive_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
         match key {
             // Scroll
             KeyCode::Down => scroll::down(window),

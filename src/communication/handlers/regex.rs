@@ -30,7 +30,7 @@ impl RegexHandler {
         }
     }
 
-    /// Save the user input pattern to the main window conig
+    /// Save the user input pattern to the main window config
     fn set_pattern(&mut self, window: &mut MainWindow) -> Result<()> {
         let pattern = match self.input_handler.gather(window) {
             Ok(pattern) => pattern,
@@ -47,7 +47,6 @@ impl RegexHandler {
                 Some(regex)
             }
             Err(e) => {
-                // TODO: Alert user of invalid regex somehow?
                 window.write_to_command_line(&format!("Invalid regex: /{}/ ({})", pattern, e))?;
                 None
             }
@@ -60,7 +59,7 @@ impl RegexHandler {
 
 impl ProcessorMethods for RegexHandler {
     /// Process matches, loading the buffer of indexes to matched messages in the main buffer
-    fn process_matches(&self, window: &mut MainWindow) -> Result<()> {
+    fn process_matches(&mut self, window: &mut MainWindow) -> Result<()> {
         // TODO: Possibly async? Possibly loading indicator for large jobs?
         match &self.current_pattern {
             Some(_) => {
@@ -116,7 +115,7 @@ impl Handler for RegexHandler {
         }
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
+    fn receive_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
         match &self.current_pattern {
             Some(_) => match key {
                 // Scroll
@@ -159,7 +158,7 @@ impl Handler for RegexHandler {
                     window.redraw()?;
                 }
                 KeyCode::Esc => self.return_to_normal(window)?,
-                key => self.input_handler.recieve_input(window, key)?,
+                key => self.input_handler.receive_input(window, key)?,
             },
         }
         Ok(())
@@ -250,7 +249,7 @@ mod tests {
     #[should_panic]
     fn test_cant_process_no_pattern() {
         let mut logria = MainWindow::_new_dummy();
-        let handler = super::RegexHandler::new();
+        let mut handler = super::RegexHandler::new();
 
         // Set state to regex mode
         logria.input_type = InputType::Regex;
@@ -286,7 +285,7 @@ mod tests {
 
         // Simulate keystroke for command mode
         handler
-            .recieve_input(&mut logria, KeyCode::Char(':'))
+            .receive_input(&mut logria, KeyCode::Char(':'))
             .unwrap();
 
         // Ensure we have the same amount of messages as when the regex was active

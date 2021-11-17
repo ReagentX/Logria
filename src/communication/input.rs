@@ -30,7 +30,7 @@ pub mod stream {
     pub struct InputStream {
         pub stdout: Receiver<String>,
         pub stderr: Receiver<String>,
-        pub proccess_name: String,
+        pub process_name: String,
         pub process: Result<std::thread::JoinHandle<()>, std::io::Error>,
         _type: String,
     }
@@ -94,7 +94,7 @@ pub mod stream {
             Ok(InputStream {
                 stdout: out_rx,
                 stderr: err_rx,
-                proccess_name: name,
+                process_name: name,
                 process,
                 _type: String::from("FileInput"),
             })
@@ -169,7 +169,7 @@ pub mod stream {
             Ok(InputStream {
                 stdout: out_rx,
                 stderr: err_rx,
-                proccess_name: name,
+                process_name: name,
                 process,
                 _type: String::from("CommandInput"),
             })
@@ -177,7 +177,7 @@ pub mod stream {
     }
 
     fn determine_stream_type(command: &str) -> SessionType {
-        // TODO: Fix logic, doesnt work for  "ls -lga"
+        // TODO: Fix logic, doesn't work for  "ls -lga"
         let path = Path::new(command);
         match path.exists() {
             true => SessionType::File,

@@ -10,6 +10,10 @@ pub enum LogriaError {
     CannotRead(String, String),
     CannotWrite(String, String),
     CannotRemove(String, String),
+    CannotParseDate(String),
+    InvalidCommand(String),
+    CannotParseMessage(String),
+    InvalidParserState(String),
 }
 
 impl Display for LogriaError {
@@ -30,9 +34,21 @@ impl Display for LogriaError {
             LogriaError::CannotRead(path, why) => write!(fmt, "Couldn't open {:?}: {}", path, why),
             LogriaError::CannotWrite(path, why) => {
                 write!(fmt, "Couldn't write {:?}: {}", path, why)
-            },
+            }
             LogriaError::CannotRemove(path, why) => {
                 write!(fmt, "Couldn't remove {:?}: {}", path, why)
+            }
+            LogriaError::CannotParseDate(msg) => {
+                write!(fmt, "Invalid format description: {}", msg)
+            }
+            LogriaError::InvalidCommand(msg) => {
+                write!(fmt, "Invalid poll command: {}", msg)
+            }
+            LogriaError::CannotParseMessage(msg) => {
+                write!(fmt, "Unable to parse message: {}", msg)
+            }
+            LogriaError::InvalidParserState(msg) => {
+                write!(fmt, "Invalid parser state: {}", msg)
             }
         }
     }

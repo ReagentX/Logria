@@ -3,13 +3,16 @@ use std::io::Write;
 use crossterm::{event::KeyCode, Result};
 
 use super::handler::Handler;
-use crate::communication::{
-    handlers::user_input::UserInputHandler, input::stream_type::StreamType,
-    reader::main::MainWindow,
+use crate::{
+    communication::{
+        handlers::user_input::UserInputHandler, input::stream_type::StreamType,
+        reader::main::MainWindow,
+    },
+    util::error::LogriaError,
 };
 
 pub struct CommandHandler {
-    input_hander: UserInputHandler,
+    input_handler: UserInputHandler,
 }
 
 impl CommandHandler {
@@ -23,19 +26,41 @@ impl CommandHandler {
         Ok(())
     }
 
-    fn resolve_poll_rate(&self, command: &str) -> Result<u64> {
+    fn resolve_poll_rate(&self, command: &str) -> std::result::Result<u64, LogriaError> {
         let parts: Vec<&str> = command.split(' ').collect(); // ["poll", "42", ...]
         if parts.len() < 2 {
-            return Err(crossterm::ErrorKind::FmtError(std::fmt::Error));
+            return Err(LogriaError::InvalidCommand(format!(
+                "No poll delay provided {:?}",
+                parts
+            )));
         }
-        Ok(parts[1].parse::<u64>()?)
+        match parts[1].parse::<u64>() {
+            Ok(parsed) => Ok(parsed),
+            Err(why) => Err(LogriaError::InvalidCommand(format!("{:?}", why))),
+        }
     }
 
-    fn resolve_delete_command(&self, command: &str) -> Result<Vec<usize>> {
+    fn resolve_aggregation_count(&self, command: &str) -> std::result::Result<usize, LogriaError> {
+        let parts: Vec<&str> = command.split(' ').collect(); // ["agg", "42", ...]
+        if parts.len() < 2 {
+            return Err(LogriaError::InvalidCommand(format!(
+                "No aggregation count provided: {:?}",
+                parts
+            )));
+        }
+        match parts[1].parse::<usize>() {
+            Ok(parsed) => Ok(parsed),
+            Err(why) => Err(LogriaError::InvalidCommand(format!("{:?}", why))),
+        }
+    }
+
+    fn resolve_delete_command(
+        &self,
+        command: &str,
+    ) -> std::result::Result<Vec<usize>, LogriaError> {
         // Validate length
         if command.len() < 3 {
-            // TODO: Use proper error here
-            return Err(crossterm::ErrorKind::FmtError(std::fmt::Error));
+            return Err(LogriaError::InvalidCommand(format!("{:?}", command)));
         }
 
         // Remove "r " from the string
@@ -53,16 +78,28 @@ impl CommandHandler {
 
                 // Parse range
                 // This code is repeated because we cannot break from the loop if we use a closure
-                let start = range[0].parse::<usize>()?;
-                let end = range[1].parse::<usize>()?;
+                match (range[0].parse::<usize>(), range[1].parse::<usize>()) {
+                    (Ok(start), Ok(end)) => {
+                        (start..end + 1).for_each(|step| out_l.push(step));
+                    }
+                    (_, _) => {
+                        return Err(LogriaError::InvalidCommand(format!(
+                            "range invalid: {:?}",
+                            &range
+                        )))
+                    }
+                }
 
                 // Add all items to the range
-                (start..end + 1).for_each(|step| out_l.push(step));
             } else {
                 // Parse the value
                 if !part.is_empty() {
-                    let num = part.parse::<usize>()?;
-                    out_l.push(num);
+                    match part.parse::<usize>() {
+                        Ok(num) => {
+                            out_l.push(num);
+                        }
+                        Err(why) => return Err(LogriaError::InvalidCommand(format!("{:?}", why))),
+                    }
                 }
             }
         }
@@ -134,6 +171,19 @@ impl CommandHandler {
         // Go back to start screen
         else if command.starts_with("restart") {
             window.write_to_command_line("Restart")?
+        } else if command.starts_with("agg") {
+            match self.resolve_aggregation_count(command) {
+                Ok(val) => {
+                    window.config.num_to_aggregate = val;
+                    // TODO: This wont cause the screen to re-render until there is a new message to get parsed
+                }
+                Err(why) => {
+                    window.write_to_command_line(&format!(
+                        "Failed to parse remove command: {:?}",
+                        why
+                    ))?;
+                }
+            }
         } else {
             window.write_to_command_line(&format!("Invalid command: {:?}", command))?;
         }
@@ -145,15 +195,15 @@ impl CommandHandler {
 impl Handler for CommandHandler {
     fn new() -> CommandHandler {
         CommandHandler {
-            input_hander: UserInputHandler::new(),
+            input_handler: UserInputHandler::new(),
         }
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
+    fn receive_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
         match key {
             // Execute the command
             KeyCode::Enter => {
-                let command = match self.input_hander.gather(window) {
+                let command = match self.input_handler.gather(window) {
                     Ok(command) => command,
                     Err(why) => panic!("Unable to gather text: {:?}", why),
                 };
@@ -161,7 +211,7 @@ impl Handler for CommandHandler {
             }
             // Go back to the previous state
             KeyCode::Esc => self.return_to_prev_state(window)?,
-            key => self.input_hander.recieve_input(window, key)?,
+            key => self.input_handler.receive_input(window, key)?,
         }
         Ok(())
     }

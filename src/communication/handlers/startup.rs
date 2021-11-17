@@ -109,7 +109,7 @@ impl Handler for StartupHandler {
         }
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
+    fn receive_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
         match key {
             // Scroll
             KeyCode::Down => scroll::down(window),
@@ -136,7 +136,7 @@ impl Handler for StartupHandler {
             }
 
             // User input
-            key => self.input_handler.recieve_input(window, key)?,
+            key => self.input_handler.receive_input(window, key)?,
         }
         window.redraw()?;
         Ok(())

@@ -1,11 +1,12 @@
+use std::path::Path;
+
 use crossterm::{event::KeyCode, Result};
 use regex::Regex;
 
 use crate::{
     communication::{
         handlers::{
-            handler::Handler, multiple_choice::MultipleChoiceHandler,
-            processor::ProcessorMethods,
+            handler::Handler, multiple_choice::MultipleChoiceHandler, processor::ProcessorMethods,
         },
         input::{input_type::InputType::Normal, stream_type::StreamType},
         reader::main::MainWindow,
@@ -15,10 +16,20 @@ use crate::{
         parser::{Parser, PatternType},
     },
     ui::scroll,
-    util::error::LogriaError,
+    util::{
+        aggregators::{
+            aggregator::AggregationMethod,
+            counter::Counter,
+            date::{Date, DateParserType},
+            mean::Mean,
+            none::NoneAg,
+            sum::Sum,
+        },
+        error::LogriaError,
+    },
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ParserState {
     Disabled,
     NeedsParser,
@@ -30,11 +41,11 @@ pub struct ParserHandler {
     mc_handler: MultipleChoiceHandler,
     redraw: bool,   // True if we should redraw the choices in the window
     status: String, // Stores the current parser and index for the user
+    parser: Option<Parser>,
 }
 
 impl ParserHandler {
     /// Setup the parser instance on the main window
-    // TODO: Make this and select_index send proper function handle to window.config.generate_auxiliary_messages
     // So that we render the text when it updates from deletion commands
     pub fn parser_messages_handle() -> Vec<String> {
         let mut body_text = vec![];
@@ -54,7 +65,7 @@ impl ParserHandler {
 
     /// Set which index of the parsed message to render
     fn select_index(&mut self, window: &mut MainWindow) -> Result<()> {
-        if let Some(parser) = &window.config.parser {
+        if let Some(parser) = &self.parser {
             match parser.get_example() {
                 Ok(examples) => {
                     self.mc_handler.set_choices(&examples);
@@ -75,39 +86,114 @@ impl ParserHandler {
 
     /// Parse a message with the current parser rules
     fn parse(
-        &self,
-        parser: &Parser,
+        &mut self,
         index: usize,
         message: &str,
     ) -> std::result::Result<Option<String>, LogriaError> {
-        match parser.pattern_type {
-            PatternType::Regex => match parser.get_regex() {
+        match self.parser.as_ref().unwrap().pattern_type {
+            PatternType::Regex => match self.parser.as_ref().unwrap().get_regex() {
                 Ok(pattern) => Ok(self.regex_handle(message, index, pattern)),
                 Err(why) => Err(why),
             },
-            PatternType::Split => Ok(self.split_handle(message, index, &parser.pattern)),
+            PatternType::Split => {
+                Ok(self.split_handle(message, index, &self.parser.as_ref().unwrap().pattern))
+            }
         }
     }
 
-    /// Parse message with regex logic
+    /// Parse a message with regex logic
     fn regex_handle(&self, message: &str, index: usize, pattern: Regex) -> Option<String> {
         pattern
             .captures(message)
             .map(|captures| captures.get(index).unwrap().as_str().to_owned())
     }
 
-    /// Parse message with split logic
+    /// Parse a message with split logic
     fn split_handle(&self, message: &str, index: usize, pattern: &str) -> Option<String> {
         let result: Vec<&str> = message.split_terminator(pattern).collect();
         result.get(index).map(|part| String::from(*part))
     }
 
+    /// Handle aggregation logic for a single message
+    fn aggregate_handle(
+        &mut self,
+        message: &str,
+        num_to_get: &usize,
+        render: bool,
+    ) -> std::result::Result<Vec<String>, LogriaError> {
+        match &self.parser {
+            Some(parser) => {
+                // Split message into a Vec<&str> of its parts
+                let message_parts: std::result::Result<Vec<&str>, LogriaError> = match parser
+                    .pattern_type
+                {
+                    PatternType::Regex => match parser.get_regex() {
+                        Ok(pattern) => {
+                            if let Some(captures) = pattern.captures(message) {
+                                Ok(captures
+                                    .iter()
+                                    .skip(1)
+                                    .flatten()
+                                    .map(|f| f.as_str())
+                                    .collect())
+                            } else {
+                                Err(LogriaError::CannotParseMessage(
+                                    "regex did not match message!".to_string(),
+                                ))
+                            }
+                        }
+                        Err(why) => Err(why),
+                    },
+                    PatternType::Split => Ok(message.split_terminator(&parser.pattern).collect()),
+                };
+
+                match message_parts {
+                    Ok(message_parts) => {
+                        // If we got this far, allocate the return value
+                        let mut aggregated_data = vec![];
+                        for (idx, part) in message_parts.iter().enumerate() {
+                            // Clone here so we can use a mutable reference later
+                            if let Some(item) =
+                                self.parser.as_ref().unwrap().order.get(idx).cloned()
+                            {
+                                if let Some(aggregator) =
+                                    self.parser.as_mut().unwrap().aggregator_map.get_mut(&item)
+                                {
+                                    aggregator.update(part)?;
+                                    if render {
+                                        aggregated_data.push(item);
+                                        aggregated_data.extend(aggregator.messages(num_to_get));
+                                    }
+                                } else {
+                                    return Err(LogriaError::InvalidParserState(format!(
+                                        "aggregator missing for {}!",
+                                        item
+                                    )));
+                                }
+                            } else {
+                                return Err(LogriaError::CannotParseMessage(
+                                    "number of aggregation methods not equal to number of matches!"
+                                        .to_string(),
+                                ));
+                            }
+                        }
+                        Ok(aggregated_data)
+                    }
+                    Err(why) => Err(why),
+                }
+            }
+            None => Err(LogriaError::InvalidParserState(
+                "no parser selected!".to_string(),
+            )),
+        }
+    }
+
     /// Reset parser
-    fn reset(&self, window: &mut MainWindow) {
+    fn reset(&mut self, window: &mut MainWindow) {
         // Parser still active, but not set up
         window.config.parser_state = ParserState::NeedsParser;
         window.config.auxiliary_messages.clear();
-        window.config.parser = None;
+        self.parser = None;
         window.config.parser_index = 0;
         window.config.did_switch = true;
     }
@@ -130,48 +216,65 @@ impl ProcessorMethods for ParserHandler {
     /// Clear the parsed messages from the message buffer
     fn clear_matches(&mut self, window: &mut MainWindow) -> Result<()> {
         // TODO: Determine if regex while parsing still works after parser deactivation
-        window.config.parser = None;
+        self.parser = None;
         window.config.auxiliary_messages.clear();
         window.config.last_index_processed = 0;
+        window.config.aggregation_enabled = false;
         self.status.clear();
         window.reset_command_line()?;
         Ok(())
     }
 
     /// Parse messages, loading the buffer of parsed messages in the main window
-    fn process_matches(&self, window: &mut MainWindow) -> Result<()> {
+    fn process_matches(&mut self, window: &mut MainWindow) -> Result<()> {
         // Only process if the parser is set up properly
         if let ParserState::Full = window.config.parser_state {
             // TODO: Possibly async? Possibly loading indicator for large jobs?
-            match &window.config.parser {
-                Some(parser) => {
-                    // Start from where we left off to the most recent message
-                    let buf_range = (
-                        window.config.last_index_processed,
-                        window.previous_messages().len(),
-                    );
+            if self.parser.is_some() {
+                // Start from where we left off to the most recent message
+                let buf_range = (
+                    window.config.last_index_processed,
+                    window.previous_messages().len(),
+                );
 
-                    // Iterate "forever", skipping to the start and taking up till end-start
-                    // TODO: Something to indicate progress
-                    // TODO: Overflow subtraction
-                    for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
-                        if let Ok(Some(message)) = self.parse(
-                            parser,
-                            window.config.parser_index,
+                // Iterate "forever", skipping to the start and taking up till end-start
+                // TODO: Something to indicate progress
+                let last = buf_range.1.checked_sub(1).unwrap_or(buf_range.0);
+                for index in (0..)
+                    .skip(buf_range.0)
+                    .take(buf_range.1.checked_sub(buf_range.0).unwrap_or(buf_range.0))
+                {
+                    if window.config.aggregation_enabled {
+                        match self.aggregate_handle(
                             &window.previous_messages()[index],
+                            &window.config.num_to_aggregate,
+                            index == last,
                         ) {
-                            window.config.auxiliary_messages.push(message);
+                            Ok(aggregated_messages) => {
+                                if !aggregated_messages.is_empty() {
+                                    window.config.auxiliary_messages.clear();
+                                    window.config.auxiliary_messages.extend(aggregated_messages);
+                                }
+                            }
+                            Err(why) => {
+                                // If the message failed parsing, it might just be a different format, so we ignore it
+                                // If the parser is in an invalid state, alert the user
+                                if let LogriaError::CannotParseMessage(error) = why {
+                                    window.write_to_command_line(&error)?;
+                                }
+                            }
                         }
-
-                        // Update the last spot so we know where to start next time
-                        window.config.last_index_processed = index + 1;
+                    } else if let Ok(Some(message)) = self.parse(
+                        window.config.parser_index,
+                        &window.previous_messages()[index],
+                    ) {
+                        window.config.auxiliary_messages.push(message);
                     }
+                    // Update the last spot so we know where to start next time
+                    window.config.last_index_processed = index + 1;
                 }
-                None => {
-                    panic!("Parser state is Full but there is no Parser!");
-                }
-            };
-        }
+            }
+        };
         Ok(())
     }
 }
@@ -182,10 +285,11 @@ impl Handler for ParserHandler {
             mc_handler: MultipleChoiceHandler::new(),
             redraw: true,
             status: String::new(),
+            parser: None,
         }
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> crossterm::Result<()> {
+    fn receive_input(&mut self, window: &mut MainWindow, key: KeyCode) -> crossterm::Result<()> {
         // Enable command mode for parsers
         if key == KeyCode::Char(':') {
             window.set_command_mode(Some(Parser::del))?;
@@ -198,15 +302,76 @@ impl Handler for ParserHandler {
             ParserState::Disabled | ParserState::NeedsParser => {
                 match self.mc_handler.get_choice() {
                     Some(item) => match Parser::load(item) {
-                        Ok(parser) => {
+                        Ok(mut parser) => {
                             // Tell the parser to redraw on the next tick
                             self.redraw = true;
 
                             // Update the status string
-                            self.status.push_str(&format!("Parsing with {}", item));
+                            let name = Path::new(item).file_name().unwrap().to_str().unwrap();
+                            self.status.push_str(&format!("Parsing with {}", name));
+
+                            // Update the parser struct's aggregation map
+                            for method_name in &parser.order {
+                                if let Some(method) = parser.aggregation_methods.get(method_name) {
+                                    match method {
+                                        AggregationMethod::Mean => {
+                                            parser.aggregator_map.insert(
+                                                method_name.to_string(),
+                                                Box::new(Mean::new()),
+                                            );
+                                        }
+                                        AggregationMethod::Mode => {
+                                            parser.aggregator_map.insert(
+                                                method_name.to_string(),
+                                                Box::new(Counter::new()),
+                                            );
+                                        }
+                                        AggregationMethod::Sum => {
+                                            parser.aggregator_map.insert(
+                                                method_name.to_string(),
+                                                Box::new(Sum::new()),
+                                            );
+                                        }
+                                        AggregationMethod::Count => {
+                                            parser.aggregator_map.insert(
+                                                method_name.to_string(),
+                                                Box::new(Counter::new()),
+                                            );
+                                        }
+                                        AggregationMethod::Date(format) => {
+                                            parser.aggregator_map.insert(
+                                                method_name.to_string(),
+                                                Box::new(Date::new(format, DateParserType::Date)),
+                                            );
+                                        }
+                                        AggregationMethod::Time(format) => {
+                                            parser.aggregator_map.insert(
+                                                method_name.to_string(),
+                                                Box::new(Date::new(format, DateParserType::Time)),
+                                            );
+                                        }
+                                        AggregationMethod::DateTime(format) => {
+                                            parser.aggregator_map.insert(
+                                                method_name.to_string(),
+                                                Box::new(Date::new(
+                                                    format,
+                                                    DateParserType::DateTime,
+                                                )),
+                                            );
+                                        }
+                                        AggregationMethod::None => {
+                                            parser.aggregator_map.insert(
+                                                method_name.to_string(),
+                                                Box::new(NoneAg::new()),
+                                            );
+                                        }
+                                    };
+                                }
+                            }
 
                             // Set the new parser and parser state
-                            window.config.parser = Some(parser);
+                            self.parser = Some(parser);
+
                             window.config.parser_state = ParserState::NeedsIndex;
 
                             // Remove the redraw command for deleted items
@@ -215,7 +380,7 @@ impl Handler for ParserHandler {
                             // Move the cursor back to the start of the line
                             window.go_to_cli()?;
 
-                            // Update the auxilery messages for the second setup step
+                            // Update the auxillary messages for the second setup step
                             self.select_index(window)?;
                         }
                         Err(why) => {
@@ -234,7 +399,7 @@ impl Handler for ParserHandler {
                         }
                         window.render_auxiliary_text()?;
                         self.select_parser(window)?;
-                        self.mc_handler.recieve_input(window, key)?;
+                        self.mc_handler.receive_input(window, key)?;
                     }
                 }
             }
@@ -243,7 +408,7 @@ impl Handler for ParserHandler {
                     Some(item) => {
                         // Tell the parser to redraw on the next tick
                         self.redraw = true;
-                        // TODO: More graceful clearing of the mc handler value
+
                         // get_choice() clears the item from the mc handler)
                         self.mc_handler.get_choice();
 
@@ -251,7 +416,7 @@ impl Handler for ParserHandler {
                         window.config.parser_index = item;
                         window.config.parser_state = ParserState::Full;
 
-                        // Clear auxilery messages for next use
+                        // Clear auxillary messages for next use
                         window.config.auxiliary_messages.clear();
 
                         // Process messages
@@ -268,7 +433,7 @@ impl Handler for ParserHandler {
                         window.write_status()?;
                     }
                     None => {
-                        self.mc_handler.recieve_input(window, key)?;
+                        self.mc_handler.receive_input(window, key)?;
                     }
                 }
             }
@@ -290,6 +455,25 @@ impl Handler for ParserHandler {
                         self.reset(window);
                     }
 
+                    // Swap to and from analytics mode
+                    KeyCode::Char('a') => {
+                        if !window.config.aggregation_enabled {
+                            let new_status = self.status.to_owned();
+                            window.config.current_status = Some(new_status.replace(
+                                &format!("field {}", window.config.parser_index),
+                                "aggregation mode",
+                            ));
+                            window.write_status()?;
+                            window.config.aggregation_enabled = true;
+                        } else {
+                            window.config.current_status = Some(self.status.to_owned());
+                            window.config.aggregation_enabled = false;
+                        }
+                        window.config.last_index_processed = 0;
+                        window.write_status()?;
+                        window.config.auxiliary_messages.clear();
+                    }
+
                     // Return to normal
                     KeyCode::Char('z') | KeyCode::Esc => self.return_to_normal(window)?,
 
@@ -298,6 +482,69 @@ impl Handler for ParserHandler {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod parse_tests {
+    use super::ParserHandler;
+    use crate::{
+        communication::handlers::handler::Handler,
+        extensions::parser::{Parser, PatternType},
+        util::aggregators::aggregator::AggregationMethod,
+    };
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_does_split() {
+        // Create handler
+        let mut handler = ParserHandler::new();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("1"), AggregationMethod::Count);
+        let parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from("1"),
+            vec![String::from("1")],
+            map,
+        );
+        handler.parser = Some(parser);
+
+        let parsed_message = handler.parse(0, "I - Am - A - Test").unwrap().unwrap();
+
+        assert_eq!(parsed_message, String::from("I"))
+    }
+
+    #[test]
+    fn test_does_regex() {
+        // Create handler
+        let mut handler = ParserHandler::new();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("1"), AggregationMethod::Count);
+        let parser = Parser::new(
+            String::from("(\\d+)"),
+            PatternType::Regex,
+            String::from("1"),
+            vec![String::from("1")],
+            map,
+        );
+        handler.parser = Some(parser);
+
+        let parsed_message = handler
+            .parse(0, "Log message part 65 test")
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(parsed_message, String::from("65"))
+    }
+
+    #[test]
+    fn test_does_analytics_average() {
+        // TODO: Implement tests for every parser method
     }
 }
 
@@ -314,26 +561,27 @@ mod regex_tests {
             reader::main::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
+        util::aggregators::{aggregator::AggregationMethod, mean::Mean},
     };
 
     #[test]
     fn test_can_setup_with_session_first_index() {
         // Update window config
         let mut logria = MainWindow::_new_dummy();
-        let handler = ParserHandler::new();
+        let mut handler = ParserHandler::new();
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), String::from("count"));
+        map.insert(String::from("1"), AggregationMethod::Count);
         let parser = Parser::new(
             String::from("([1-9])"),
             PatternType::Regex,
             String::from("1"),
+            vec![String::from("1")],
             map,
-            None,
         );
 
-        logria.config.parser = Some(parser);
+        handler.parser = Some(parser);
         logria.config.parser_state = ParserState::Full;
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 0;
@@ -350,21 +598,21 @@ mod regex_tests {
     #[test]
     fn test_can_setup_with_session_second_index() {
         let mut logria = MainWindow::_new_dummy();
-        let handler = ParserHandler::new();
+        let mut handler = ParserHandler::new();
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), String::from("count"));
+        map.insert(String::from("1"), AggregationMethod::Count);
         let parser = Parser::new(
             String::from("([1-9])"),
             PatternType::Regex,
             String::from("1"),
+            vec![String::from("1")],
             map,
-            None,
         );
 
         // Update window config
-        logria.config.parser = Some(parser);
+        handler.parser = Some(parser);
         logria.config.parser_state = ParserState::Full;
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 1;
@@ -375,6 +623,75 @@ mod regex_tests {
         assert_eq!(
             logria.config.auxiliary_messages[0..10],
             vec!["1", "2", "3", "4", "5", "6", "7", "8", "9", "1"]
+        );
+    }
+
+    #[test]
+    fn test_can_setup_with_session_aggregated() {
+        let mut logria = MainWindow::_new_dummy_parse();
+        // Add some messages that can be easily parsed
+        let mut handler = ParserHandler::new();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("full"), AggregationMethod::Mean);
+        map.insert(String::from("minus_1"), AggregationMethod::Mean);
+        map.insert(String::from("minus_2"), AggregationMethod::Mean);
+        map.insert(String::from("minus_3"), AggregationMethod::Mean);
+        let mut parser = Parser::new(
+            String::from("(\\d*?) - (\\d*?) - (\\d*?) - (\\d*?)$"),
+            PatternType::Regex,
+            String::from("1 - 2 - 3 - 4"),
+            vec![
+                String::from("full"),
+                String::from("minus_1"),
+                String::from("minus_2"),
+                String::from("minus_3"),
+            ],
+            map,
+        );
+        parser
+            .aggregator_map
+            .insert(String::from("full"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_1"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_2"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_3"), Box::new(Mean::new()));
+
+        // Update window config
+        handler.parser = Some(parser);
+        logria.config.parser_state = ParserState::Full;
+        logria.input_type = InputType::Parser;
+        logria.config.parser_index = 1;
+        logria.config.previous_stream_type = StreamType::StdErr;
+        logria.config.aggregation_enabled = true;
+
+        handler.process_matches(&mut logria).unwrap();
+        assert_eq!(
+            logria.config.auxiliary_messages,
+            vec![
+                "full",
+                "    Mean: 59.50",
+                "    Count: 100",
+                "    Total: 5,950",
+                "minus_1",
+                "    Mean: 58.50",
+                "    Count: 100",
+                "    Total: 5,850",
+                "minus_2",
+                "    Mean: 57.50",
+                "    Count: 100",
+                "    Total: 5,750",
+                "minus_3",
+                "    Mean: 56.50",
+                "    Count: 100",
+                "    Total: 5,650"
+            ]
         );
     }
 }
@@ -391,26 +708,27 @@ mod split_tests {
             reader::main::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
+        util::aggregators::{aggregator::AggregationMethod, mean::Mean},
     };
 
     #[test]
     fn test_can_setup_with_session_first_index() {
         // Update window config
         let mut logria = MainWindow::_new_dummy();
-        let handler = ParserHandler::new();
+        let mut handler = ParserHandler::new();
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), String::from("count"));
+        map.insert(String::from("1"), AggregationMethod::Count);
         let parser = Parser::new(
             String::from("1"),
             PatternType::Split,
             String::from("1"),
+            vec![String::from("1")],
             map,
-            None,
         );
 
-        logria.config.parser = Some(parser);
+        handler.parser = Some(parser);
         logria.config.parser_state = ParserState::Full;
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 0;
@@ -430,21 +748,21 @@ mod split_tests {
     #[test]
     fn test_can_setup_with_session_second_index() {
         let mut logria = MainWindow::_new_dummy();
-        let handler = ParserHandler::new();
+        let mut handler = ParserHandler::new();
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), String::from("count"));
+        map.insert(String::from("1"), AggregationMethod::Count);
         let parser = Parser::new(
             String::from("1"),
             PatternType::Split,
             String::from("1"),
+            vec![String::from("1")],
             map,
-            None,
         );
 
         // Update window config
-        logria.config.parser = Some(parser);
+        handler.parser = Some(parser);
         logria.config.parser_state = ParserState::Full;
         logria.input_type = InputType::Parser;
         logria.config.parser_index = 1;
@@ -456,5 +774,188 @@ mod split_tests {
             vec!["0", "", "2", "3", "4", "5", "6", "7", "8", "9"]
         );
         assert_eq!(logria.config.auxiliary_messages.len(), 10)
+    }
+
+    #[test]
+    fn test_can_setup_with_session_aggregated() {
+        let mut logria = MainWindow::_new_dummy_parse();
+        // Add some messages that can be easily parsed
+        let mut handler = ParserHandler::new();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("full"), AggregationMethod::Mean);
+        map.insert(String::from("minus_1"), AggregationMethod::Mean);
+        map.insert(String::from("minus_2"), AggregationMethod::Mean);
+        map.insert(String::from("minus_3"), AggregationMethod::Mean);
+        let mut parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from("1"),
+            vec![
+                String::from("full"),
+                String::from("minus_1"),
+                String::from("minus_2"),
+                String::from("minus_3"),
+            ],
+            map,
+        );
+        parser
+            .aggregator_map
+            .insert(String::from("full"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_1"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_2"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_3"), Box::new(Mean::new()));
+
+        // Update window config
+        handler.parser = Some(parser);
+        logria.config.parser_state = ParserState::Full;
+        logria.input_type = InputType::Parser;
+        logria.config.parser_index = 1;
+        logria.config.previous_stream_type = StreamType::StdErr;
+        logria.config.aggregation_enabled = true;
+
+        handler.process_matches(&mut logria).unwrap();
+        assert_eq!(
+            logria.config.auxiliary_messages,
+            vec![
+                "full",
+                "    Mean: 59.50",
+                "    Count: 100",
+                "    Total: 5,950",
+                "minus_1",
+                "    Mean: 58.50",
+                "    Count: 100",
+                "    Total: 5,850",
+                "minus_2",
+                "    Mean: 57.50",
+                "    Count: 100",
+                "    Total: 5,750",
+                "minus_3",
+                "    Mean: 56.50",
+                "    Count: 100",
+                "    Total: 5,650"
+            ]
+        );
+    }
+}
+
+#[cfg(test)]
+mod failure_tests {
+    use super::ParserHandler;
+    use std::collections::HashMap;
+
+    use crate::{
+        communication::{
+            handlers::{handler::Handler, parser::ParserState, processor::ProcessorMethods},
+            input::{input_type::InputType, stream_type::StreamType},
+            reader::main::MainWindow,
+        },
+        extensions::parser::{Parser, PatternType},
+        util::aggregators::{aggregator::AggregationMethod, mean::Mean},
+    };
+
+    #[test]
+    fn test_no_matches_for_order() {
+        let mut logria = MainWindow::_new_dummy_parse();
+        // Add some messages that can be easily parsed
+        let mut handler = ParserHandler::new();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("full"), AggregationMethod::Mean);
+        map.insert(String::from("minus_1"), AggregationMethod::Mean);
+        map.insert(String::from("minus_2"), AggregationMethod::Mean);
+        map.insert(String::from("minus_3"), AggregationMethod::Mean);
+
+        let mut parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from("1"),
+            vec![
+                String::from("full"),
+                String::from("minus_1"),
+                String::from("minus_2"),
+            ],
+            map,
+        );
+
+        parser
+            .aggregator_map
+            .insert(String::from("full"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_1"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_2"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_3"), Box::new(Mean::new()));
+
+        // Update window config
+        handler.parser = Some(parser);
+        logria.config.parser_state = ParserState::Full;
+        logria.input_type = InputType::Parser;
+        logria.config.parser_index = 1;
+        logria.config.previous_stream_type = StreamType::StdErr;
+        logria.config.aggregation_enabled = true;
+
+        handler.process_matches(&mut logria).unwrap();
+        assert_eq!(logria.config.auxiliary_messages, Vec::<String>::new());
+    }
+
+    #[test]
+    fn test_unbalanced_aggregation_methods() {
+        let mut logria = MainWindow::_new_dummy_parse();
+        // Add some messages that can be easily parsed
+        let mut handler = ParserHandler::new();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("full"), AggregationMethod::Mean);
+        map.insert(String::from("minus_1"), AggregationMethod::Mean);
+        map.insert(String::from("minus_2"), AggregationMethod::Mean);
+        map.insert(String::from("minus_3"), AggregationMethod::Mean);
+        let mut parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from("1"),
+            vec![
+                String::from("full"),
+                String::from("minus_1"),
+                String::from("minus_2"),
+                String::from("minus_3"),
+            ],
+            map,
+        );
+
+        // Only 3 aggregators, not enough for 4 matches
+        parser
+            .aggregator_map
+            .insert(String::from("full"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_1"), Box::new(Mean::new()));
+        parser
+            .aggregator_map
+            .insert(String::from("minus_2"), Box::new(Mean::new()));
+
+        // Update window config
+        handler.parser = Some(parser);
+        logria.config.parser_state = ParserState::Full;
+        logria.input_type = InputType::Parser;
+        logria.config.parser_index = 1;
+        logria.config.previous_stream_type = StreamType::StdErr;
+        logria.config.aggregation_enabled = true;
+
+        handler.process_matches(&mut logria).unwrap();
+        assert_eq!(logria.config.auxiliary_messages, Vec::<String>::new());
     }
 }

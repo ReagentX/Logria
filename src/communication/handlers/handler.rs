@@ -5,5 +5,5 @@ use crate::communication::reader::main::MainWindow;
 
 pub trait Handler {
     fn new() -> Self;
-    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()>;
+    fn receive_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()>;
 }

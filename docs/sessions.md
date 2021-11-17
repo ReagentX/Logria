@@ -18,7 +18,7 @@ Sessions are stored as `JSON` in `$LOGRIA_ROOT/sessions` and do not have file ex
             "sample_streams/generate_test_logs_2.py"
         ]
     ],
-    "stream_type": "command"
+    "stream_type": "Command"
 }
 ```
 
@@ -31,8 +31,8 @@ All sessions have two keys:
 - `commands`
   - Contains a list of commands to listen on
 - `stream_type`
-  - Contains a string of the type of input handler to use, either `file` or `command`
-  - `file` creates a `FileInputHander` and `command` creates a `CommandInputHandler`
+  - Contains a string of the type of input handler to use, either `File` or `Command`
+  - `File` creates a `FileInputHander` and `Command` creates a `CommandInputHandler`
 
 ## Interpreting Sessions at Runtime
 

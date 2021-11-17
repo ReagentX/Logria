@@ -181,7 +181,7 @@ impl Handler for UserInputHandler {
         handler
     }
 
-    fn recieve_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
+    fn receive_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
         queue!(window.output, cursor::Show)?;
         match key {
             // Remove data
@@ -193,7 +193,6 @@ impl Handler for UserInputHandler {
             KeyCode::Left => self.move_left(window)?,
             KeyCode::Right => self.move_right(window)?,
 
-            // TODO: History tape
             KeyCode::Up => self.tape_back(window)?,
             KeyCode::Down => self.tape_forward(window)?,
 

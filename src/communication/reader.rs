@@ -611,6 +611,7 @@ pub mod main {
             self.config.height = h;
             self.config.width = w;
             self.config.last_row = self.config.height.checked_sub(3).unwrap_or(h);
+            build(self)?;
             Ok(())
         }
 
@@ -776,7 +777,8 @@ pub mod main {
                         Event::Mouse(_) => {} // Probably remove
                         Event::Resize(_, _) => {
                             self.update_dimensions()?;
-                        } // Call self.dimensions() and some other stuff
+                            self.redraw()?;
+                        }
                     }
                 }
                 // possibly sleep, cleanup, etc
@@ -797,6 +799,7 @@ pub mod main {
                             }
                             if self.config.did_switch {
                                 // 2 ticks, one to process the current input and another to refresh
+                                // Did I just write a hack for my own app?
                                 parser_handler.receive_input(self, refresh_key)?;
                                 parser_handler.receive_input(self, refresh_key)?;
                                 self.config.did_switch = false;

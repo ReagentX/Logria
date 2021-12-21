@@ -945,9 +945,10 @@ pub mod main {
         }
     }
 
+    #[cfg(test)] 
     mod poll_rate_tests {
         use crate::communication::{input::input_type::InputType, reader::main::MainWindow};
-        use std::time::{Duration, Instant};
+        use std::time::{Duration};
 
         #[test]
         fn test_no_poll_rate_change_when_disabled() {

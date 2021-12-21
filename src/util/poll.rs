@@ -83,6 +83,7 @@ impl RollingMean {
     }
 }
 
+#[cfg(test)]
 mod mean_track_tests {
     use crate::util::poll::RollingMean;
 

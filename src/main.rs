@@ -10,10 +10,7 @@ fn main() -> Result<()> {
     let options = util::options::from_command_line();
     let history = !options.is_present("history");
     let smart_poll_rate = !options.is_present("smart-poll-rate");
-    let exec: Option<Vec<String>> = match options.value_of("exec") {
-        Some(text) => Some(vec![text.to_string()]),
-        None => None,
-    };
+    let exec: Option<Vec<String>> = options.value_of("exec").map(|text| vec![text.to_string()]);
 
     // loop {
     //     let poll_rate = Arc::clone(&input.poll_rate);

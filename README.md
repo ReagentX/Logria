@@ -97,7 +97,7 @@ Logria is not a tool for detailed log analytics. [`lnav`](https://lnav.org/featu
 
 ## Special Thanks
 
-- [Voidsphere](https://voidsphere.bandcamp.com), for providing all the hacking music I could want.
+- [Voidsphere](https://voidsphere.bandcamp.com/music), for providing all the hacking music I could want.
 - [Julian Coleman](https://github.com/juliancoleman/), for lots of code review and general Rust advice.
 - [@rhamorim](https://twitter.com/rhamorim), for [suggesting](https://twitter.com/rhamorim/status/1333856615624306692) an alternative for non-blocking IO without `O_NONBLOCK`.
 - [@andy_crab_gear](https://twitter.com/andy_crab_gear), for [suggesting](https://twitter.com/andy_crab_gear/status/1333866079555239936) an alternative for non-blocking IO without `O_NONBLOCK`.

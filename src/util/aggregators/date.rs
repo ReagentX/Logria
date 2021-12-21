@@ -1,11 +1,8 @@
 use std::cmp::{max, min};
 
-use crate::util::{
-    aggregators::aggregator::{Aggregator},
-    error::LogriaError,
-};
-use time::{format_description::parse, Date as Dt, PrimitiveDateTime as DateTime, Time as Tm};
+use crate::util::{aggregators::aggregator::Aggregator, error::LogriaError};
 use format_num::format_num;
+use time::{format_description::parse, Date as Dt, PrimitiveDateTime as DateTime, Time as Tm};
 
 pub enum DateParserType {
     Date,
@@ -55,7 +52,11 @@ impl Aggregator for Date {
 
     fn messages(&self, _: &usize) -> Vec<String> {
         let mut out_v = vec![
-            format!("    Rate: {} {}", format_num!(",.0f", self.rate as u32), self.unit),
+            format!(
+                "    Rate: {} {}",
+                format_num!(",.0f", self.rate as u32),
+                self.unit
+            ),
             format!("    Count: {}", format_num!(",d", self.count as u32)),
         ];
         match self.parser_type {
@@ -157,7 +158,12 @@ mod use_tests {
 
     #[test]
     fn can_construct() {
-        let d: Date = Date::new("[month]/[day]/[year]", DateParserType::Date);
+        Date::new("[month]/[day]/[year]", DateParserType::Date);
+        Date::new("[hour]:[minute]:[second]", DateParserType::Time);
+        Date::new(
+            "[month]/[day]/[year] [hour]:[minute]:[second]",
+            DateParserType::DateTime,
+        );
     }
 
     #[test]

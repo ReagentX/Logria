@@ -683,7 +683,7 @@ pub mod main {
         pub fn quit(&mut self) -> Result<()> {
             execute!(self.output, cursor::Show, Clear(ClearType::All))?;
             disable_raw_mode()?;
-            std::process::exit(1);
+            std::process::exit(0);
         }
 
         /// Update stderr and stdout buffers from every stream's queue

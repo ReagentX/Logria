@@ -35,10 +35,14 @@ pub mod main {
         constants::cli::{
             cli_chars, colors,
             messages::{NO_MESSAGE_IN_BUFFER_NORMAL, NO_MESSAGE_IN_BUFFER_PARSER},
-            poll_rate::{DEFAULT, FASTEST, SLOWEST},
+            poll_rate::DEFAULT,
         },
         ui::{interface::build, scroll::ScrollState},
-        util::{poll::RollingMean, sanitizers::length::LengthFinder, types::Del},
+        util::{
+            poll::{ms_per_message, RollingMean},
+            sanitizers::length::LengthFinder,
+            types::Del,
+        },
     };
 
     pub struct LogriaConfig {
@@ -626,11 +630,9 @@ pub mod main {
         fn handle_smart_poll_rate(&mut self, t_1: Duration, new_messages: u64) {
             if self.config.smart_poll_rate && !(self.input_type == InputType::Startup) {
                 // Set the poll rate to the number of milliseconds per message
-                let ms_per_message = (t_1.as_millis() as u64)
-                    .checked_div(new_messages)
-                    .unwrap_or(SLOWEST)
-                    .clamp(FASTEST, SLOWEST);
-                self.config.message_speed_tracker.update(ms_per_message);
+                self.config
+                    .message_speed_tracker
+                    .update(ms_per_message(t_1, new_messages));
                 self.update_poll_rate(self.config.message_speed_tracker.mean());
 
                 // Reset the timer we use to count new messages
@@ -689,7 +691,7 @@ pub mod main {
             let mut total_messages = 0;
             for stream in &self.config.streams {
                 // Read from streams until there is no more input
-                // May lock if logs come in too fast
+                // ? May lock if logs come in too fast
                 while let Ok(data) = stream.stderr.try_recv() {
                     total_messages += 1;
                     self.config.stderr_messages.push(data);
@@ -943,9 +945,10 @@ pub mod main {
         }
     }
 
+    #[cfg(test)] 
     mod poll_rate_tests {
         use crate::communication::{input::input_type::InputType, reader::main::MainWindow};
-        use std::time::Duration;
+        use std::time::{Duration};
 
         #[test]
         fn test_no_poll_rate_change_when_disabled() {

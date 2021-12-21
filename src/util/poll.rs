@@ -1,8 +1,16 @@
 use std::collections::vec_deque::VecDeque;
 
 use std::cmp::{max, min};
+use std::time::Duration;
 
-use crate::constants::cli::poll_rate::{DEFAULT, SLOWEST};
+use crate::constants::cli::poll_rate::{DEFAULT, FASTEST, SLOWEST};
+
+pub fn ms_per_message(timestamp: Duration, messages: u64) -> u64 {
+    (timestamp.as_millis() as u64)
+        .checked_div(messages)
+        .unwrap_or(SLOWEST)
+        .clamp(FASTEST, SLOWEST)
+}
 
 #[derive(Debug)]
 pub struct Backoff {
@@ -65,7 +73,7 @@ impl RollingMean {
     }
 
     pub fn mean(&self) -> u64 {
-        self.sum / self.size
+        self.sum.checked_div(self.size).unwrap_or(0)
     }
 
     pub fn reset(&mut self) {
@@ -75,6 +83,7 @@ impl RollingMean {
     }
 }
 
+#[cfg(test)]
 mod mean_track_tests {
     use crate::util::poll::RollingMean;
 

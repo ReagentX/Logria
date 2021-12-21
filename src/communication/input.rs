@@ -7,10 +7,7 @@ pub mod stream {
         path::Path,
         process::Stdio,
         result::Result,
-        sync::{
-            mpsc::{channel, Receiver},
-            Arc, Mutex,
-        },
+        sync::mpsc::{channel, Receiver},
         thread, time,
     };
 
@@ -21,9 +18,7 @@ pub mod stream {
     };
 
     use crate::{
-        constants::{
-            directories::home,
-        },
+        constants::directories::home,
         extensions::{
             extension::ExtensionMethods,
             session::{Session, SessionType},

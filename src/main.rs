@@ -5,7 +5,6 @@ mod constants;
 mod extensions;
 mod ui;
 mod util;
-use std::sync::Arc;
 
 fn main() -> Result<()> {
     let options = util::options::from_command_line();

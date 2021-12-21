@@ -35,7 +35,7 @@ pub mod main {
         constants::cli::{
             cli_chars, colors,
             messages::{NO_MESSAGE_IN_BUFFER_NORMAL, NO_MESSAGE_IN_BUFFER_PARSER},
-            poll_rate::{DEFAULT, FASTEST, SLOWEST},
+            poll_rate::DEFAULT,
         },
         ui::{interface::build, scroll::ScrollState},
         util::{

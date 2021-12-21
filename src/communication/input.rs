@@ -21,9 +21,17 @@ pub mod stream {
     };
 
     use crate::{
-        constants::{cli::poll_rate::FASTEST, directories::home},
-        extensions::{session::{Session, SessionType}, extension::ExtensionMethods},
-        util::error::LogriaError,
+        constants::{
+            directories::home,
+        },
+        extensions::{
+            extension::ExtensionMethods,
+            session::{Session, SessionType},
+        },
+        util::{
+            error::LogriaError,
+            poll::{ms_per_message, RollingMean},
+        },
     };
 
     #[derive(Debug)]
@@ -36,11 +44,7 @@ pub mod stream {
     }
 
     pub trait Input {
-        fn build(
-            poll_rate: Option<u64>,
-            name: String,
-            command: String,
-        ) -> Result<InputStream, LogriaError>;
+        fn build(name: String, command: String) -> Result<InputStream, LogriaError>;
     }
 
     #[derive(Debug)]
@@ -49,11 +53,7 @@ pub mod stream {
     impl Input for FileInput {
         /// Create a file input
         /// poll_rate is unused since the file will be read all at once
-        fn build(
-            _: Option<u64>,
-            name: String,
-            command: String,
-        ) -> Result<InputStream, LogriaError> {
+        fn build(name: String, command: String) -> Result<InputStream, LogriaError> {
             // Setup multiprocessing queues
             let (_, err_rx) = channel();
             let (out_tx, out_rx) = channel();
@@ -113,18 +113,13 @@ pub mod stream {
 
     impl Input for CommandInput {
         /// Create a command input
-        fn build(
-            poll_rate: Option<u64>,
-            name: String,
-            command: String,
-        ) -> Result<InputStream, LogriaError> {
+        fn build(name: String, command: String) -> Result<InputStream, LogriaError> {
             // Setup multiprocessing queues
             let (err_tx, err_rx) = channel();
             let (out_tx, out_rx) = channel();
 
             // Handle poll rate
-            let poll_rate = Arc::new(Mutex::new(poll_rate.unwrap_or(FASTEST as u64)));
-            let internal_poll_rate = Arc::clone(&poll_rate);
+            let mut poll_rate = RollingMean::new(5);
 
             // Start reading from the queues
             let process = thread::Builder::new()
@@ -151,17 +146,30 @@ pub mod stream {
                             TokioBufReader::new(proc_read.stderr.take().unwrap()).lines();
 
                         loop {
-                            let wait = internal_poll_rate.lock().unwrap();
-                            thread::sleep(time::Duration::from_millis(*wait));
+                            thread::sleep(time::Duration::from_millis(poll_rate.mean()));
 
-                            tokio::select! {
-                                Ok(line) = stdout.next_line() => {
-                                    if let Some(l) = line { out_tx.send(l).unwrap() }
-                                }
-                                Ok(line) = stderr.next_line() => {
-                                    if let Some(l) = line { err_tx.send(l).unwrap() }
+                            let timestamp = time::Instant::now();
+                            let mut counter = 0;
+
+                            loop {
+                                tokio::select! {
+                                    Ok(line) = stdout.next_line() => {
+                                        if let Some(l) = line {
+                                            out_tx.send(l).unwrap();
+                                            counter += 1;
+                                        } else { break }
+                                    }
+                                    Ok(line) = stderr.next_line() => {
+                                        if let Some(l) = line {
+                                            err_tx.send(l).unwrap();
+                                            counter += 1;
+                                        } else { break }
+                                    }
+                                    else => break
                                 }
                             }
+
+                            poll_rate.update(ms_per_message(timestamp.elapsed(), counter));
                         }
                     });
                 });
@@ -197,7 +205,7 @@ pub mod stream {
             match determine_stream_type(command) {
                 SessionType::Command => {
                     // None indicates default poll rate
-                    match CommandInput::build(None, command.to_owned(), command.to_owned()) {
+                    match CommandInput::build(command.to_owned(), command.to_owned()) {
                         Ok(stream) => streams.push(stream),
                         Err(why) => return Err(why),
                     };
@@ -207,7 +215,7 @@ pub mod stream {
                     // None indicates default poll rate
                     let path = Path::new(command);
                     let name = path.file_name().unwrap().to_str().unwrap().to_string();
-                    match FileInput::build(None, name, command.to_owned()) {
+                    match FileInput::build(name, command.to_owned()) {
                         Ok(stream) => streams.push(stream),
                         Err(why) => return Err(why),
                     };
@@ -243,7 +251,7 @@ pub mod stream {
             SessionType::Command => {
                 let mut streams: Vec<InputStream> = vec![];
                 for command in session.commands {
-                    match CommandInput::build(None, command.to_owned(), command.to_owned()) {
+                    match CommandInput::build(command.to_owned(), command.to_owned()) {
                         Ok(stream) => streams.push(stream),
                         Err(why) => return Err(why),
                     };
@@ -253,7 +261,7 @@ pub mod stream {
             SessionType::File => {
                 let mut streams: Vec<InputStream> = vec![];
                 for command in session.commands {
-                    match FileInput::build(None, command.to_owned(), command.to_owned()) {
+                    match FileInput::build(command.to_owned(), command.to_owned()) {
                         Ok(stream) => streams.push(stream),
                         Err(why) => return Err(why),
                     };

@@ -3,27 +3,27 @@ use clap::{crate_version, App, Arg, ArgMatches};
 use crate::constants::app::NAME;
 use crate::constants::cli::messages;
 
-pub fn from_command_line() -> ArgMatches {
+pub fn from_command_line() -> ArgMatches<'static> {
     let matches = App::new(NAME)
         .version(crate_version!())
         .about(messages::APP_DESCRIPTION)
         .arg(
-            Arg::new("history")
-                .short('i')
+            Arg::with_name("history")
+                .short("i")
                 .long("no-history")
-                .about(messages::HISTORY_HELP),
+                .help(messages::HISTORY_HELP),
         )
         .arg(
-            Arg::new("smart-poll-rate")
-                .short('n')
+            Arg::with_name("smart-poll-rate")
+                .short("n")
                 .long("no-smart-poll-rate")
-                .about(messages::SMART_POLL_RATE_HELP),
+                .help(messages::SMART_POLL_RATE_HELP),
         )
         .arg(
-            Arg::new("exec")
-                .short('e')
+            Arg::with_name("exec")
+                .short("e")
                 .long("exec")
-                .about(messages::EXEC_HELP)
+                .help(messages::EXEC_HELP)
                 .takes_value(true)
                 .value_name("stream"),
         )

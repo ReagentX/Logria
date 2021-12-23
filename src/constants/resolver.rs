@@ -1,10 +1,10 @@
-use dirs::home_dir;
+use dirs::config_dir;
 use std::env;
 
 pub fn get_home_dir() -> String {
     match env::var("LOGRIA_USER_HOME") {
         Ok(val) => val,
-        Err(_) => home_dir()
+        Err(_) => config_dir()
             .expect("Unable to start application: home directory not resolved!")
             .to_str()
             .expect("Home directory path is badly malformed!")

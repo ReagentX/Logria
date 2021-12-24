@@ -4,7 +4,7 @@ A session is a collection of commands that result in input streams.
 
 ## Storage
 
-Sessions are stored as `JSON` in `$LOGRIA_ROOT/sessions` and do not have file extensions. A pattern is defined like so:
+Sessions are stored as `JSON` in `$LOGRIA_ROOT/sessions` and do not have file extensions. A session is defined like so:
 
 ```json
 {

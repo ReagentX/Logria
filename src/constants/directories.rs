@@ -17,7 +17,7 @@ pub fn app_root() -> String {
 
 pub fn patterns() -> String {
     let mut root = app_root();
-    root.push_str("/patterns");
+    root.push_str("/parsers");
     root
 }
 
@@ -56,7 +56,7 @@ mod tests {
     fn test_patterns() {
         let t = directories::patterns();
         let mut root = config_dir().unwrap().to_str().unwrap().to_string();
-        root.push_str("/Logria/patterns");
+        root.push_str("/Logria/parsers");
         assert_eq!(t, root)
     }
 

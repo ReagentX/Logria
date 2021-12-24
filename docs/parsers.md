@@ -116,7 +116,7 @@ The `aggregation_methods` key stores a `HashMap<String, AggregationMethod>` of t
 
 ### Included Methods
 
-Methods currently include `Mean`, `Sum`, `Count`, `Date`, `Time`, `DateTime`, and `None`. These all have different behaviors.
+Methods currently include [`Mean`](#mean-and-sum), [`Sum`](#mean-and-sum), [`Count`](#count), [`Date`](#date-time-and-datetime), [`Time`](#date-time-and-datetime), [`DateTime`](#date-time-and-datetime), and [`None`](#none). These all have different behaviors.
 
 #### Mean and Sum
 

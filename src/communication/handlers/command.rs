@@ -179,7 +179,7 @@ impl CommandHandler {
                 }
                 Err(why) => {
                     window.write_to_command_line(&format!(
-                        "Failed to parse remove command: {:?}",
+                        "Failed to parse aggregation count command: {:?}",
                         why
                     ))?;
                 }

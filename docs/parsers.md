@@ -28,7 +28,7 @@ Parsers are stored as `JSON` in `$LOGRIA_ROOT/parsers` and do not have file exte
 }
 ```
 
-If `$LOGRIA_ROOT/parsers` does not exist, Logria will create it.
+If `$LOGRIA_USER_HOME/$LOGRIA_ROOT/parsers` does not exist, Logria will create it.
 
 ## Types of Parsers
 
@@ -83,7 +83,7 @@ A `regex` parser uses a regex expression to match parts of a log and looks like 
 
 ### Split Patterns
 
-A `split` parser uses [str::split](https://doc.rust-lang.org/std/primitive.str.html#method.split) a message on a delimiter:
+A `split` parser uses [str::split](https://doc.rust-lang.org/std/primitive.str.html#method.split) to split a message on a delimiter:
 
 ```json
 {
@@ -107,9 +107,9 @@ A `split` parser uses [str::split](https://doc.rust-lang.org/std/primitive.str.h
 }
 ```
 
-## Interpreting Parsers at Runtime
+## Activating Parsers
 
-When activated, Logria will list the parsers defined in the parsers folder for the user to select based on the index of the filename:
+When invoked, Logria will list the parsers defined in the parsers directory for the user to select based on the index of the filename:
 
 ```zsh
   0: Common Log Format

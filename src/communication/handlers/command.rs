@@ -127,14 +127,17 @@ impl CommandHandler {
         }
         // Enter configuration mode
         else if command.starts_with("config") {
+            // TODO: Make this work
             window.write_to_command_line("Config mode")?
         }
         // Enter history mode
         else if command.starts_with("history") {
+            // TODO: Make this work
             window.write_to_command_line("History mode")?
         }
         // Exit history mode
         else if command.starts_with("history off") {
+            // TODO: Make this work
             window.write_to_command_line("History off")?
         }
         // Remove saved sessions from the main screen
@@ -170,6 +173,7 @@ impl CommandHandler {
         }
         // Go back to start screen
         else if command.starts_with("restart") {
+            // TODO: Make this work
             window.write_to_command_line("Restart")?
         } else if command.starts_with("agg") {
             match self.resolve_aggregation_count(command) {

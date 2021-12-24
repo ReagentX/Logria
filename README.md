@@ -79,7 +79,7 @@ See [session](/docs/sessions.md) docs.
 
 ### User-defined saved log parsing methods
 
-See [patterns](/docs/patterns.md) docs.
+See [parser](/docs/parsers.md) docs.
 
 ## Notes
 

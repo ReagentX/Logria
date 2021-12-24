@@ -4,8 +4,8 @@ This folder contains the documentation on how to interact with Logria programmat
 
 ## Index
 
-- [Patterns](patterns.md)
-  - Details on how to configure patterns for log parsing
+- [Parsers](parsers.md)
+  - Details on how to configure parsers for log parsing
 - [Sessions](sessions.md)
   - Details on how to configure sessions when launching the app
 - [Input Handler](input_handler.md)
@@ -26,7 +26,7 @@ This folder contains the documentation on how to interact with Logria programmat
 
 ### Directory Configuration
 
-By default, Logria will create a `/Logria/` directory to store [patterns](patterns.md), [sessions](sessions.md), and an input history tape in. The loction is [platform dependent](https://docs.rs/dirs/latest/dirs/fn.config_dir.html).
+By default, Logria will create a `/Logria/` directory to store [parsers](parsers.md), [sessions](sessions.md), and an input history tape in. The loction is [platform dependent](https://docs.rs/dirs/latest/dirs/fn.config_dir.html).
 
 #### Platform-Specific Directory Locations
 

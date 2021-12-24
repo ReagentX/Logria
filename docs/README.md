@@ -26,15 +26,25 @@ This folder contains the documentation on how to interact with Logria programmat
 
 ### Directory Configuration
 
-By default, Logria will create `~/.logria/` to store parsers, sessions, and an input history tape in. If you want to specify a different path, either set `LOGRIA_ROOT` to replace the `.logria` directory or set `LOGRIA_USER_HOME` to move the directory away from the default `$HOME`. Setting both means the app looks in `$LOGRIA_USER_HOME/$LOGRIA_ROOT`.
+By default, Logria will create a `/Logria/` directory to store [patterns](patterns.md), [sessions](sessions.md), and an input history tape in. The loction is [platform dependent](https://docs.rs/dirs/latest/dirs/fn.config_dir.html).
+
+#### Platform-Specific Directory Locations
+
+| Platform | Value | Example |
+| --- | --- | --- |
+| Linux   | `$XDG_DATA_HOME` or `$HOME/.config` | `~/.config/Logria` |
+| macOS   | `$HOME/Library/Application Support` | `~/Library/Application Support/Logria` |
+| Windows | `{FOLDERID_RoamingAppData}` | `%homedrive%%homepath%\AppData\Roaming\Logria` |
+
+If you want to specify a different path, either set `LOGRIA_ROOT` to replace the `/Logria/` directory or set `LOGRIA_USER_HOME` to move the directory away from the default `$HOME`. Setting both means the app looks in `$LOGRIA_USER_HOME/$LOGRIA_ROOT`.
 
 #### Example Exports
 
-| export | value | result |
+| Environment Variable | Value | Result |
 |---|---|---|
-| `LOGRIA_ROOT` | `.config/logria` | `~/.config/logria/` |
-| `LOGRIA_USER_HOME` | `/usr/local/` | `/usr/local/.logria` |
-| both of the above | | `/usr/local/.config/logria/` |
+| `LOGRIA_ROOT` | `.conf/.logria` | `~/.conf/.logria/` |
+| `LOGRIA_USER_HOME` | `/usr/local/` | `/usr/local/Logria` |
+| both of the above | | `/usr/local/.conf/.logria/` |
 
 ## Sample Usage Session
 

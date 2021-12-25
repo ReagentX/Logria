@@ -575,11 +575,11 @@ mod tests {
         );
         map.insert(
             String::from("Level"),
-            AggregationMethod::DateTime("".to_string()),
+            AggregationMethod::DateTime("[year]-[month]-[day] [hour]:[month]:[second]".to_string()),
         );
         map.insert(
             String::from("Level"),
-            AggregationMethod::Time("".to_string()),
+            AggregationMethod::Time("[hour]:[month]:[second]".to_string()),
         );
         map.insert(String::from("Message"), AggregationMethod::Mean);
         map.insert(String::from("Message"), AggregationMethod::Sum);

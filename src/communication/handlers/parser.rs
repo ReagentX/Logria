@@ -497,26 +497,26 @@ mod parse_tests {
     }
 
     #[test]
-    fn test_does_analytics_average() {
+    fn test_does_analytics_numbers() {
         // Use the parser sample so we have a second field to look at
         let mut logria = MainWindow::_new_dummy_parse();
         let mut handler = ParserHandler::new();
 
         // Create Parser
         let mut map = HashMap::new();
-        map.insert(String::from("1"), AggregationMethod::Mean);
-        map.insert(String::from("2"), AggregationMethod::Mean);
-        map.insert(String::from("3"), AggregationMethod::Mean);
-        map.insert(String::from("4"), AggregationMethod::Mean);
+        map.insert(String::from("Mean"), AggregationMethod::Mean);
+        map.insert(String::from("Sum"), AggregationMethod::Sum);
+        map.insert(String::from("Count"), AggregationMethod::Count);
+        map.insert(String::from("Mode"), AggregationMethod::Mode);
         let mut parser = Parser::new(
             String::from("([0-9]{0,3}) - ([0-9]{0,3}) - ([0-9]{0,3}) - ([0-9]{0,3})"),
             PatternType::Regex,
             String::from("1 - 2 - 3 - 4"),
             vec![
-                String::from("1"),
-                String::from("2"),
-                String::from("3"),
-                String::from("4"),
+                String::from("Mean"),
+                String::from("Sum"),
+                String::from("Count"),
+                String::from("Mode"),
             ],
             map,
         );
@@ -536,22 +536,20 @@ mod parse_tests {
         assert_eq!(
             logria.config.auxiliary_messages,
             vec![
-                "1",
+                "Mean",
                 "    Mean: 59.50",
                 "    Count: 100",
                 "    Total: 5,950",
-                "2",
-                "    Mean: 58.50",
-                "    Count: 100",
+                "Sum",
                 "    Total: 5,850",
-                "3",
-                "    Mean: 57.50",
-                "    Count: 100",
-                "    Total: 5,750",
-                "4",
-                "    Mean: 56.50",
-                "    Count: 100",
-                "    Total: 5,650"
+                "Count",
+                "    10\u{1b}[0m: 1 (1%)",
+                "    100\u{1b}[0m: 1 (1%)",
+                "    101\u{1b}[0m: 1 (1%)",
+                "    102\u{1b}[0m: 1 (1%)",
+                "    103\u{1b}[0m: 1 (1%)",
+                "Mode",
+                "    10\u{1b}[0m: 1 (1%)",
             ]
         );
     }

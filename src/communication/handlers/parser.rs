@@ -553,6 +553,126 @@ mod parse_tests {
             ]
         );
     }
+
+    #[test]
+    fn test_does_analytics_none() {
+        // Use the parser sample so we have a second field to look at
+        let mut logria = MainWindow::_new_dummy_parse();
+        let mut handler = ParserHandler::new();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("Mean"), AggregationMethod::None);
+        map.insert(String::from("Sum"), AggregationMethod::None);
+        map.insert(String::from("Count"), AggregationMethod::None);
+        map.insert(String::from("Mode"), AggregationMethod::None);
+        let mut parser = Parser::new(
+            String::from("([0-9]{0,3}) - ([0-9]{0,3}) - ([0-9]{0,3}) - ([0-9]{0,3})"),
+            PatternType::Regex,
+            String::from("1 - 2 - 3 - 4"),
+            vec![
+                String::from("Mean"),
+                String::from("Sum"),
+                String::from("Count"),
+                String::from("Mode"),
+            ],
+            map,
+        );
+
+        parser.setup();
+
+        // Update window config
+        handler.parser = Some(parser);
+        logria.config.parser_state = ParserState::Full;
+        logria.input_type = InputType::Parser;
+        logria.config.parser_index = 1;
+        logria.config.previous_stream_type = StreamType::StdErr;
+        logria.config.aggregation_enabled = true;
+
+        handler.process_matches(&mut logria).unwrap();
+
+        assert_eq!(
+            logria.config.auxiliary_messages,
+            vec![
+                "Mean",
+                "    Disabled",
+                "Sum",
+                "    Disabled",
+                "Count",
+                "    Disabled",
+                "Mode",
+                "    Disabled"
+            ]
+        );
+    }
+
+    #[test]
+    fn test_does_analytics_dates() {
+        // Use the parser sample so we have a second field to look at
+        let mut logria = MainWindow::_new_dummy_parse_date();
+        let mut handler = ParserHandler::new();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(
+            String::from("Date"),
+            AggregationMethod::Date("[year]-[month]-[day]".to_string()),
+        );
+        map.insert(
+            String::from("Time"),
+            AggregationMethod::Time("[hour]:[minute]:[second]".to_string()),
+        );
+        map.insert(
+            String::from("DateTime"),
+            AggregationMethod::DateTime(
+                "[year]-[month]-[day] [hour]:[minute]:[second]".to_string(),
+            ),
+        );
+        let mut parser = Parser::new(
+            String::from(" | "),
+            PatternType::Split,
+            String::from("2021-03-19 | 08:10:26 | 2021-03-19 08:10:26"),
+            vec![
+                String::from("Date"),
+                String::from("Time"),
+                String::from("DateTime"),
+            ],
+            map,
+        );
+
+        parser.setup();
+
+        // Update window config
+        handler.parser = Some(parser);
+        logria.config.parser_state = ParserState::Full;
+        logria.input_type = InputType::Parser;
+        logria.config.parser_index = 1;
+        logria.config.previous_stream_type = StreamType::StdErr;
+        logria.config.aggregation_enabled = true;
+
+        handler.process_matches(&mut logria).unwrap();
+
+        assert_eq!(
+            logria.config.auxiliary_messages,
+            vec![
+                "Date",
+                "    Rate: 4 per week",
+                "    Count: 4",
+                "    Earliest: 2021-03-10",
+                "    Latest: 2021-03-15",
+                "Time",
+                "    Rate: 4 per minute",
+                "    Count: 4",
+                "    Earliest: 8:10:26.0",
+                "    Latest: 8:10:56.0",
+                "DateTime",
+                "    Rate: 2 per hour",
+                "    Count: 4",
+                "    Earliest: 2021-03-19 8:10:26.0",
+                "    Latest: 2021-03-19 10:30:26.0"
+            ]
+        );
+    }
 }
 
 #[cfg(test)]

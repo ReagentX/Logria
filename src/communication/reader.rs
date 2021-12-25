@@ -328,7 +328,7 @@ pub mod main {
         }
 
         /// Highlight the regex matched text with an ASCII escape code
-        fn highlight_match(&self, message: String) -> String {
+        fn highlight_match(&self, message: &str) -> String {
             // Regex out any existing color codes
             // We use a bytes regex because we cannot compile the pattern using normal regex
             let clean_message = self
@@ -439,7 +439,7 @@ pub mod main {
 
                 // TODO: make this faster
                 if self.config.highlight_match && self.config.regex_pattern.is_some() {
-                    message = self.highlight_match(message);
+                    message = self.highlight_match(&message);
                 }
 
                 /*
@@ -946,10 +946,10 @@ pub mod main {
         }
     }
 
-    #[cfg(test)] 
+    #[cfg(test)]
     mod poll_rate_tests {
         use crate::communication::{input::input_type::InputType, reader::main::MainWindow};
-        use std::time::{Duration};
+        use std::time::Duration;
 
         #[test]
         fn test_no_poll_rate_change_when_disabled() {

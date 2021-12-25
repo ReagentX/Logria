@@ -103,9 +103,13 @@ impl ParserHandler {
 
     /// Parse a message with regex logic
     fn regex_handle(&self, message: &str, index: usize, pattern: Regex) -> Option<String> {
-        pattern
-            .captures(message)
-            .map(|captures| captures.get(index).unwrap().as_str().to_owned())
+        // We add 1 here because the zeroth index of a Capture is the original message
+        match pattern.captures(message) {
+            Some(caps) => caps
+                .get(index.checked_add(1).unwrap_or(index))
+                .map(|s| s.as_str().to_owned()),
+            None => None,
+        }
     }
 
     /// Parse a message with split logic
@@ -452,6 +456,7 @@ impl Handler for ParserHandler {
 
                     // Build new parser
                     KeyCode::Char('p') => {
+                        // TODO: This does not work
                         self.reset(window);
                     }
 
@@ -481,6 +486,7 @@ impl Handler for ParserHandler {
                 };
             }
         }
+        window.redraw()?;
         Ok(())
     }
 }
@@ -596,7 +602,8 @@ mod regex_tests {
     }
 
     #[test]
-    fn test_can_setup_with_session_second_index() {
+    fn test_cannot_setup_with_session_invalid_index() {
+        // Update window config
         let mut logria = MainWindow::_new_dummy();
         let mut handler = ParserHandler::new();
 
@@ -607,6 +614,37 @@ mod regex_tests {
             String::from("([1-9])"),
             PatternType::Regex,
             String::from("1"),
+            vec![String::from("1")],
+            map,
+        );
+
+        handler.parser = Some(parser);
+        logria.config.parser_state = ParserState::Full;
+        logria.input_type = InputType::Parser;
+        logria.config.parser_index = 1;
+        logria.config.previous_stream_type = StreamType::StdErr;
+
+        handler.process_matches(&mut logria).unwrap();
+
+        assert_eq!(logria.config.auxiliary_messages, Vec::<String>::new());
+    }
+
+    #[test]
+    fn test_can_setup_with_session_second_index() {
+        // Use the parser sample so we have a second field to look at
+        let mut logria = MainWindow::_new_dummy_parse();
+        let mut handler = ParserHandler::new();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("1"), AggregationMethod::Count);
+        map.insert(String::from("2"), AggregationMethod::Count);
+        map.insert(String::from("3"), AggregationMethod::Count);
+        map.insert(String::from("4"), AggregationMethod::Count);
+        let parser = Parser::new(
+            String::from("([1-9]{0,2}) - ([1-9]{0,2}) - ([1-9]{0,2}) - ([1-9]{0,2})"),
+            PatternType::Regex,
+            String::from("1 - 2 - 3 - 4"),
             vec![String::from("1")],
             map,
         );
@@ -622,7 +660,7 @@ mod regex_tests {
 
         assert_eq!(
             logria.config.auxiliary_messages[0..10],
-            vec!["1", "2", "3", "4", "5", "6", "7", "8", "9", "1"]
+            vec!["9", "12", "13", "14", "15", "16", "17", "18", "19", "22"]
         );
     }
 

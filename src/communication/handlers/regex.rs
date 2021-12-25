@@ -161,6 +161,7 @@ impl Handler for RegexHandler {
                 key => self.input_handler.receive_input(window, key)?,
             },
         }
+        window.redraw()?;
         Ok(())
     }
 }

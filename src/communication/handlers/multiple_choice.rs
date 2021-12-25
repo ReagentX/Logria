@@ -100,6 +100,7 @@ impl Handler for MultipleChoiceHandler {
             // User text input
             key => self.input_handler.receive_input(window, key)?,
         }
+        window.redraw()?;
         Ok(())
     }
 }

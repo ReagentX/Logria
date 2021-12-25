@@ -360,7 +360,7 @@ mod message_tests {
 
     #[test]
     fn can_get_top_3() {
-        let mut c: Counter = Counter::new(Some(5));
+        let mut c: Counter = Counter::new(None);
         c.increment(A);
         c.increment(A);
         c.increment(A);

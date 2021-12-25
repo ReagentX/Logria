@@ -315,63 +315,7 @@ impl Handler for ParserHandler {
                             self.status.push_str(&format!("Parsing with {}", name));
 
                             // Update the parser struct's aggregation map
-                            for method_name in &parser.order {
-                                if let Some(method) = parser.aggregation_methods.get(method_name) {
-                                    match method {
-                                        AggregationMethod::Mean => {
-                                            parser.aggregator_map.insert(
-                                                method_name.to_string(),
-                                                Box::new(Mean::new()),
-                                            );
-                                        }
-                                        AggregationMethod::Mode => {
-                                            parser.aggregator_map.insert(
-                                                method_name.to_string(),
-                                                Box::new(Counter::new()),
-                                            );
-                                        }
-                                        AggregationMethod::Sum => {
-                                            parser.aggregator_map.insert(
-                                                method_name.to_string(),
-                                                Box::new(Sum::new()),
-                                            );
-                                        }
-                                        AggregationMethod::Count => {
-                                            parser.aggregator_map.insert(
-                                                method_name.to_string(),
-                                                Box::new(Counter::new()),
-                                            );
-                                        }
-                                        AggregationMethod::Date(format) => {
-                                            parser.aggregator_map.insert(
-                                                method_name.to_string(),
-                                                Box::new(Date::new(format, DateParserType::Date)),
-                                            );
-                                        }
-                                        AggregationMethod::Time(format) => {
-                                            parser.aggregator_map.insert(
-                                                method_name.to_string(),
-                                                Box::new(Date::new(format, DateParserType::Time)),
-                                            );
-                                        }
-                                        AggregationMethod::DateTime(format) => {
-                                            parser.aggregator_map.insert(
-                                                method_name.to_string(),
-                                                Box::new(Date::new(
-                                                    format,
-                                                    DateParserType::DateTime,
-                                                )),
-                                            );
-                                        }
-                                        AggregationMethod::None => {
-                                            parser.aggregator_map.insert(
-                                                method_name.to_string(),
-                                                Box::new(NoneAg::new()),
-                                            );
-                                        }
-                                    };
-                                }
-                            }
+                            parser.setup();
 
                             // Set the new parser and parser state
                             self.parser = Some(parser);
@@ -495,7 +439,11 @@ impl Handler for ParserHandler {
 mod parse_tests {
     use super::ParserHandler;
     use crate::{
-        communication::handlers::handler::Handler,
+        communication::{
+            handlers::{handler::Handler, parser::ParserState, processor::ProcessorMethods},
+            input::{input_type::InputType, stream_type::StreamType},
+            reader::main::MainWindow,
+        },
         extensions::parser::{Parser, PatternType},
         util::aggregators::aggregator::AggregationMethod,
     };
@@ -550,7 +498,62 @@ mod parse_tests {
 
     #[test]
     fn test_does_analytics_average() {
-        // TODO: Implement tests for every parser method
+        // Use the parser sample so we have a second field to look at
+        let mut logria = MainWindow::_new_dummy_parse();
+        let mut handler = ParserHandler::new();
+
+        // Create Parser
+        let mut map = HashMap::new();
+        map.insert(String::from("1"), AggregationMethod::Mean);
+        map.insert(String::from("2"), AggregationMethod::Mean);
+        map.insert(String::from("3"), AggregationMethod::Mean);
+        map.insert(String::from("4"), AggregationMethod::Mean);
+        let mut parser = Parser::new(
+            String::from("([0-9]{0,3}) - ([0-9]{0,3}) - ([0-9]{0,3}) - ([0-9]{0,3})"),
+            PatternType::Regex,
+            String::from("1 - 2 - 3 - 4"),
+            vec![
+                String::from("1"),
+                String::from("2"),
+                String::from("3"),
+                String::from("4"),
+            ],
+            map,
+        );
+
+        parser.setup();
+
+        // Update window config
+        handler.parser = Some(parser);
+        logria.config.parser_state = ParserState::Full;
+        logria.input_type = InputType::Parser;
+        logria.config.parser_index = 1;
+        logria.config.previous_stream_type = StreamType::StdErr;
+        logria.config.aggregation_enabled = true;
+
+        handler.process_matches(&mut logria).unwrap();
+
+        assert_eq!(
+            logria.config.auxiliary_messages,
+            vec![
+                "1",
+                "    Mean: 59.50",
+                "    Count: 100",
+                "    Total: 5,950",
+                "2",
+                "    Mean: 58.50",
+                "    Count: 100",
+                "    Total: 5,850",
+                "3",
+                "    Mean: 57.50",
+                "    Count: 100",
+                "    Total: 5,750",
+                "4",
+                "    Mean: 56.50",
+                "    Count: 100",
+                "    Total: 5,650"
+            ]
+        );
     }
 }
 
@@ -558,11 +561,12 @@ mod parse_tests {
 mod regex_tests {
     use std::collections::HashMap;
 
-    use super::ParserHandler;
-
     use crate::{
         communication::{
-            handlers::{handler::Handler, parser::ParserState, processor::ProcessorMethods},
+            handlers::{
+                handler::Handler, parser::ParserHandler, parser::ParserState,
+                processor::ProcessorMethods,
+            },
             input::{input_type::InputType, stream_type::StreamType},
             reader::main::MainWindow,
         },
@@ -960,7 +964,6 @@ mod failure_tests {
         map.insert(String::from("full"), AggregationMethod::Mean);
         map.insert(String::from("minus_1"), AggregationMethod::Mean);
         map.insert(String::from("minus_2"), AggregationMethod::Mean);
-        map.insert(String::from("minus_3"), AggregationMethod::Mean);
         let mut parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
@@ -975,15 +978,7 @@ mod failure_tests {
         );
 
         // Only 3 aggregators, not enough for 4 matches
-        parser
-            .aggregator_map
-            .insert(String::from("full"), Box::new(Mean::new()));
-        parser
-            .aggregator_map
-            .insert(String::from("minus_1"), Box::new(Mean::new()));
-        parser
-            .aggregator_map
-            .insert(String::from("minus_2"), Box::new(Mean::new()));
+        parser.setup();
 
         // Update window config
         handler.parser = Some(parser);

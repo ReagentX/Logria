@@ -13,7 +13,14 @@ use crate::{
     constants::directories::patterns,
     extensions::extension::ExtensionMethods,
     util::{
-        aggregators::aggregator::{AggregationMethod, Aggregator},
+        aggregators::{
+            aggregator::{AggregationMethod, Aggregator},
+            counter::Counter,
+            date::{Date, DateParserType},
+            mean::Mean,
+            none::NoneAg,
+            sum::Sum,
+        },
         error::LogriaError,
     },
 };
@@ -141,6 +148,53 @@ impl Parser {
                 file_name.to_owned(),
                 why.to_string(),
             )),
+        }
+    }
+
+    pub fn setup(&mut self) {
+        for method_name in &self.order {
+            if let Some(method) = self.aggregation_methods.get(method_name) {
+                match method {
+                    AggregationMethod::Mean => {
+                        self.aggregator_map
+                            .insert(method_name.to_string(), Box::new(Mean::new()));
+                    }
+                    AggregationMethod::Mode => {
+                        self.aggregator_map
+                            .insert(method_name.to_string(), Box::new(Counter::new()));
+                    }
+                    AggregationMethod::Sum => {
+                        self.aggregator_map
+                            .insert(method_name.to_string(), Box::new(Sum::new()));
+                    }
+                    AggregationMethod::Count => {
+                        self.aggregator_map
+                            .insert(method_name.to_string(), Box::new(Counter::new()));
+                    }
+                    AggregationMethod::Date(format) => {
+                        self.aggregator_map.insert(
+                            method_name.to_string(),
+                            Box::new(Date::new(format, DateParserType::Date)),
+                        );
+                    }
+                    AggregationMethod::Time(format) => {
+                        self.aggregator_map.insert(
+                            method_name.to_string(),
+                            Box::new(Date::new(format, DateParserType::Time)),
+                        );
+                    }
+                    AggregationMethod::DateTime(format) => {
+                        self.aggregator_map.insert(
+                            method_name.to_string(),
+                            Box::new(Date::new(format, DateParserType::DateTime)),
+                        );
+                    }
+                    AggregationMethod::None => {
+                        self.aggregator_map
+                            .insert(method_name.to_string(), Box::new(NoneAg::new()));
+                    }
+                };
+            }
         }
     }
 

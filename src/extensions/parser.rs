@@ -381,7 +381,7 @@ mod tests {
         map.insert(
             String::from("DateTime"),
             AggregationMethod::DateTime(String::from(
-                "[year]-[month]-[day] [hour]:[month]:[second]",
+                "[year]-[month]-[day] [hour]:[minute]:[second]",
             )),
         );
         map.insert(String::from("Method"), AggregationMethod::Count);
@@ -391,7 +391,7 @@ mod tests {
         map2.insert(
             String::from("DateTime"),
             AggregationMethod::DateTime(String::from(
-                "[year]-[month]-[day] [hour]:[month]:[second]",
+                "[year]-[month]-[day] [hour]:[minute]:[second]",
             )),
         );
         map2.insert(String::from("Method"), AggregationMethod::Count);
@@ -575,11 +575,11 @@ mod tests {
         );
         map.insert(
             String::from("Level"),
-            AggregationMethod::DateTime("[year]-[month]-[day] [hour]:[month]:[second]".to_string()),
+            AggregationMethod::DateTime("[year]-[month]-[day] [hour]:[minute]:[second]".to_string()),
         );
         map.insert(
             String::from("Level"),
-            AggregationMethod::Time("[hour]:[month]:[second]".to_string()),
+            AggregationMethod::Time("[hour]:[minute]:[second]".to_string()),
         );
         map.insert(String::from("Message"), AggregationMethod::Mean);
         map.insert(String::from("Message"), AggregationMethod::Sum);

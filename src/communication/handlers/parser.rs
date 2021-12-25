@@ -219,7 +219,6 @@ impl ProcessorMethods for ParserHandler {
 
     /// Clear the parsed messages from the message buffer
     fn clear_matches(&mut self, window: &mut MainWindow) -> Result<()> {
-        // TODO: Determine if regex while parsing still works after parser deactivation
         self.parser = None;
         window.config.auxiliary_messages.clear();
         window.config.last_index_processed = 0;

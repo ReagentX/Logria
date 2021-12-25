@@ -326,7 +326,9 @@ mod tests {
         let mut map = HashMap::new();
         map.insert(
             String::from("DateTime"),
-            AggregationMethod::DateTime(String::from("[year]-[month]-[day] [hour]:[month]:[second]")),
+            AggregationMethod::DateTime(String::from(
+                "[year]-[month]-[day] [hour]:[month]:[second]",
+            )),
         );
         map.insert(String::from("Method"), AggregationMethod::Count);
         map.insert(String::from("Level"), AggregationMethod::Count);
@@ -334,7 +336,9 @@ mod tests {
         let mut map2 = HashMap::new();
         map2.insert(
             String::from("DateTime"),
-            AggregationMethod::DateTime(String::from("[year]-[month]-[day] [hour]:[month]:[second]")),
+            AggregationMethod::DateTime(String::from(
+                "[year]-[month]-[day] [hour]:[month]:[second]",
+            )),
         );
         map2.insert(String::from("Method"), AggregationMethod::Count);
         map2.insert(String::from("Level"), AggregationMethod::Count);

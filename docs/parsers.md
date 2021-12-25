@@ -47,7 +47,7 @@ All parsers have the following keys:
 - `order`
   - The order the message parts occur in for aggregation
 - `aggregation_methods`
-  - Can be `Mean`, `Sum`, `Count`, `Date`, `Time`, `DateTime`, and `None`
+  - Can be `Mean`, `Sum`, `Count`, `Mode`, `Date`, `Time`, `DateTime`, and `None`
   - See [Aggregation Methods](#aggregation-methods) below for details
 
 ## Types of Parsers
@@ -116,7 +116,7 @@ The `aggregation_methods` key stores a `HashMap<String, AggregationMethod>` of t
 
 ### Included Methods
 
-Methods currently include [`Mean`](#mean-and-sum), [`Sum`](#mean-and-sum), [`Count`](#count), [`Date`](#date-time-and-datetime), [`Time`](#date-time-and-datetime), [`DateTime`](#date-time-and-datetime), and [`None`](#none). These all have different behaviors.
+Methods currently include [`Mean`](#mean-and-sum), [`Sum`](#mean-and-sum), [`Count`](#count-and-mode),[`Mode`](#count-and-mode) [`Date`](#date-time-and-datetime), [`Time`](#date-time-and-datetime), [`DateTime`](#date-time-and-datetime), and [`None`](#none). These all have different behaviors.
 
 #### Mean and Sum
 
@@ -146,7 +146,7 @@ extract_number("4.123 this is a test 123.4");  // 4.123
 extract_number("this is a 123.123. test");  // None, invalid
 ```
 
-#### Count
+#### Count and Mode
 
 This uses a data structure similar to Python's [`collections.Counter`](https://docs.python.org/3/library/collections.html#collections.Counter) to keep track of messages. Each message is hashed, so identical messages will get incremented. It defaults to displaying the top 5 results; this can be adjusted using the `:agg` [command](commands.md#commands).
 
@@ -158,6 +158,8 @@ Level
     WARNING: 1,433 (28%)
     ERROR: 886 (17%)
 ```
+
+`Mode` is a special case of `Couter` where the top `n` is frozen to `1`.
 
 #### Date, Time, and DateTime
 

@@ -442,14 +442,16 @@ pub mod main {
                     message = self.highlight_match(message);
                 }
 
-                // Adding padding and printing over the rest of the line is better than
-                // clearing the screen and writing again. This is because we can only fit
-                // a few items into the render queue. Because the queue is flushed
-                // automatically when it is full, we end up having a lot of partial screen
-                // renders, i.e. a lot of flickering, which makes for bad UX. This is not
-                // a perfect solution because we can still get partial renders if the
-                // terminal has a lot of lines, but we are guaranteed to never have blank
-                // lines in the render, which are what cause the flickering effect.
+                /*
+                Adding padding and printing over the rest of the line is better than
+                clearing the screen and writing again. This is because we can only fit
+                a few items into the render queue. Because the queue is flushed
+                automatically when it is full, we end up having a lot of partial screen
+                renders, i.e. a lot of flickering, which makes for bad UX. This is not
+                a perfect solution because we can still get partial renders if the
+                terminal has a lot of lines, but we are guaranteed to never have blank
+                lines in the render, which are what cause the flickering effect.
+                */
                 let message_padding_size = (width * message_rows) - message_length;
                 let padding = " ".repeat(message_padding_size);
 
@@ -538,7 +540,6 @@ pub mod main {
 
         /// Overwrites the output window with empty space
         /// TODO: faster?
-        ///! Unused currently because it is too slow and causes flickering
         pub fn reset_output(&mut self) -> Result<()> {
             let last_row = self.config.last_row - 1;
             execute!(self.output, cursor::SavePosition)?;

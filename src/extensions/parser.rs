@@ -161,7 +161,7 @@ impl Parser {
                     }
                     AggregationMethod::Mode => {
                         self.aggregator_map
-                            .insert(method_name.to_string(), Box::new(Counter::new()));
+                            .insert(method_name.to_string(), Box::new(Counter::new(Some(1))));
                     }
                     AggregationMethod::Sum => {
                         self.aggregator_map
@@ -169,7 +169,7 @@ impl Parser {
                     }
                     AggregationMethod::Count => {
                         self.aggregator_map
-                            .insert(method_name.to_string(), Box::new(Counter::new()));
+                            .insert(method_name.to_string(), Box::new(Counter::new(None)));
                     }
                     AggregationMethod::Date(format) => {
                         self.aggregator_map.insert(
@@ -558,5 +558,44 @@ mod tests {
                 String::from("critical message")
             ]
         );
+    }
+
+    #[test]
+    fn test_can_setup_aggregation_methods() {
+        let mut map = HashMap::new();
+        map.insert(
+            String::from("Date"),
+            AggregationMethod::Date(String::from("[year]-[month]-[day]")),
+        );
+        map.insert(String::from("Method"), AggregationMethod::Count);
+        map.insert(String::from("Message"), AggregationMethod::Mode);
+        map.insert(
+            String::from("Level"),
+            AggregationMethod::Date("".to_string()),
+        );
+        map.insert(
+            String::from("Level"),
+            AggregationMethod::DateTime("".to_string()),
+        );
+        map.insert(
+            String::from("Level"),
+            AggregationMethod::Time("".to_string()),
+        );
+        map.insert(String::from("Message"), AggregationMethod::Mean);
+        map.insert(String::from("Message"), AggregationMethod::Sum);
+        map.insert(String::from("Message"), AggregationMethod::None);
+        let mut parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
+            map,
+        );
+        parser.setup();
     }
 }

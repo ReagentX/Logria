@@ -253,6 +253,8 @@ impl Parser {
 mod parse_tests {
     use std::collections::HashMap;
 
+    use time::parsing::Parsable;
+
     use crate::{
         constants::directories::patterns,
         extensions::{
@@ -623,6 +625,7 @@ mod aggregate_tests {
             map,
         );
         parser.setup();
+        assert!(parser.aggregator_map.get("1").is_some());
     }
 
     #[test]
@@ -640,6 +643,7 @@ mod aggregate_tests {
             map,
         );
         parser.setup();
+        assert!(parser.aggregator_map.get("1").is_some());
     }
 
     #[test]
@@ -659,6 +663,7 @@ mod aggregate_tests {
             map,
         );
         parser.setup();
+        assert!(parser.aggregator_map.get("1").is_some());
     }
 
     #[test]
@@ -673,6 +678,7 @@ mod aggregate_tests {
             map,
         );
         parser.setup();
+        assert!(parser.aggregator_map.get("1").is_some());
     }
 
     #[test]
@@ -687,6 +693,7 @@ mod aggregate_tests {
             map,
         );
         parser.setup();
+        assert!(parser.aggregator_map.get("1").is_some());
     }
 
     #[test]
@@ -701,6 +708,7 @@ mod aggregate_tests {
             map,
         );
         parser.setup();
+        assert!(parser.aggregator_map.get("1").is_some());
     }
 
     #[test]
@@ -715,6 +723,7 @@ mod aggregate_tests {
             map,
         );
         parser.setup();
+        assert!(parser.aggregator_map.get("1").is_some());
     }
 
     #[test]
@@ -729,5 +738,6 @@ mod aggregate_tests {
             map,
         );
         parser.setup();
+        assert!(parser.aggregator_map.get("1").is_some());
     }
 }

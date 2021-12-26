@@ -144,7 +144,10 @@ impl Date {
         }
         let mut per_unit = String::from("per ");
         per_unit.push_str(unit);
-        (self.count.checked_div(denominator).unwrap_or(0), per_unit)
+        (
+            max(self.count.checked_div(denominator).unwrap_or(self.count), 1),
+            per_unit,
+        )
     }
 }
 

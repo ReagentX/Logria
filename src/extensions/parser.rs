@@ -13,7 +13,14 @@ use crate::{
     constants::directories::patterns,
     extensions::extension::ExtensionMethods,
     util::{
-        aggregators::aggregator::{AggregationMethod, Aggregator},
+        aggregators::{
+            aggregator::{AggregationMethod, Aggregator},
+            counter::Counter,
+            date::{Date, DateParserType},
+            mean::Mean,
+            none::NoneAg,
+            sum::Sum,
+        },
         error::LogriaError,
     },
 };
@@ -141,6 +148,53 @@ impl Parser {
                 file_name.to_owned(),
                 why.to_string(),
             )),
+        }
+    }
+
+    pub fn setup(&mut self) {
+        for method_name in &self.order {
+            if let Some(method) = self.aggregation_methods.get(method_name) {
+                match method {
+                    AggregationMethod::Mean => {
+                        self.aggregator_map
+                            .insert(method_name.to_string(), Box::new(Mean::new()));
+                    }
+                    AggregationMethod::Mode => {
+                        self.aggregator_map
+                            .insert(method_name.to_string(), Box::new(Counter::new(Some(1))));
+                    }
+                    AggregationMethod::Sum => {
+                        self.aggregator_map
+                            .insert(method_name.to_string(), Box::new(Sum::new()));
+                    }
+                    AggregationMethod::Count => {
+                        self.aggregator_map
+                            .insert(method_name.to_string(), Box::new(Counter::new(None)));
+                    }
+                    AggregationMethod::Date(format) => {
+                        self.aggregator_map.insert(
+                            method_name.to_string(),
+                            Box::new(Date::new(format, DateParserType::Date)),
+                        );
+                    }
+                    AggregationMethod::Time(format) => {
+                        self.aggregator_map.insert(
+                            method_name.to_string(),
+                            Box::new(Date::new(format, DateParserType::Time)),
+                        );
+                    }
+                    AggregationMethod::DateTime(format) => {
+                        self.aggregator_map.insert(
+                            method_name.to_string(),
+                            Box::new(Date::new(format, DateParserType::DateTime)),
+                        );
+                    }
+                    AggregationMethod::None => {
+                        self.aggregator_map
+                            .insert(method_name.to_string(), Box::new(NoneAg::new()));
+                    }
+                };
+            }
         }
     }
 
@@ -327,7 +381,7 @@ mod tests {
         map.insert(
             String::from("DateTime"),
             AggregationMethod::DateTime(String::from(
-                "[year]-[month]-[day] [hour]:[month]:[second]",
+                "[year]-[month]-[day] [hour]:[minute]:[second]",
             )),
         );
         map.insert(String::from("Method"), AggregationMethod::Count);
@@ -337,7 +391,7 @@ mod tests {
         map2.insert(
             String::from("DateTime"),
             AggregationMethod::DateTime(String::from(
-                "[year]-[month]-[day] [hour]:[month]:[second]",
+                "[year]-[month]-[day] [hour]:[minute]:[second]",
             )),
         );
         map2.insert(String::from("Method"), AggregationMethod::Count);
@@ -504,5 +558,44 @@ mod tests {
                 String::from("critical message")
             ]
         );
+    }
+
+    #[test]
+    fn test_can_setup_aggregation_methods() {
+        let mut map = HashMap::new();
+        map.insert(
+            String::from("Date"),
+            AggregationMethod::Date(String::from("[year]-[month]-[day]")),
+        );
+        map.insert(String::from("Method"), AggregationMethod::Count);
+        map.insert(String::from("Message"), AggregationMethod::Mode);
+        map.insert(
+            String::from("Level"),
+            AggregationMethod::Date("".to_string()),
+        );
+        map.insert(
+            String::from("Level"),
+            AggregationMethod::DateTime("[year]-[month]-[day] [hour]:[minute]:[second]".to_string()),
+        );
+        map.insert(
+            String::from("Level"),
+            AggregationMethod::Time("[hour]:[minute]:[second]".to_string()),
+        );
+        map.insert(String::from("Message"), AggregationMethod::Mean);
+        map.insert(String::from("Message"), AggregationMethod::Sum);
+        map.insert(String::from("Message"), AggregationMethod::None);
+        let mut parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from("2005-03-19 15:10:26,773 - simple_example - CRITICAL - critical message"),
+            vec![
+                "Date".to_string(),
+                "Message".to_string(),
+                "Level".to_string(),
+                "Message".to_string(),
+            ],
+            map,
+        );
+        parser.setup();
     }
 }

@@ -10,6 +10,7 @@ use format_num::format_num;
 pub struct Counter {
     state: HashMap<String, u64>,
     order: HashMap<u64, BTreeSet<String>>,
+    num_to_get: Option<usize>,
 }
 
 impl Aggregator for Counter {
@@ -20,8 +21,9 @@ impl Aggregator for Counter {
 
     fn messages(&self, n: &usize) -> Vec<String> {
         // Place to store the result
-        let mut result = Vec::with_capacity(*n);
-        if *n == 0_usize {
+        let num = &self.num_to_get.unwrap_or(*n);
+        let mut result = Vec::with_capacity(*num);
+        if *num == 0_usize {
             return result;
         }
 
@@ -50,7 +52,7 @@ impl Aggregator for Counter {
                     (*count as f64 / total) * 100_f64
                 ));
                 total_added += 1;
-                if total_added == *n {
+                if total_added == *num {
                     return result;
                 }
             }
@@ -60,10 +62,11 @@ impl Aggregator for Counter {
 }
 
 impl Counter {
-    pub fn new() -> Counter {
+    pub fn new(num_to_get: Option<usize>) -> Counter {
         Counter {
             state: HashMap::new(),
             order: HashMap::new(),
+            num_to_get,
         }
     }
 
@@ -153,12 +156,12 @@ mod behavior_tests {
 
     #[test]
     fn can_construct_counter() {
-        let c: Counter = Counter::new();
+        let c: Counter = Counter::new(None);
     }
 
     #[test]
     fn can_count_int() {
-        let mut c: Counter = Counter::new();
+        let mut c: Counter = Counter::new(None);
         c.increment("1");
         c.increment("1");
         c.increment("1");
@@ -183,7 +186,7 @@ mod behavior_tests {
 
     #[test]
     fn can_count() {
-        let mut c: Counter = Counter::new();
+        let mut c: Counter = Counter::new(Some(5));
         c.increment(A);
         c.increment(A);
         c.increment(A);
@@ -208,7 +211,7 @@ mod behavior_tests {
 
     #[test]
     fn can_sum() {
-        let mut c: Counter = Counter::new();
+        let mut c: Counter = Counter::new(None);
         c.update(A).unwrap();
         c.update(A).unwrap();
         c.update(A).unwrap();
@@ -224,7 +227,7 @@ mod behavior_tests {
 
     #[test]
     fn can_decrement() {
-        let mut c: Counter = Counter::new();
+        let mut c: Counter = Counter::new(Some(5));
         c.increment(A);
         c.increment(A);
         c.increment(A);
@@ -248,7 +251,7 @@ mod behavior_tests {
 
     #[test]
     fn can_decrement_auto_remove() {
-        let mut c: Counter = Counter::new();
+        let mut c: Counter = Counter::new(Some(5));
         c.increment(A);
         c.increment(B);
         c.increment(B);
@@ -268,7 +271,7 @@ mod behavior_tests {
 
     #[test]
     fn can_delete() {
-        let mut c: Counter = Counter::new();
+        let mut c: Counter = Counter::new(Some(5));
         c.increment(A);
         c.increment(A);
         c.increment(A);
@@ -300,7 +303,7 @@ mod message_tests {
 
     #[test]
     fn can_get_top_0() {
-        let mut c: Counter = Counter::new();
+        let mut c: Counter = Counter::new(None);
         c.increment(A);
         c.increment(A);
         c.increment(A);
@@ -318,7 +321,7 @@ mod message_tests {
 
     #[test]
     fn can_get_top_1() {
-        let mut c: Counter = Counter::new();
+        let mut c: Counter = Counter::new(None);
         c.increment(A);
         c.increment(A);
         c.increment(A);
@@ -336,7 +339,7 @@ mod message_tests {
 
     #[test]
     fn can_get_top_2() {
-        let mut c: Counter = Counter::new();
+        let mut c: Counter = Counter::new(None);
         c.increment(A);
         c.increment(A);
         c.increment(A);
@@ -357,7 +360,7 @@ mod message_tests {
 
     #[test]
     fn can_get_top_3() {
-        let mut c: Counter = Counter::new();
+        let mut c: Counter = Counter::new(None);
         c.increment(A);
         c.increment(A);
         c.increment(A);
@@ -379,7 +382,7 @@ mod message_tests {
 
     #[test]
     fn can_get_top_4() {
-        let mut c: Counter = Counter::new();
+        let mut c: Counter = Counter::new(Some(5));
         c.increment(A);
         c.increment(A);
         c.increment(A);

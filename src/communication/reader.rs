@@ -140,6 +140,30 @@ pub mod main {
             app
         }
 
+        /// Construct sample window for testing date parsers
+        pub fn _new_dummy_parse_date() -> MainWindow {
+            let mut app = MainWindow::new(true, true);
+
+            // Set fake dimensions
+            app.config.height = 10;
+            app.config.width = 100;
+            app.config.stream_type = StreamType::StdErr;
+            app.config.previous_stream_type = StreamType::StdOut;
+
+            // Set fake previous render
+            app.config.last_row = app.config.height - 3; // simulate the last row we can render to
+
+            // Set fake messages
+            app.config.stderr_messages = vec![
+                "2021-03-10 | 08:10:26 | 2021-03-19 08:10:26".to_string(),
+                "2021-03-12 | 08:10:36 | 2021-03-19 08:12:26".to_string(),
+                "2021-03-12 | 08:10:46 | 2021-03-19 09:14:26".to_string(),
+                "2021-03-15 | 08:10:56 | 2021-03-19 10:30:26".to_string(),
+            ];
+
+            app
+        }
+
         pub fn new(history: bool, smart_poll_rate: bool) -> MainWindow {
             // Build streams here
             MainWindow {
@@ -328,7 +352,7 @@ pub mod main {
         }
 
         /// Highlight the regex matched text with an ASCII escape code
-        fn highlight_match(&self, message: String) -> String {
+        fn highlight_match(&self, message: &str) -> String {
             // Regex out any existing color codes
             // We use a bytes regex because we cannot compile the pattern using normal regex
             let clean_message = self
@@ -439,7 +463,7 @@ pub mod main {
 
                 // TODO: make this faster
                 if self.config.highlight_match && self.config.regex_pattern.is_some() {
-                    message = self.highlight_match(message);
+                    message = self.highlight_match(&message);
                 }
 
                 /*
@@ -946,10 +970,10 @@ pub mod main {
         }
     }
 
-    #[cfg(test)] 
+    #[cfg(test)]
     mod poll_rate_tests {
         use crate::communication::{input::input_type::InputType, reader::main::MainWindow};
-        use std::time::{Duration};
+        use std::time::Duration;
 
         #[test]
         fn test_no_poll_rate_change_when_disabled() {

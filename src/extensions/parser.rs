@@ -253,8 +253,6 @@ impl Parser {
 mod parse_tests {
     use std::collections::HashMap;
 
-    use time::parsing::Parsable;
-
     use crate::{
         constants::directories::patterns,
         extensions::{
@@ -567,7 +565,7 @@ mod parse_tests {
 mod aggregate_tests {
     use std::collections::HashMap;
 
-    use crate::{extensions::parser::{AggregationMethod, Parser, PatternType}, util::aggregators::none::NoneAg};
+    use crate::extensions::parser::{AggregationMethod, Parser, PatternType};
 
     #[test]
     fn test_can_setup_multiple_aggregation_methods() {

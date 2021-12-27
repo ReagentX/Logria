@@ -60,11 +60,8 @@ impl Tape {
                 // Create a buffer and read from it
                 let reader = BufReader::new(file);
                 for line in reader.lines() {
-                    if line.is_ok() {
-                        self.history_tape.push(match line {
-                            Ok(a) => a,
-                            _ => unreachable!(),
-                        });
+                    if let Ok(item) = line {
+                        self.history_tape.push(item);
                     } else {
                         break;
                     }

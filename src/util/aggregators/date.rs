@@ -46,7 +46,7 @@ impl Aggregator for Date {
                     Err(why) => Err(LogriaError::CannotParseDate(why.to_string())),
                 },
             },
-            Err(why) => panic!("{}", why),
+            Err(why) => Err(LogriaError::CannotParseDate(why.to_string())),
         }
     }
 

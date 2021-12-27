@@ -629,7 +629,7 @@ pub mod main {
                 self.config.auxiliary_messages.extend(gen());
                 self.redraw()?;
             } else {
-                panic!("Cannot draw aux messages with no fn pointer!")
+                self.write_to_command_line("Cannot write auxiliary messages with no function!")?;
             }
             Ok(())
         }

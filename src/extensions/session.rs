@@ -136,11 +136,7 @@ impl Session {
                 <dyn Error>::to_string(&why)
             ),
         };
-        let session = serde_json::from_str(&session_json);
-        match session {
-            Ok(s) => Ok(s),
-            Err(e) => Err(e),
-        }
+        serde_json::from_str(&session_json)
     }
 }
 

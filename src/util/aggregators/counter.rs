@@ -156,7 +156,7 @@ mod behavior_tests {
 
     #[test]
     fn can_construct_counter() {
-        let c: Counter = Counter::new(None);
+        Counter::new(None);
     }
 
     #[test]

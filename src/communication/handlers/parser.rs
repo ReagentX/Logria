@@ -678,7 +678,7 @@ mod regex_tests {
             reader::main::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
-        util::aggregators::{aggregator::AggregationMethod, mean::Mean},
+        util::aggregators::aggregator::AggregationMethod,
     };
 
     #[test]
@@ -847,7 +847,7 @@ mod split_tests {
             reader::main::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
-        util::aggregators::{aggregator::AggregationMethod, mean::Mean},
+        util::aggregators::aggregator::AggregationMethod,
     };
 
     #[test]
@@ -987,7 +987,7 @@ mod failure_tests {
             reader::main::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
-        util::aggregators::{aggregator::AggregationMethod, mean::Mean},
+        util::aggregators::aggregator::AggregationMethod,
     };
 
     #[test]

@@ -250,7 +250,7 @@ impl Parser {
 }
 
 #[cfg(test)]
-mod tests {
+mod parse_tests {
     use std::collections::HashMap;
 
     use crate::{
@@ -559,9 +559,16 @@ mod tests {
             ]
         );
     }
+}
+
+#[cfg(test)]
+mod aggregate_tests {
+    use std::collections::HashMap;
+
+    use crate::extensions::parser::{AggregationMethod, Parser, PatternType};
 
     #[test]
-    fn test_can_setup_aggregation_methods() {
+    fn test_can_setup_multiple_aggregation_methods() {
         let mut map = HashMap::new();
         map.insert(
             String::from("Date"),
@@ -575,7 +582,9 @@ mod tests {
         );
         map.insert(
             String::from("Level"),
-            AggregationMethod::DateTime("[year]-[month]-[day] [hour]:[minute]:[second]".to_string()),
+            AggregationMethod::DateTime(
+                "[year]-[month]-[day] [hour]:[minute]:[second]".to_string(),
+            ),
         );
         map.insert(
             String::from("Level"),
@@ -597,5 +606,136 @@ mod tests {
             map,
         );
         parser.setup();
+    }
+
+    #[test]
+    fn test_can_setup_date() {
+        let mut map = HashMap::new();
+        map.insert(
+            String::from("1"),
+            AggregationMethod::Date(String::from("[year]-[month]-[day]")),
+        );
+        let mut parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from(""),
+            vec!["1".to_string()],
+            map,
+        );
+        parser.setup();
+        assert!(parser.aggregator_map.get("1").is_some());
+    }
+
+    #[test]
+    fn test_can_setup_time() {
+        let mut map = HashMap::new();
+        map.insert(
+            String::from("1"),
+            AggregationMethod::Time(String::from("[hour]:[minute]:[second]")),
+        );
+        let mut parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from(""),
+            vec!["1".to_string()],
+            map,
+        );
+        parser.setup();
+        assert!(parser.aggregator_map.get("1").is_some());
+    }
+
+    #[test]
+    fn test_can_setup_datetime() {
+        let mut map = HashMap::new();
+        map.insert(
+            String::from("1"),
+            AggregationMethod::DateTime(String::from(
+                "[year]-[month]-[day] [hour]:[minute]:[second]",
+            )),
+        );
+        let mut parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from(""),
+            vec!["1".to_string()],
+            map,
+        );
+        parser.setup();
+        assert!(parser.aggregator_map.get("1").is_some());
+    }
+
+    #[test]
+    fn test_can_setup_count() {
+        let mut map = HashMap::new();
+        map.insert(String::from("1"), AggregationMethod::Count);
+        let mut parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from(""),
+            vec!["1".to_string()],
+            map,
+        );
+        parser.setup();
+        assert!(parser.aggregator_map.get("1").is_some());
+    }
+
+    #[test]
+    fn test_can_setup_mode() {
+        let mut map = HashMap::new();
+        map.insert(String::from("1"), AggregationMethod::Mode);
+        let mut parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from(""),
+            vec!["1".to_string()],
+            map,
+        );
+        parser.setup();
+        assert!(parser.aggregator_map.get("1").is_some());
+    }
+
+    #[test]
+    fn test_can_setup_mean() {
+        let mut map = HashMap::new();
+        map.insert(String::from("1"), AggregationMethod::Mean);
+        let mut parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from(""),
+            vec!["1".to_string()],
+            map,
+        );
+        parser.setup();
+        assert!(parser.aggregator_map.get("1").is_some());
+    }
+
+    #[test]
+    fn test_can_setup_sum() {
+        let mut map = HashMap::new();
+        map.insert(String::from("1"), AggregationMethod::Sum);
+        let mut parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from(""),
+            vec!["1".to_string()],
+            map,
+        );
+        parser.setup();
+        assert!(parser.aggregator_map.get("1").is_some());
+    }
+
+    #[test]
+    fn test_can_setup_none() {
+        let mut map = HashMap::new();
+        map.insert(String::from("1"), AggregationMethod::None);
+        let mut parser = Parser::new(
+            String::from(" - "),
+            PatternType::Split,
+            String::from(""),
+            vec!["1".to_string()],
+            map,
+        );
+        parser.setup();
+        assert!(parser.aggregator_map.get("1").is_some());
     }
 }

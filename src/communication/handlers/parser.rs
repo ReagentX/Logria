@@ -16,7 +16,7 @@ use crate::{
         parser::{Parser, PatternType},
     },
     ui::scroll,
-    util::{ error::LogriaError},
+    util::error::LogriaError,
 };
 
 #[derive(Debug, PartialEq)]
@@ -799,18 +799,8 @@ mod regex_tests {
             ],
             map,
         );
-        parser
-            .aggregator_map
-            .insert(String::from("full"), Box::new(Mean::new()));
-        parser
-            .aggregator_map
-            .insert(String::from("minus_1"), Box::new(Mean::new()));
-        parser
-            .aggregator_map
-            .insert(String::from("minus_2"), Box::new(Mean::new()));
-        parser
-            .aggregator_map
-            .insert(String::from("minus_3"), Box::new(Mean::new()));
+
+        parser.setup();
 
         // Update window config
         handler.parser = Some(parser);
@@ -949,18 +939,8 @@ mod split_tests {
             ],
             map,
         );
-        parser
-            .aggregator_map
-            .insert(String::from("full"), Box::new(Mean::new()));
-        parser
-            .aggregator_map
-            .insert(String::from("minus_1"), Box::new(Mean::new()));
-        parser
-            .aggregator_map
-            .insert(String::from("minus_2"), Box::new(Mean::new()));
-        parser
-            .aggregator_map
-            .insert(String::from("minus_3"), Box::new(Mean::new()));
+
+        parser.setup();
 
         // Update window config
         handler.parser = Some(parser);
@@ -1035,18 +1015,7 @@ mod failure_tests {
             map,
         );
 
-        parser
-            .aggregator_map
-            .insert(String::from("full"), Box::new(Mean::new()));
-        parser
-            .aggregator_map
-            .insert(String::from("minus_1"), Box::new(Mean::new()));
-        parser
-            .aggregator_map
-            .insert(String::from("minus_2"), Box::new(Mean::new()));
-        parser
-            .aggregator_map
-            .insert(String::from("minus_3"), Box::new(Mean::new()));
+        parser.setup();
 
         // Update window config
         handler.parser = Some(parser);

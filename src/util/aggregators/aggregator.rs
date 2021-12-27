@@ -28,7 +28,9 @@ pub fn extract_number(message: &str) -> Option<f64> {
 }
 
 pub trait Aggregator {
+    /// Insert an item into the aggregator, updating it's internal tracking data
     fn update(&mut self, message: &str) -> Result<(), LogriaError>;
+    /// Expensive function that generates messages to render
     fn messages(&self, n: &usize) -> Vec<String>;
 }
 
@@ -38,9 +40,9 @@ pub enum AggregationMethod {
     Mode, // Special case of Count, for most_common(1)
     Sum,
     Count,
-    Date(String),
-    Time(String),
-    DateTime(String),
+    Date(String),     // Format string provided by user
+    Time(String),     // Format string provided by user
+    DateTime(String), // Format string provided by user
     None,
 }
 

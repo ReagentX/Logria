@@ -242,14 +242,15 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn test_cant_process_no_pattern() {
+    fn test_can_process_no_pattern() {
         let mut logria = MainWindow::_new_dummy();
         let mut handler = super::RegexHandler::new();
 
         // Set state to regex mode
         logria.input_type = InputType::Regex;
         handler.process_matches(&mut logria).unwrap();
+
+        assert_eq!(logria.config.matched_rows, Vec::<usize>::new());
     }
 
     #[test]

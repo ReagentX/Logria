@@ -1,11 +1,12 @@
 [package]
 name = "logria"
-version = "0.1.0"
+version = "0.0.0"
 authors = ["Christopher Sardegna <logria@reagentx.net>"]
 edition = "2021"
 repository = "https://github.com/ReagentX/Logria"
 readme = "README.md"
 description = "A powerful CLI tool that puts log analytics at your fingertips."
+license-file = "LICENSE"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]

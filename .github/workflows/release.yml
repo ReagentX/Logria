@@ -31,6 +31,6 @@ jobs:
       - run: |
           export VERSION=${{ github.event.release.tag_name }}
           sed -i "s/0.0.0/$VERSION/g" Cargo.toml
-          cargo publish --dry-run --allow-dirty
+          cargo publish --allow-dirty
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

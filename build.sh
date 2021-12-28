@@ -8,8 +8,10 @@ git pull
 export VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
 
 if [ -n "$VERSION" ]; then
+    # Confirm version number with user before build
     read -p "Build with version $VERSION? C-c to cancel, any key to continue " -n 1 -r
     echo
+
     # Update version number in Cargo.toml for build
     # MacOS sed requires the weird empty string param
     # Otherwise it returns `invalid command code C`

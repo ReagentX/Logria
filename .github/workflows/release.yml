@@ -25,7 +25,7 @@ jobs:
           override: true
 
       - run: |
-          export VERSION=${{ github\.event\.release\.tag_name }}
+          export VERSION=${{ github.event.release.tag_name }}
           echo $VERSION
           sed -i "s/0.0.0/$VERSION/g" Cargo.toml
           cargo publish --dry-run

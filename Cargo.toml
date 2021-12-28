@@ -3,12 +3,15 @@ name = "logria"
 version = "0.0.0"
 authors = ["Christopher Sardegna <logria@reagentx.net>"]
 edition = "2021"
-repository = "https://github.com/ReagentX/Logria"
-readme = "README.md"
 description = "A powerful CLI tool that puts log analytics at your fingertips."
+readme = "README.md"
+repository = "https://github.com/ReagentX/Logria"
 license-file = "LICENSE"
+keywords = ["cli", "logs", "log-parsing", "log-analytics"]
+categories = ["command-line-interface", "command-line-utilities"]
+exclude = ["/resources", ".github", "docs", "build.sh"]
+publish = false
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 clap = "2.34.0"
 dirs = "4.0.0"

@@ -24,7 +24,7 @@ jobs:
           toolchain: stable
           override: true
 
-      - run: 
+      - run: |
           sed -i 's/0.0.0/${{ github.event.release.tag_name }}' Cargo.toml
           cargo publish --dry-run
         env:

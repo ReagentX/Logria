@@ -30,6 +30,7 @@ jobs:
           command: test
 
       - name: Publish to Crates.io
+        uses: actions-rs/toolchain@v1
       - run: |
           export VERSION=${{ github.event.release.tag_name }}
           sed -i "s/0.0.0/$VERSION/g" Cargo.toml

@@ -17,13 +17,6 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2
 
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
       - name: Run tests
         uses: actions-rs/cargo@v1
         with:
@@ -31,9 +24,13 @@ jobs:
 
       - name: Publish to Crates.io
         uses: actions-rs/toolchain@v1
-      - run: |
-          export VERSION=${{ github.event.release.tag_name }}
-          sed -i "s/0.0.0/$VERSION/g" Cargo.toml
-          cargo publish --dry-run --allow-dirty
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+        - run: |
+            export VERSION=${{ github.event.release.tag_name }}
+            sed -i "s/0.0.0/$VERSION/g" Cargo.toml
+            cargo publish --dry-run --allow-dirty
+          env:
+            CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

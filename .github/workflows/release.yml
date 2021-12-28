@@ -28,8 +28,6 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-
-      - name: Publish to Crates.io
       - run: |
           export VERSION=${{ github.event.release.tag_name }}
           sed -i "s/0.0.0/$VERSION/g" Cargo.toml

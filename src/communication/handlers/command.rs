@@ -9,6 +9,7 @@ use crate::{
         input::{input_type::InputType, stream_type::StreamType},
         reader::main::MainWindow,
     },
+    ui::scroll::ScrollState,
     util::{credits::gen, error::LogriaError},
 };
 
@@ -183,6 +184,7 @@ impl CommandHandler {
             if let InputType::Startup = window.previous_input_type {
                 window.config.generate_auxiliary_messages = Some(gen);
                 window.config.stream_type = StreamType::Auxiliary;
+                window.config.scroll_state = ScrollState::Top;
                 window.render_auxiliary_text()?;
                 window.write_to_command_line("You've reached the credits! C-c or :q to exit.")?;
             }

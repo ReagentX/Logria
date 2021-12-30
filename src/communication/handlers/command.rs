@@ -5,9 +5,11 @@ use crossterm::{event::KeyCode, Result};
 use super::handler::Handler;
 use crate::{
     communication::{
-        handlers::user_input::UserInputHandler, input::stream_type::StreamType,
+        handlers::user_input::UserInputHandler,
+        input::{input_type::InputType, stream_type::StreamType},
         reader::main::MainWindow,
     },
+    constants::app::LOGRIA,
     util::error::LogriaError,
 };
 
@@ -169,6 +171,20 @@ impl CommandHandler {
                 {
                     window.write_to_command_line("Cannot remove files outside of startup mode.")?;
                 }
+            }
+        }
+        // Credits! Only accessible from the startup window
+        else if command.starts_with("credits") {
+            // Since getting here implies that we are now in command mode, check if the previous input type was startup
+            if let InputType::Startup = window.previous_input_type {
+                // TODO: abstract this, do something cooler
+                fn test() -> Vec<String> {
+                    LOGRIA.into_iter().map(|s| s.to_owned()).collect()
+                }
+                window.config.generate_auxiliary_messages = Some(test);
+                window.config.stream_type = StreamType::Auxiliary;
+                window.render_auxiliary_text()?;
+                window.write_to_command_line("You've reached the credits! :restart to go back.")?;
             }
         }
         // Go back to start screen

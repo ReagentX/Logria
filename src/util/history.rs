@@ -173,7 +173,7 @@ mod tests {
         let mut tape = Tape::new();
 
         // Create some dummy data
-        (0..5)
+        (0..10)
             .into_iter()
             .for_each(|_| tape.history_tape.push("".to_owned()));
         tape.current_index = tape.history_tape.len().checked_sub(1).unwrap_or_default();

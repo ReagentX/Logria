@@ -13,6 +13,7 @@ pub mod length {
                 color_pattern: Regex::new(ANSI_COLOR_PATTERN).unwrap(),
             }
         }
+
         pub fn get_real_length(&self, content: &str) -> usize {
             self.color_pattern
                 .split(content.as_bytes())

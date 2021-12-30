@@ -5,10 +5,12 @@ use crossterm::{event::KeyCode, Result};
 use super::handler::Handler;
 use crate::{
     communication::{
-        handlers::user_input::UserInputHandler, input::stream_type::StreamType,
+        handlers::user_input::UserInputHandler,
+        input::{input_type::InputType, stream_type::StreamType},
         reader::main::MainWindow,
     },
-    util::error::LogriaError,
+    ui::scroll::ScrollState,
+    util::{credits::gen, error::LogriaError},
 };
 
 pub struct CommandHandler {
@@ -140,6 +142,11 @@ impl CommandHandler {
             // TODO: Make this work
             window.write_to_command_line("History off")?
         }
+        // Go back to start screen, must be before `: r`
+        else if command.starts_with("restart") {
+            // TODO: Make this work
+            window.write_to_command_line("Restart")?
+        }
         // Remove saved sessions from the main screen
         else if command.starts_with('r') {
             if let StreamType::Auxiliary = window.config.stream_type {
@@ -171,10 +178,16 @@ impl CommandHandler {
                 }
             }
         }
-        // Go back to start screen
-        else if command.starts_with("restart") {
-            // TODO: Make this work
-            window.write_to_command_line("Restart")?
+        // Credits! Only accessible from the startup window
+        else if command.starts_with("credits") {
+            // Since getting here implies that we are now in command mode, check if the previous input type was startup
+            if let InputType::Startup = window.previous_input_type {
+                window.config.generate_auxiliary_messages = Some(gen);
+                window.config.stream_type = StreamType::Auxiliary;
+                window.config.scroll_state = ScrollState::Top;
+                window.render_auxiliary_text()?;
+                window.write_to_command_line("You've reached the credits! C-c or :q to exit.")?;
+            }
         } else if command.starts_with("agg") {
             match self.resolve_aggregation_count(command) {
                 Ok(val) => {

@@ -100,6 +100,6 @@ Logria is not a tool for detailed log analytics. [`lnav`](https://lnav.org/featu
 - [Voidsphere](https://voidsphere.bandcamp.com/music), for providing all the hacking music I could want.
 - [Julian Coleman](https://github.com/juliancoleman/), for lots of code review and general Rust advice.
 - [@rhamorim](https://twitter.com/rhamorim), for [suggesting](https://twitter.com/rhamorim/status/1333856615624306692) an alternative for non-blocking IO without `O_NONBLOCK`.
-- [@andy_crab_gear](https://twitter.com/andy_crab_gear), for [suggesting](https://twitter.com/andy_crab_gear/status/1333866079555239936) an alternative for non-blocking IO without `O_NONBLOCK`.
+- [@javasux0](https://twitter.com/javasux0), for [suggesting](https://twitter.com/javasux0/status/1333866079555239936) an alternative for non-blocking IO without `O_NONBLOCK`.
 - [yonkeltron](https://github.com/yonkeltron), for advice and help learning Rust.
 - [Simone Vittori](https://www.simonewebdesign.it), for a great [blog post](https://www.simonewebdesign.it/rust-hashmap-insert-values-multiple-types/) on storing multiple value types in a `HashMap`.

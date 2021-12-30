@@ -7,6 +7,7 @@ pub mod length {
     pub struct LengthFinder {
         color_pattern: Regex,
     }
+
     impl LengthFinder {
         pub fn new() -> LengthFinder {
             LengthFinder {

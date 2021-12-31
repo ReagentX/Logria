@@ -20,6 +20,12 @@ pub fn from_command_line() -> ArgMatches<'static> {
                 .help(messages::SMART_POLL_RATE_HELP),
         )
         .arg(
+            Arg::with_name("docs")
+                .short("-d")
+                .long("docs")
+                .help(messages::DOCS_HELP),
+        )
+        .arg(
             Arg::with_name("exec")
                 .short("e")
                 .long("exec")

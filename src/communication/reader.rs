@@ -698,6 +698,10 @@ pub mod main {
             // Build the UI
             build(self)?;
 
+            // Since building the UI hid the cursor, expose it again
+            self.go_to_cli()?;
+            execute!(self.output, cursor::Show)?;
+
             // Start the main event loop
             self.main()?;
             Ok(())

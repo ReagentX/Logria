@@ -27,8 +27,7 @@ pub mod main {
                 startup::StartupHandler,
             },
             input::{
-                input_type::InputType,
-                stream::{build_streams_from_input, InputStream},
+                build_streams_from_input, input_type::InputType, streams::InputStream,
                 stream_type::StreamType,
             },
         },

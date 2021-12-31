@@ -6,8 +6,7 @@ use super::{handler::Handler, user_input::UserInputHandler};
 use crate::{
     communication::{
         input::{
-            input_type::InputType,
-            stream::{build_streams_from_input, build_streams_from_session},
+            build_streams_from_input, build_streams_from_session, input_type::InputType,
             stream_type::StreamType::StdErr,
         },
         reader::main::MainWindow,

@@ -107,7 +107,6 @@ pub mod messages {
         "    | `:`             | enter command mode                                                          |\n",
         "    | `:q`            | exit the program                                                            |\n",
         "    | `:poll #`       | update poll-rate to #, where # is a number                                  |\n",
-        "    | `:config`       | enter configuration mode to create sessions or parsers                      |\n",
         "    | `:history`      | view and search the history tape                                            |\n",
         "    | `:history #`    | view and search the history tape's last # (integer) items                   |\n",
         "    | `:history off`  | go back to the main app from history mode                                   |\n",

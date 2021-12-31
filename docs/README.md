@@ -58,8 +58,7 @@ This will launch the app and show us the splash screen:
 
 ```log
 Enter a new command to open and save a new stream,
-or enter a number to choose a saved session from the list,
-or enter `:config` to configure.
+or enter a number to choose a saved session from the list.
 
 Enter `:r #` to remove session #.
 Enter `:q` to quit.

@@ -33,10 +33,9 @@ pub mod cli_chars {
 pub mod messages {
 
     // Startup messages
-    pub const START_MESSAGE: [&str; 7] = [
+    pub const START_MESSAGE: [&str; 6] = [
         "Enter a new command to open and save a new stream,",
-        "or enter a number to choose a saved session from the list,",
-        "or enter `:config` to configure.",
+        "or enter a number to choose a saved session from the list.",
         " ", // Blank line for printout
         "Enter `:r #` to remove session #.",
         "Enter `:q` to quit.",
@@ -83,6 +82,40 @@ pub mod messages {
     pub const HISTORY_HELP: &str = "Disable command history disk cache";
     pub const SMART_POLL_RATE_HELP: &str =
         "Disable variable speed polling based on message receive rate";
+    pub const DOCS_HELP: &str = "Print documentation and exit";
+    pub const DOCS: &str = concat!(
+        "CONTROLS:\n",
+        "    +------+--------------------------------------------------+\n",
+        "    | Key  | Command                                          |\n",
+        "    +======+==================================================+\n",
+        "    |  :   | command mode                                     |\n",
+        "    |  /   | regex search                                     |\n",
+        "    |  h   | if regex active, toggle highlighting of matches  |\n",
+        "    |  s   | swap reading `stderr` and `stdout`               |\n",
+        "    |  p   | activate parser                                  |\n",
+        "    |  a   | toggle aggregation mode when parser is active    |\n",
+        "    |  z   | deactivate parser                                |\n",
+        "    |  ↑   | scroll buffer up one line                        |\n",
+        "    |  ↓   | scroll buffer down one line                      |\n",
+        "    |  →   | skip and stick to end of buffer                  |\n",
+        "    |  ←   | skip and stick to beginning of buffer            |\n",
+        "    +------+--------------------------------------------------+\n\n",
+        "COMMANDS:\n",
+        "    +-----------------+-----------------------------------------------------------------------------+\n",
+        "    | Key             | Command                                                                     |\n",
+        "    +=================+=============================================================================+\n",
+        "    | `:`             | enter command mode                                                          |\n",
+        "    | `:q`            | exit the program                                                            |\n",
+        "    | `:poll #`       | update poll-rate to #, where # is a number                                  |\n",
+        "    | `:config`       | enter configuration mode to create sessions or parsers                      |\n",
+        "    | `:history`      | view and search the history tape                                            |\n",
+        "    | `:history #`    | view and search the history tape's last # (integer) items                   |\n",
+        "    | `:history off`  | go back to the main app from history mode                                   |\n",
+        "    | `:r #`          | when launching logria or viewing sessions, this will delete item #          |\n",
+        "    | `:restart`      | go back to the setup screen to change sessions                              |\n",
+        "    | `:agg #`        | set the limit for aggregation counters be `top #`, i.e. `top 5` or `top 1`  |\n",
+        "    +-----------------+-----------------------------------------------------------------------------+\n",
+    );
     pub const PIPE_INPUT_ERROR: &str = "Piping is not supported as Logria cannot both
     listen to stdin as well as get user input from
     your tty. Process substitution is also not

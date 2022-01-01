@@ -81,8 +81,8 @@ pub mod messages {
     pub const EXEC_HELP: &str = "Command to listen to, ex: logria -e \"tail -f log.txt\"";
     pub const HISTORY_HELP: &str = "Disable command history disk cache";
     pub const SMART_POLL_RATE_HELP: &str =
-        "Disable variable speed polling based on message receive rate";
-    pub const DOCS_HELP: &str = "Print documentation and exit";
+        "Disable variable polling rate based on incoming message rate";
+    pub const DOCS_HELP: &str = "Prints documentation";
     pub const DOCS: &str = concat!(
         "CONTROLS:\n",
         "    +------+--------------------------------------------------+\n",
@@ -101,19 +101,19 @@ pub mod messages {
         "    |  ←   | skip and stick to beginning of buffer            |\n",
         "    +------+--------------------------------------------------+\n\n",
         "COMMANDS:\n",
-        "    +-----------------+-----------------------------------------------------------------------------+\n",
-        "    | Key             | Command                                                                     |\n",
-        "    +=================+=============================================================================+\n",
-        "    | `:`             | enter command mode                                                          |\n",
-        "    | `:q`            | exit the program                                                            |\n",
-        "    | `:poll #`       | update poll-rate to #, where # is a number                                  |\n",
-        "    | `:history`      | view and search the history tape                                            |\n",
-        "    | `:history #`    | view and search the history tape's last # (integer) items                   |\n",
-        "    | `:history off`  | go back to the main app from history mode                                   |\n",
-        "    | `:r #`          | when launching logria or viewing sessions, this will delete item #          |\n",
-        "    | `:restart`      | go back to the setup screen to change sessions                              |\n",
-        "    | `:agg #`        | set the limit for aggregation counters be `top #`, i.e. `top 5` or `top 1`  |\n",
-        "    +-----------------+-----------------------------------------------------------------------------+\n",
+        "    +-----------------+---------------------------------------+\n",
+        "    | Key             | Command                               |\n",
+        "    +=================+=======================================+\n",
+        "    | :q              | exit Logria                           |\n",
+        "    | :poll #         | update poll rate to #, where # is an  |\n",
+        "    |                 | integer (in milliseconds)             |\n",
+        "    | :r #            | when launching logria or viewing      |\n",
+        "    |                 | sessions, this will delete item #     |\n",
+        "    | :restart        | go back to the setup screen to change |\n",
+        "    |                 | sessions, this will delete item #     |\n",
+        "    | :agg #          | set the limit for aggregation counters|\n",
+        "    |                 | be top #, i.e. top 5 or top 1         |\n",
+        "    +-----------------+---------------------------------------|\n"
     );
     pub const PIPE_INPUT_ERROR: &str = "Piping is not supported as Logria cannot both
     listen to stdin as well as get user input from

@@ -13,7 +13,7 @@ if [ -n "$VERSION" ]; then
     echo
 
     # Update version number in Cargo.toml for build
-    # MacOS sed requires the weird empty string param
+    # macOS sed requires the weird empty string param
     # Otherwise it returns `invalid command code C`
     sed -i '' "s/0.0.0/$VERSION/g" Cargo.toml
 
@@ -21,7 +21,7 @@ if [ -n "$VERSION" ]; then
     cargo build --target aarch64-apple-darwin --release
     cp target/aarch64-apple-darwin/release/logria output/logria-aarch64-apple-darwin
 
-    # Build for 64-bit Intel MacOS
+    # Build for 64-bit Intel macOS
     cargo build --target x86_64-apple-darwin --release
     cp target/x86_64-apple-darwin/release/logria output/logria-x86_64-apple-darwin
 

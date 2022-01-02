@@ -115,13 +115,16 @@ pub mod messages {
         "    |                 | be top #, i.e. top 5 or top 1         |\n",
         "    +-----------------+---------------------------------------|\n"
     );
-    pub const PIPE_INPUT_ERROR: &str = "Piping is not supported as Logria cannot both
-    listen to stdin as well as get user input from
-    your tty. Process substitution is also not
-    allowed, as Logria is unable to read from the
-    file descriptor created by the shell.
-
-    To capture command output, start Logria and
-    enter the command during the setup process, or
-    invoke Logria with `logria -e \"command\"";
+    pub const PIPE_INPUT_ERROR: &str = concat!(
+        "Piping is not supported as Logria cannot both\n",
+        "listen to stdin as well as get user input from\n",
+        "your tty. Process substitution is also not\n",
+        "allowed, as Logria is unable to read from the\n",
+        "file descriptor created by the shell.\n",
+        "\n",
+        "To capture command output, start Logria and\n",
+        "enter the command during the setup process,\n",
+        "invoke Logria with `logria -e \"command\", or",
+        "create a valid session file."
+    );
 }

@@ -7,8 +7,8 @@ mod ui;
 mod util;
 
 use communication::reader::main::MainWindow;
-use util::options::from_command_line;
 use constants::cli::messages::DOCS;
+use util::options::from_command_line;
 
 fn main() -> Result<()> {
     // Get options from command line

@@ -27,16 +27,21 @@ pub mod main {
                 startup::StartupHandler,
             },
             input::{
-                build_streams_from_input, input_type::InputType, streams::InputStream,
-                stream_type::StreamType,
+                build_streams_from_input, input_type::InputType, stream_type::StreamType,
+                streams::InputStream,
             },
         },
         constants::cli::{
             cli_chars, colors,
-            messages::{NO_MESSAGE_IN_BUFFER_NORMAL, NO_MESSAGE_IN_BUFFER_PARSER},
+            messages::{
+                NO_MESSAGE_IN_BUFFER_NORMAL, NO_MESSAGE_IN_BUFFER_PARSER, PIPE_INPUT_ERROR,
+            },
             poll_rate::DEFAULT,
         },
-        ui::{interface::build, scroll::ScrollState},
+        ui::{
+            interface::{build, invalid_tty},
+            scroll::ScrollState,
+        },
         util::{
             poll::{ms_per_message, RollingMean},
             sanitizers::length::LengthFinder,
@@ -671,6 +676,12 @@ pub mod main {
 
         /// Initial application setup
         pub fn start(&mut self, commands: Option<Vec<String>>) -> Result<()> {
+            // Ensure the tty is valid before doing any work
+            if invalid_tty() {
+                println!("{}", PIPE_INPUT_ERROR);
+                return Ok(());
+            }
+
             // Build the app
             if let Some(c) = commands {
                 // Build streams from the command used to launch Logria

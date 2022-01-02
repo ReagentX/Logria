@@ -1,5 +1,5 @@
-use crossterm::{cursor, execute, queue, style, terminal, Result};
-use std::io::{Stdout, Write};
+use crossterm::{cursor, execute, queue, style, terminal, Result, tty::IsTty};
+use std::io::{Stdout, Write, stdin};
 
 use crate::communication::reader::main::MainWindow;
 
@@ -32,4 +32,8 @@ pub fn build(app: &mut MainWindow) -> Result<()> {
     )?;
     app.output.flush()?;
     Ok(())
+}
+
+pub fn invalid_tty() -> bool {
+    !stdin().is_tty()
 }

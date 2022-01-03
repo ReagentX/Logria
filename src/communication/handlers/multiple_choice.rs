@@ -6,7 +6,7 @@ use crossterm::Result;
 use crate::{
     communication::{
         handlers::{handler::Handler, user_input::UserInputHandler},
-        reader::main::MainWindow,
+        reader::MainWindow,
     },
     ui::scroll,
 };
@@ -110,7 +110,7 @@ mod kc_tests {
     use std::collections::HashMap;
 
     use super::MultipleChoiceHandler;
-    use crate::communication::{handlers::handler::Handler, reader::main::MainWindow};
+    use crate::communication::{handlers::handler::Handler, reader::MainWindow};
 
     #[test]
     fn can_create() {

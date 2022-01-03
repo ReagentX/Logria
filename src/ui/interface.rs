@@ -1,7 +1,7 @@
 use crossterm::{cursor, execute, queue, style, terminal, tty::IsTty, Result};
 use std::io::{stdin, stdout, Stdout, Write};
 
-use crate::communication::reader::main::MainWindow;
+use crate::communication::reader::MainWindow;
 
 fn rect(stdout: &mut Stdout, start: u16, height: u16, width: u16) -> Result<()> {
     for y in start..height {

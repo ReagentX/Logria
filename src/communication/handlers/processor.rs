@@ -1,6 +1,6 @@
 use crossterm::Result;
 
-use crate::communication::reader::main::MainWindow;
+use crate::communication::reader::MainWindow;
 
 pub trait ProcessorMethods {
     fn return_to_normal(&mut self, window: &mut MainWindow) -> Result<()>;

@@ -4,7 +4,7 @@ use super::handler::Handler;
 use crate::{
     communication::{
         input::{input_type::InputType, stream_type::StreamType},
-        reader::main::MainWindow,
+        reader::MainWindow,
     },
     ui::scroll,
 };

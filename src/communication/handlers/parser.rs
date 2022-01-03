@@ -9,7 +9,7 @@ use crate::{
             handler::Handler, multiple_choice::MultipleChoiceHandler, processor::ProcessorMethods,
         },
         input::{input_type::InputType::Normal, stream_type::StreamType},
-        reader::main::MainWindow,
+        reader::MainWindow,
     },
     extensions::{
         extension::ExtensionMethods,
@@ -431,7 +431,7 @@ mod parse_tests {
         communication::{
             handlers::{handler::Handler, parser::ParserState, processor::ProcessorMethods},
             input::{input_type::InputType, stream_type::StreamType},
-            reader::main::MainWindow,
+            reader::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
         util::aggregators::aggregator::AggregationMethod,
@@ -675,7 +675,7 @@ mod regex_tests {
                 processor::ProcessorMethods,
             },
             input::{input_type::InputType, stream_type::StreamType},
-            reader::main::MainWindow,
+            reader::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
         util::aggregators::aggregator::AggregationMethod,
@@ -844,7 +844,7 @@ mod split_tests {
         communication::{
             handlers::{handler::Handler, parser::ParserState, processor::ProcessorMethods},
             input::{input_type::InputType, stream_type::StreamType},
-            reader::main::MainWindow,
+            reader::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
         util::aggregators::aggregator::AggregationMethod,
@@ -984,7 +984,7 @@ mod failure_tests {
         communication::{
             handlers::{handler::Handler, parser::ParserState, processor::ProcessorMethods},
             input::{input_type::InputType, stream_type::StreamType},
-            reader::main::MainWindow,
+            reader::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
         util::aggregators::aggregator::AggregationMethod,

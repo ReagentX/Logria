@@ -116,11 +116,15 @@ pub mod messages {
         "    +-----------------+---------------------------------------|\n"
     );
     pub const PIPE_INPUT_ERROR: &str = concat!(
-        "Piping is not supported as Logria cannot both\n",
-        "listen to stdin as well as get user input from\n",
-        "your tty. Process substitution is also not\n",
+        "Piping to Logria is not supported as it cannot\n",
+        "both listen to stdin as well as get user input \n",
+        "from your tty. Process substitution is also not\n",
         "allowed, as Logria is unable to read from the\n",
         "file descriptor created by the shell.\n",
+        "\n",
+        "Piping from Logria is also not supported because\n",
+        "the interface is fundementally interactive and\n",
+        "thus requires a tty.\n",
         "\n",
         "To capture command output, start Logria and\n",
         "enter the command during the setup process,\n",

@@ -2,6 +2,7 @@ pub mod main {
     use std::{
         cmp::max,
         io::{stdout, Stdout, Write},
+        panic,
         time::{Duration, Instant},
     };
 
@@ -39,7 +40,7 @@ pub mod main {
             poll_rate::DEFAULT,
         },
         ui::{
-            interface::{build, invalid_tty},
+            interface::{build, valid_tty},
             scroll::ScrollState,
         },
         util::{
@@ -674,13 +675,20 @@ pub mod main {
             self.config.poll_rate = new_poll_rate;
         }
 
+        fn validate_environment(&self) {
+            // Ensure the tty is valid before doing any work
+            if !valid_tty() {
+                panic::set_hook(Box::new(|_| {
+                    println!("{}", PIPE_INPUT_ERROR);
+                }));
+
+                panic!();
+            }
+        }
+
         /// Initial application setup
         pub fn start(&mut self, commands: Option<Vec<String>>) -> Result<()> {
-            // Ensure the tty is valid before doing any work
-            if invalid_tty() {
-                println!("{}", PIPE_INPUT_ERROR);
-                return Ok(());
-            }
+            self.validate_environment();
 
             // Build the app
             if let Some(c) = commands {

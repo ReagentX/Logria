@@ -1,5 +1,5 @@
-use crossterm::{cursor, execute, queue, style, terminal, Result, tty::IsTty};
-use std::io::{Stdout, Write, stdin};
+use crossterm::{cursor, execute, queue, style, terminal, tty::IsTty, Result};
+use std::io::{stdin, stdout, Stdout, Write};
 
 use crate::communication::reader::main::MainWindow;
 
@@ -34,6 +34,7 @@ pub fn build(app: &mut MainWindow) -> Result<()> {
     Ok(())
 }
 
-pub fn invalid_tty() -> bool {
-    !stdin().is_tty()
+/// Ensure both stdin and stdout are controlled by the terminal emulator
+pub fn valid_tty() -> bool {
+    stdin().is_tty() && stdout().is_tty()
 }

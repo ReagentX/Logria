@@ -1,5 +1,5 @@
-use crossterm::{cursor, execute, queue, style, terminal, Result};
-use std::io::{Stdout, Write};
+use crossterm::{cursor, execute, queue, style, terminal, tty::IsTty, Result};
+use std::io::{stdin, stdout, Stdout, Write};
 
 use crate::communication::reader::main::MainWindow;
 
@@ -7,9 +7,9 @@ fn rect(stdout: &mut Stdout, start: u16, height: u16, width: u16) -> Result<()> 
     for y in start..height {
         for x in 0..width {
             if y == start || y == height - 1 {
-                queue!(stdout, cursor::MoveTo(x, y), style::Print("─"))?;
+                queue!(stdout, cursor::MoveTo(x, y), style::Print("─"))?; // left side
             } else if x == 0 || x == width - 1 {
-                queue!(stdout, cursor::MoveTo(x, y), style::Print("│"))?;
+                queue!(stdout, cursor::MoveTo(x, y), style::Print("│"))?; // right side
             }
             queue!(stdout, cursor::MoveTo(width - 1, start), style::Print("┐"))?; // top right
             queue!(stdout, cursor::MoveTo(0, start), style::Print("┌"))?; // top left
@@ -32,4 +32,9 @@ pub fn build(app: &mut MainWindow) -> Result<()> {
     )?;
     app.output.flush()?;
     Ok(())
+}
+
+/// Ensure both stdin and stdout are controlled by the terminal emulator
+pub fn valid_tty() -> bool {
+    stdin().is_tty() && stdout().is_tty()
 }

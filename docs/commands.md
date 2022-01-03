@@ -3,12 +3,8 @@
 | Key | Command |
 |--|--|
 | `:` | enter command mode |
-| `:q` | exit the program |
-| `:poll #` | update [poll rate](#poll-rate) to #, where # is a number |
-| `:config` | enter configuration mode to create sessions or parsers |
-| `:history` | view and search the history tape |
-| `:history #` | view and search the history tape's last # (integer) items |
-| `:history off` | go back to the main app from history mode |
+| `:q` | exit Logria |
+| `:poll #` | update [poll rate](#poll-rate) to #, where # is an integer |
 | `:r #` | when launching logria or viewing sessions, this will delete item # |
 | `:restart` | go back to the setup screen to change sessions |
 | `:agg #` | set the limit for aggregation counters be `top #`, i.e. `top 5` or `top 1` |
@@ -19,9 +15,9 @@ To use a command, simply type `:` and enter a command. To exit without running t
 
 ### Poll Rate
 
-This is the rate at which Logria checks the queues for new messages as well as check for user input. Values higher than 0.01 will make the app feel sluggish, as Logria does not respond to keystrokes while waiting.
+This is the rate at which Logria checks the queues for new messages.
 
-The poll rate defaults to `smart` mode, where Logria will calculate a rate at which to poll the message queues based on the speed of incoming messages. To disable this feature, pass `-n` when starting Logria. If `smart` mode is disabled, the app falls back to the default value of `0.001`.
+The poll rate defaults to `smart` mode, where Logria will calculate a rate at which to poll the message queues based on the speed of incoming messages. To disable this feature, pass `-n` when starting Logria. If `smart` mode is disabled, the app falls back to the default value of polling once every `50` milliseconds.
 
 ### Remove Command
 

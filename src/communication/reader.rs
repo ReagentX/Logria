@@ -2,6 +2,7 @@ pub mod main {
     use std::{
         cmp::max,
         io::{stdout, Stdout, Write},
+        panic,
         time::{Duration, Instant},
     };
 
@@ -27,16 +28,21 @@ pub mod main {
                 startup::StartupHandler,
             },
             input::{
-                build_streams_from_input, input_type::InputType, streams::InputStream,
-                stream_type::StreamType,
+                build_streams_from_input, input_type::InputType, stream_type::StreamType,
+                streams::InputStream,
             },
         },
         constants::cli::{
             cli_chars, colors,
-            messages::{NO_MESSAGE_IN_BUFFER_NORMAL, NO_MESSAGE_IN_BUFFER_PARSER},
+            messages::{
+                NO_MESSAGE_IN_BUFFER_NORMAL, NO_MESSAGE_IN_BUFFER_PARSER, PIPE_INPUT_ERROR,
+            },
             poll_rate::DEFAULT,
         },
-        ui::{interface::build, scroll::ScrollState},
+        ui::{
+            interface::{build, valid_tty},
+            scroll::ScrollState,
+        },
         util::{
             poll::{ms_per_message, RollingMean},
             sanitizers::length::LengthFinder,
@@ -669,8 +675,27 @@ pub mod main {
             self.config.poll_rate = new_poll_rate;
         }
 
+        fn validate_environment(&self) {
+            // Ensure the tty is valid before doing any work
+            if !valid_tty() {
+                /*
+                Since we need to emit an error message, but the pipe to emit it through
+                may be closed, we need to use a panic instead.
+                This overrides the default panic handler to just emit a string, so it
+                looks like a normal println
+                */
+                panic::set_hook(Box::new(|_| {
+                    println!("{}", PIPE_INPUT_ERROR);
+                }));
+
+                panic!();
+            }
+        }
+
         /// Initial application setup
         pub fn start(&mut self, commands: Option<Vec<String>>) -> Result<()> {
+            self.validate_environment();
+
             // Build the app
             if let Some(c) = commands {
                 // Build streams from the command used to launch Logria
@@ -697,6 +722,10 @@ pub mod main {
 
             // Build the UI
             build(self)?;
+
+            // Since building the UI hid the cursor, expose it again
+            self.go_to_cli()?;
+            execute!(self.output, cursor::Show)?;
 
             // Start the main event loop
             self.main()?;

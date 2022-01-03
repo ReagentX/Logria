@@ -119,21 +119,21 @@ impl UserInputHandler {
     /// Get the next item in the history tape if it exists
     fn tape_forward(&mut self, window: &mut MainWindow) -> Result<()> {
         let content = self.history.scroll_forward();
-        self.tape_render(window, content)?;
+        self.tape_render(window, &content)?;
         Ok(())
     }
 
     /// Get the previous item in the history tape if it exists
     fn tape_back(&mut self, window: &mut MainWindow) -> Result<()> {
         let content = self.history.scroll_back();
-        self.tape_render(window, content)?;
+        self.tape_render(window, &content)?;
         Ok(())
     }
 
     /// Render the new choice
-    fn tape_render(&mut self, window: &mut MainWindow, content: String) -> Result<()> {
+    fn tape_render(&mut self, window: &mut MainWindow, content: &str) -> Result<()> {
         self.last_write = content.len() as u16 + 1;
-        window.write_to_command_line(&content)?;
+        window.write_to_command_line(content)?;
         self.content = content.chars().collect();
         queue!(
             window.output,
@@ -143,10 +143,10 @@ impl UserInputHandler {
         Ok(())
     }
 
-    /// Get the contents of the command line as a string
+    /// Get the contents of the command line as a String
     pub fn gather(&mut self, window: &mut MainWindow) -> Result<String> {
         // Copy the result to a new place so we can clear out the existing one and reuse the struct
-        let result: String = self.get_content();
+        let result = self.get_content();
         self.content.clear();
 
         // Hide the cursor

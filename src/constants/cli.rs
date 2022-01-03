@@ -33,10 +33,9 @@ pub mod cli_chars {
 pub mod messages {
 
     // Startup messages
-    pub const START_MESSAGE: [&str; 7] = [
+    pub const START_MESSAGE: [&str; 6] = [
         "Enter a new command to open and save a new stream,",
-        "or enter a number to choose a saved session from the list,",
-        "or enter `:config` to configure.",
+        "or enter a number to choose a saved session from the list.",
         " ", // Blank line for printout
         "Enter `:r #` to remove session #.",
         "Enter `:q` to quit.",
@@ -82,14 +81,54 @@ pub mod messages {
     pub const EXEC_HELP: &str = "Command to listen to, ex: logria -e \"tail -f log.txt\"";
     pub const HISTORY_HELP: &str = "Disable command history disk cache";
     pub const SMART_POLL_RATE_HELP: &str =
-        "Disable variable speed polling based on message receive rate";
-    pub const PIPE_INPUT_ERROR: &str = "Piping is not supported as Logria cannot both
-    listen to stdin as well as get user input from
-    your tty. Process substitution is also not
-    allowed, as Logria is unable to read from the
-    file descriptor created by the shell.
-
-    To capture command output, start Logria and
-    enter the command during the setup process, or
-    invoke Logria with `logria -e \"command\"";
+        "Disable variable polling rate based on incoming message rate";
+    pub const DOCS_HELP: &str = "Prints documentation";
+    pub const DOCS: &str = concat!(
+        "CONTROLS:\n",
+        "    +------+--------------------------------------------------+\n",
+        "    | Key  | Command                                          |\n",
+        "    +======+==================================================+\n",
+        "    |  :   | command mode                                     |\n",
+        "    |  /   | regex search                                     |\n",
+        "    |  h   | if regex active, toggle highlighting of matches  |\n",
+        "    |  s   | swap reading `stderr` and `stdout`               |\n",
+        "    |  p   | activate parser                                  |\n",
+        "    |  a   | toggle aggregation mode when parser is active    |\n",
+        "    |  z   | deactivate parser                                |\n",
+        "    |  ↑   | scroll buffer up one line                        |\n",
+        "    |  ↓   | scroll buffer down one line                      |\n",
+        "    |  →   | skip and stick to end of buffer                  |\n",
+        "    |  ←   | skip and stick to beginning of buffer            |\n",
+        "    +------+--------------------------------------------------+\n\n",
+        "COMMANDS:\n",
+        "    +-----------------+---------------------------------------+\n",
+        "    | Key             | Command                               |\n",
+        "    +=================+=======================================+\n",
+        "    | :q              | exit Logria                           |\n",
+        "    | :poll #         | update poll rate to #, where # is an  |\n",
+        "    |                 | integer (in milliseconds)             |\n",
+        "    | :r #            | when launching logria or viewing      |\n",
+        "    |                 | sessions, this will delete item #     |\n",
+        "    | :restart        | go back to the setup screen to change |\n",
+        "    |                 | sessions, this will delete item #     |\n",
+        "    | :agg #          | set the limit for aggregation counters|\n",
+        "    |                 | be top #, i.e. top 5 or top 1         |\n",
+        "    +-----------------+---------------------------------------|\n"
+    );
+    pub const PIPE_INPUT_ERROR: &str = concat!(
+        "Piping to Logria is not supported as it cannot\n",
+        "both listen to stdin as well as get user input \n",
+        "from your tty. Process substitution is also not\n",
+        "allowed, as Logria is unable to read from the\n",
+        "file descriptor created by the shell.\n",
+        "\n",
+        "Piping from Logria is also not supported because\n",
+        "the interface is fundementally interactive and\n",
+        "thus requires a tty.\n",
+        "\n",
+        "To capture command output, start Logria and\n",
+        "enter the command during the setup process,\n",
+        "invoke Logria with `logria -e \"command\", or",
+        "create a valid session file."
+    );
 }

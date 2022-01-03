@@ -4,7 +4,7 @@ use std::io::Write;
 use crossterm::{cursor, event::KeyCode, queue, style, terminal::size, Result};
 
 use crate::{
-    communication::{handlers::handler::Handler, reader::main::MainWindow},
+    communication::{handlers::handler::Handler, reader::MainWindow},
     util::history::Tape,
 };
 

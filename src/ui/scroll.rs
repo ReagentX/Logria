@@ -1,6 +1,6 @@
 use std::cmp::{max, min};
 
-use crate::communication::reader::main::MainWindow;
+use crate::communication::reader::MainWindow;
 
 #[derive(Debug)]
 pub enum ScrollState {
@@ -48,7 +48,7 @@ pub fn top(window: &mut MainWindow) {
 #[cfg(test)]
 mod tests {
     use crate::{
-        communication::{input::input_type::InputType::Regex, reader::main::MainWindow},
+        communication::{input::input_type::InputType::Regex, reader::MainWindow},
         ui::scroll,
     };
 

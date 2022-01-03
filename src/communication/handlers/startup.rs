@@ -9,7 +9,7 @@ use crate::{
             build_streams_from_input, build_streams_from_session, input_type::InputType,
             stream_type::StreamType::StdErr,
         },
-        reader::main::MainWindow,
+        reader::MainWindow,
     },
     constants::cli::messages::START_MESSAGE,
     extensions::{extension::ExtensionMethods, session::Session},
@@ -148,7 +148,7 @@ mod startup_tests {
         communication::{
             handlers::handler::Handler,
             input::{input_type::InputType, stream_type::StreamType},
-            reader::main::MainWindow,
+            reader::MainWindow,
         },
         constants::cli::messages::START_MESSAGE,
         extensions::{

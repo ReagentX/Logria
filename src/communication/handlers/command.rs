@@ -7,7 +7,7 @@ use crate::{
     communication::{
         handlers::user_input::UserInputHandler,
         input::{input_type::InputType, stream_type::StreamType},
-        reader::main::MainWindow,
+        reader::MainWindow,
     },
     ui::scroll::ScrollState,
     util::{credits::gen, error::LogriaError},

@@ -6,7 +6,7 @@ mod extensions;
 mod ui;
 mod util;
 
-use communication::reader::main::MainWindow;
+use communication::reader::MainWindow;
 use constants::cli::messages::DOCS;
 use util::options::from_command_line;
 

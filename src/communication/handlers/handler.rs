@@ -1,7 +1,7 @@
 use crossterm::Result;
 use crossterm::event::KeyCode;
 
-use crate::communication::reader::main::MainWindow;
+use crate::communication::reader::MainWindow;
 
 pub trait Handler {
     fn new() -> Self;

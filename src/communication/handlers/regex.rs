@@ -5,7 +5,7 @@ use super::{handler::Handler, processor::ProcessorMethods};
 use crate::{
     communication::{
         handlers::user_input::UserInputHandler, input::input_type::InputType::Normal,
-        reader::main::MainWindow,
+        reader::MainWindow,
     },
     constants::cli::{cli_chars::NORMAL_CHAR, patterns::ANSI_COLOR_PATTERN},
     ui::scroll,
@@ -169,7 +169,7 @@ mod tests {
     use crate::communication::{
         handlers::{handler::Handler, processor::ProcessorMethods},
         input::input_type::InputType,
-        reader::main::MainWindow,
+        reader::MainWindow,
     };
 
     #[test]

@@ -678,6 +678,12 @@ pub mod main {
         fn validate_environment(&self) {
             // Ensure the tty is valid before doing any work
             if !valid_tty() {
+                /*
+                Since we need to emit an error message, but the pipe to emit it through
+                may be closed, we need to use a panic instead.
+                This overrides the default panic handler to just emit a string, so it
+                looks like a normal println
+                */
                 panic::set_hook(Box::new(|_| {
                     println!("{}", PIPE_INPUT_ERROR);
                 }));

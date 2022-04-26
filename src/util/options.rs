@@ -26,6 +26,12 @@ pub fn from_command_line() -> ArgMatches<'static> {
                 .help(messages::DOCS_HELP),
         )
         .arg(
+            Arg::with_name("paths")
+                .short("-p")
+                .long("paths")
+                .help(messages::PATHS_HELP),
+        )
+        .arg(
             Arg::with_name("exec")
                 .short("e")
                 .long("exec")

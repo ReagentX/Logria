@@ -83,6 +83,7 @@ pub mod messages {
     pub const SMART_POLL_RATE_HELP: &str =
         "Disable variable polling rate based on incoming message rate";
     pub const DOCS_HELP: &str = "Prints documentation";
+    pub const PATHS_HELP: &str = "Prints current conficuration paths";
     pub const DOCS: &str = concat!(
         "CONTROLS:\n",
         "    +------+--------------------------------------------------+\n",

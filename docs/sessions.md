@@ -4,7 +4,7 @@ A session is a collection of commands that result in input streams.
 
 ## Storage
 
-Sessions are stored as `JSON` in `$LOGRIA_USER_HOME/$LOGRIA_ROOT/sessions` and do not have file extensions. A session is defined like so:
+Sessions are stored as `JSON` in [`$LOGRIA_USER_HOME/$LOGRIA_ROOT/sessions`](README.md#directory-configuration) and do not have file extensions. A session is defined like so:
 
 ```json
 {
@@ -22,7 +22,7 @@ Sessions are stored as `JSON` in `$LOGRIA_USER_HOME/$LOGRIA_ROOT/sessions` and d
 }
 ```
 
-If `$LOGRIA_USER_HOME/$LOGRIA_ROOT/sessions` does not exist, Logira will attempt to create it.
+If [`$LOGRIA_USER_HOME/$LOGRIA_ROOT/sessions`](README.md#directory-configuration) does not exist, Logira will attempt to create it.
 
 ## Elements
 

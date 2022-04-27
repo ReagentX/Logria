@@ -1,3 +1,4 @@
+use std::env;
 use crate::constants::{
     app::NAME,
     resolver::{get_env_var_or_default, get_home_dir},
@@ -37,6 +38,35 @@ pub fn history_tape() -> String {
     let mut root = app_root();
     root.push_str("/history/tape");
     root
+}
+
+pub fn print_paths() {
+    let mut result = String::new();
+    result.push_str("Environment variables:\n");
+    match env::var("LOGRIA_USER_HOME") {
+        Ok(home) => {
+            result.push_str(&format!("LOGRIA_USER_HOME: {}\n", home));
+        },
+        Err(_) => {
+            result.push_str("LOGRIA_USER_HOME: Not Set\n");
+        },
+    };
+    match env::var("LOGRIA_ROOT") {
+        Ok(root) => {
+            result.push_str(&format!("LOGRIA_ROOT: {}\n", root));
+        },
+        Err(_) => {
+            result.push_str("LOGRIA_ROOT:      Not Set\n");
+        },
+    };
+
+    result.push_str("\nExpanded paths:\n");
+    result.push_str(&format!("Config root: {}\n", home()));
+    result.push_str(&format!("Logria root: {}\n", app_root()));
+    result.push_str(&format!("Patterns:    {}\n", patterns()));
+    result.push_str(&format!("Sessions:    {}\n", sessions()));
+    result.push_str(&format!("History:     {}", history()));
+    println!("{}", result);
 }
 
 #[cfg(test)]
@@ -82,5 +112,11 @@ mod tests {
         let mut root = config_dir().expect("").to_str().expect("").to_string();
         root.push_str("/Logria/history/tape");
         assert_eq!(t, root)
+    }
+
+    #[test]
+    fn test_print_paths() {
+        // Ensure no weird crashes here
+        directories::print_paths();
     }
 }

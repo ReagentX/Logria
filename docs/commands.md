@@ -17,7 +17,7 @@ To use a command, simply type `:` and enter a command. To exit without running t
 
 This is the rate at which Logria checks the queues for new messages.
 
-The poll rate defaults to `smart` mode, where Logria will calculate a rate at which to poll the message queues based on the speed of incoming messages. To disable this feature, pass `-n` when starting Logria. If `smart` mode is disabled, the app falls back to the default value of polling once every `50` milliseconds.
+The poll rate defaults to `smart` mode, where Logria will calculate a rate at which to poll the message queues based on the speed of incoming messages. To disable this feature, pass `-u` when starting Logria. If `smart` mode is disabled, the app falls back to the default value of polling once every `50` milliseconds.
 
 ### Remove Command
 

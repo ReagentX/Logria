@@ -4,7 +4,7 @@ A parser includes a pattern with associated metadata that Logria uses to parse a
 
 ## Storage
 
-Parsers are stored as `JSON` in `$LOGRIA_USER_HOME/$LOGRIA_ROOT/parsers` and do not have file extensions. A parser is defined like so:
+Parsers are stored as `JSON` in [`$LOGRIA_USER_HOME/$LOGRIA_ROOT/parsers`](README.md#directory-configuration) and do not have file extensions. A parser is defined like so:
 
 ```json
 {
@@ -28,7 +28,7 @@ Parsers are stored as `JSON` in `$LOGRIA_USER_HOME/$LOGRIA_ROOT/parsers` and do 
 }
 ```
 
-If `$LOGRIA_USER_HOME/$LOGRIA_ROOT/parsers` does not exist, Logria will create it.
+If [`$LOGRIA_USER_HOME/$LOGRIA_ROOT/parsers`](README.md#directory-configuration) does not exist, Logria will create it.
 
 ## Anatomy
 

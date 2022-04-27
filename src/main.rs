@@ -19,7 +19,7 @@ fn main() -> Result<()> {
         print_paths();
     } else {
         let history = !options.is_present("history");
-        let smart_poll_rate = !options.is_present("smart-poll-rate");
+        let smart_poll_rate = !options.is_present("mindless");
         let exec: Option<Vec<String>> = options.value_of("exec").map(|text| vec![text.to_string()]);
 
         // Start app

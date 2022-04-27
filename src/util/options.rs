@@ -14,9 +14,9 @@ pub fn from_command_line() -> ArgMatches<'static> {
                 .help(messages::HISTORY_HELP),
         )
         .arg(
-            Arg::with_name("smart-poll-rate")
-                .short("n")
-                .long("no-smart-poll-rate")
+            Arg::with_name("mindless")
+                .short("m")
+                .long("mindless")
                 .help(messages::SMART_POLL_RATE_HELP),
         )
         .arg(

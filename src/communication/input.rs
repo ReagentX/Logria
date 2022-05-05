@@ -13,6 +13,7 @@ use crate::{
 
 pub mod streams {
     use std::{
+        env::current_dir,
         error::Error,
         fs::File,
         io::{BufRead, BufReader},
@@ -29,12 +30,9 @@ pub mod streams {
         runtime::Runtime,
     };
 
-    use crate::{
-        constants::directories::home,
-        util::{
-            error::LogriaError,
-            poll::{ms_per_message, RollingMean},
-        },
+    use crate::util::{
+        error::LogriaError,
+        poll::{ms_per_message, RollingMean},
     };
 
     #[derive(Debug)]
@@ -133,7 +131,7 @@ pub mod streams {
                         let command_to_run = CommandInput::parse_command(&command);
                         let mut proc_read = match Command::new(command_to_run[0])
                             .args(&command_to_run[1..])
-                            .current_dir(home())
+                            .current_dir(current_dir().unwrap())
                             .stdout(Stdio::piped())
                             .stderr(Stdio::piped())
                             .spawn()
@@ -215,7 +213,7 @@ pub fn build_streams_from_input(
                     Ok(stream) => streams.push(stream),
                     Err(why) => return Err(why),
                 };
-                stream_types.insert(SessionType::File);
+                stream_types.insert(SessionType::Command);
             }
             SessionType::File => {
                 // None indicates default poll rate

@@ -213,7 +213,7 @@ pub fn build_streams_from_input(
                     Ok(stream) => streams.push(stream),
                     Err(why) => return Err(why),
                 };
-                stream_types.insert(SessionType::File);
+                stream_types.insert(SessionType::Command);
             }
             SessionType::File => {
                 // None indicates default poll rate

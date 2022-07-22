@@ -48,47 +48,79 @@ use crate::{
 };
 
 pub struct LogriaConfig {
-    pub width: u16,         // Window width
-    pub height: u16,        // Window height
-    pub last_row: u16,      // The last row we can render, aka number of lines visible in the tty
-    pub current_end: usize, // Current last row we have rendered
+    /// Window width
+    pub width: u16,
+    /// Window height
+    pub height: u16,
+    /// The last row we can render, aka number of lines visible in the tty
+    pub last_row: u16,
+    /// Current last row we have rendered
+    pub current_end: usize,
 
     // Message buffers
+    /// Messages read from standard error
     stderr_messages: Vec<String>,
+    /// Messages read from standard output
     stdout_messages: Vec<String>,
+    /// The stream type Logria is currently displaying
     pub stream_type: StreamType,
-    pub previous_stream_type: StreamType, // The previous stream the user was looking at
-    pub auxiliary_messages: Vec<String>,  // Messages displayed by extensions
+    /// The previous stream the user was looking at
+    pub previous_stream_type: StreamType,
+    /// Messages displayed by extensions
+    pub auxiliary_messages: Vec<String>,
 
     // Regex settings
-    pub regex_pattern: Option<regex::bytes::Regex>, // Current regex pattern
-    pub matched_rows: Vec<usize>, // List of index of matches when regex filtering is active
-    pub last_index_regexed: usize, // The last index the filtering function saw
-    color_replace_regex: Regex,   // A regex to remove ANSI color codes
-    pub highlight_match: bool,    // Determines whether we highlight the matched text to the user
+    /// Current regex pattern
+    pub regex_pattern: Option<regex::bytes::Regex>,
+    /// List of index of matches when regex filtering is active
+    pub matched_rows: Vec<usize>,
+    /// The last index the filtering function saw
+    pub last_index_regexed: usize,
+    /// A regex to remove ANSI color codes
+    color_replace_regex: Regex,
+    /// Determines whether we highlight the matched text to the user
+    pub highlight_match: bool,
 
     // Parser settings
-    pub parser_index: usize,         // Index for the parser to look at
-    pub parser_state: ParserState,   // The state of the current parser
-    pub aggregation_enabled: bool,   // Whether we are aggregating log data or not
-    pub last_index_processed: usize, // The last index the parsing function saw
-    pub num_to_aggregate: usize,     // The number of items to get when aggregating a Counter
+    /// Index for the parser to look at
+    pub parser_index: usize,
+    /// The state of the current parser
+    pub parser_state: ParserState,
+    /// Whether we are aggregating log data or not
+    pub aggregation_enabled: bool,
+    /// The last index the parsing function saw
+    pub last_index_processed: usize,
+    /// The number of items to get when aggregating a Counter
+    pub num_to_aggregate: usize,
 
     // App state
-    loop_time: Instant, // How long a loop of the main app takes
-    pub poll_rate: u64, // The rate at which we check for new messages
-    pub message_speed_tracker: RollingMean, // A deque based moving average tracker
-    smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
-    pub use_history: bool, // Whether the app records user input to a history tape
+    /// How long a loop of the main app takes
+    loop_time: Instant,
+    /// The rate at which we check for new messages
+    pub poll_rate: u64,
+    /// A deque based moving average tracker
+    pub message_speed_tracker: RollingMean,
+    /// Whether we reduce the poll rate to the message receive speed
+    smart_poll_rate: bool,
+    /// Whether the app records user input to a history tape
+    pub use_history: bool,
 
     // Render data
+    /// The current scroll mode
     pub scroll_state: ScrollState,
-    pub streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
-    previous_render: (usize, usize), // Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
-    was_empty: bool, // True if the previously rendered buffer had no data in it, False otherwise
-    pub did_switch: bool, // True if we just swapped input types, False otherwise
-    pub delete_func: Del, // Pointer to function used to delete items for the `: r` command
-    pub current_status: Option<String>, // Current status of the app  if there is one, i.e. if regex or parsers are active
+    /// Can be a vector of FileInputs, CommandInputs, etc
+    pub streams: Vec<InputStream>,
+    /// Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
+    previous_render: (usize, usize),
+    /// True if the previously rendered buffer had no data in it, False otherwise
+    was_empty: bool,
+    /// True if we just swapped input types, False otherwise
+    pub did_switch: bool,
+    /// Pointer to function used to delete items for the `: r` command
+    pub delete_func: Del,
+    /// Current status of the app  if there is one, i.e. if regex or parsers are active
+    pub current_status: Option<String>,
+    /// Function that can generate messages for display
     pub generate_auxiliary_messages: Option<fn() -> Vec<String>>,
 }
 
@@ -784,6 +816,8 @@ impl MainWindow {
 
         // Handle directing input to the correct handlers during operation
         loop {
+            // TODO: We need to use shared state concurrency here to make the app not block on I/O
+            // ? https://keliris.dev/improving-spotify-tui/
             // Update streams and poll rate
             // let t_0 = Instant::now();
             let num_new_messages = self.receive_streams();

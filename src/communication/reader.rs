@@ -355,7 +355,7 @@ impl MainWindow {
         self.config.current_end = end; // Save this row so we know where we are
         let mut start: usize = 0; // default start
         if end > self.config.last_row as usize {
-            start = (end as u16 - self.config.last_row - 1) as usize;
+            start = (end.checked_sub(self.config.last_row as usize)).unwrap_or(end) as usize;
         }
         (start, end)
     }

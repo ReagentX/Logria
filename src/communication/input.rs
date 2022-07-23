@@ -20,7 +20,10 @@ pub mod streams {
         path::Path,
         process::Stdio,
         result::Result,
-        sync::mpsc::{channel, Receiver},
+        sync::{
+            mpsc::{channel, Receiver},
+            Arc, Mutex,
+        },
         thread, time,
     };
 
@@ -41,6 +44,7 @@ pub mod streams {
         pub stderr: Receiver<String>,
         pub process_name: String,
         pub process: Result<std::thread::JoinHandle<()>, std::io::Error>,
+        pub should_die: Arc<Mutex<bool>>,
         pub _type: String,
     }
 
@@ -97,6 +101,7 @@ pub mod streams {
                 stderr: err_rx,
                 process_name: name,
                 process,
+                should_die: Arc::new(Mutex::new(false)),
                 _type: String::from("FileInput"),
             })
         }
@@ -118,6 +123,10 @@ pub mod streams {
             // Setup multiprocessing queues
             let (err_tx, err_rx) = channel();
             let (out_tx, out_rx) = channel();
+
+            // Provide check for termination outside of the thread
+            let should_die = Arc::new(Mutex::new(false));
+            let die = should_die.clone();
 
             // Handle poll rate
             let mut poll_rate = RollingMean::new(5);
@@ -168,6 +177,11 @@ pub mod streams {
                                     }
                                     else => break
                                 }
+
+                                if *die.lock().unwrap() {
+                                    proc_read.kill().await.unwrap();
+                                    break;
+                                }
                             }
 
                             poll_rate.update(ms_per_message(timestamp.elapsed(), counter));
@@ -180,6 +194,7 @@ pub mod streams {
                 stderr: err_rx,
                 process_name: name,
                 process,
+                should_die,
                 _type: String::from("CommandInput"),
             })
         }

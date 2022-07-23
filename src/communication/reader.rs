@@ -1,7 +1,7 @@
 use std::{
     cmp::max,
     io::{stdout, Write},
-    panic,
+    panic, thread,
     time::{Duration, Instant},
 };
 
@@ -753,6 +753,9 @@ impl MainWindow {
     pub fn quit(&mut self) -> Result<()> {
         execute!(stdout(), cursor::Show, Clear(ClearType::All))?;
         disable_raw_mode()?;
+        for stream in &self.config.streams {
+            *stream.should_die.lock().unwrap() = true;
+        }
         std::process::exit(0);
     }
 

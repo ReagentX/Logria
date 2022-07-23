@@ -1,3 +1,5 @@
+use std::io::stdout;
+
 use crossterm::{cursor, event::KeyCode, queue, Result};
 
 use super::handler::Handler;
@@ -29,7 +31,7 @@ impl NormalHandler {
         window.config.highlight_match = true;
         window.reset_command_line()?;
         window.set_cli_cursor(None)?;
-        queue!(window.output, cursor::Show)?;
+        queue!(stdout(), cursor::Show)?;
         // Send 2 new refresh ticks from the main app loop when this method returns
         window.config.did_switch = true;
         Ok(())

@@ -1,6 +1,6 @@
 use std::{
     cmp::max,
-    io::{stdout, Stdout, Write},
+    io::{stdout, Write},
     panic,
     time::{Duration, Instant},
 };
@@ -128,7 +128,7 @@ pub struct MainWindow {
     pub config: LogriaConfig,
     pub input_type: InputType,
     pub previous_input_type: InputType,
-    pub output: Stdout,
+    // pub output: Stdout,
     pub mc_handler: MultipleChoiceHandler,
     length_finder: LengthFinder,
 }
@@ -203,7 +203,6 @@ impl MainWindow {
         MainWindow {
             input_type: InputType::Startup,
             previous_input_type: InputType::Startup,
-            output: stdout(),
             length_finder: LengthFinder::new(),
             mc_handler: MultipleChoiceHandler::new(),
             config: LogriaConfig {
@@ -427,7 +426,7 @@ impl MainWindow {
         let width = self.config.width as usize;
 
         // Save the cursor position (i.e. if the user is editing text in the command line)
-        queue!(self.output, cursor::SavePosition)?;
+        queue!(stdout(), cursor::SavePosition)?;
 
         // Determine the start and end position of the render
         let (start, end) = self.determine_render_position();
@@ -446,13 +445,13 @@ impl MainWindow {
                 }
             }
             self.config.was_empty = true;
-            self.output.flush()?;
+            stdout().flush()?;
             return Ok(());
         }
 
         // Don't do anything if nothing changed; start at index 0
         if !self.config.aggregation_enabled && self.config.previous_render == (max(0, start), end) {
-            queue!(self.output, cursor::RestorePosition)?;
+            queue!(stdout(), cursor::RestorePosition)?;
             return Ok(());
         }
 
@@ -512,7 +511,7 @@ impl MainWindow {
             // Render message
             message.push_str(&padding);
             queue!(
-                self.output,
+                stdout(),
                 cursor::MoveTo(0, current_row),
                 style::Print(message)
             )?;
@@ -524,18 +523,13 @@ impl MainWindow {
             let clear_line = " ".repeat(width);
             (0..current_row).for_each(|row| {
                 // No `?` here because it is inside of a closure
-                queue!(
-                    self.output,
-                    cursor::MoveTo(0, row),
-                    style::Print(&clear_line),
-                )
-                .unwrap()
+                queue!(stdout(), cursor::MoveTo(0, row), style::Print(&clear_line),).unwrap()
             });
         }
 
         // Restore the cursor position and flush the queue
-        queue!(self.output, cursor::RestorePosition)?;
-        self.output.flush()?;
+        queue!(stdout(), cursor::RestorePosition)?;
+        stdout().flush()?;
         Ok(())
     }
 
@@ -567,7 +561,7 @@ impl MainWindow {
     /// Move the cursor to the CLI window
     pub fn go_to_cli(&mut self) -> Result<()> {
         let cli_position = self.config.height - 2;
-        queue!(self.output, cursor::MoveTo(1, cli_position))?;
+        queue!(stdout(), cursor::MoveTo(1, cli_position))?;
         Ok(())
     }
 
@@ -578,7 +572,7 @@ impl MainWindow {
         self.go_to_cli()?;
         self.reset_command_line()?;
         self.set_cli_cursor(None)?;
-        queue!(self.output, cursor::Show)?;
+        queue!(stdout(), cursor::Show)?;
         Ok(())
     }
 
@@ -594,14 +588,14 @@ impl MainWindow {
     /// TODO: faster?
     pub fn reset_output(&mut self) -> Result<()> {
         let last_row = self.config.last_row - 1;
-        execute!(self.output, cursor::SavePosition)?;
+        execute!(stdout(), cursor::SavePosition)?;
         queue!(
-            self.output,
+            stdout(),
             cursor::MoveTo(1, last_row),
             Clear(ClearType::CurrentLine),
             Clear(ClearType::FromCursorUp),
         )?;
-        execute!(self.output, cursor::RestorePosition)?;
+        execute!(stdout(), cursor::RestorePosition)?;
         Ok(())
     }
 
@@ -613,20 +607,20 @@ impl MainWindow {
         self.go_to_cli()?;
 
         // If the cursor was visible, hide it
-        queue!(self.output, style::Print(&clear), cursor::Hide)?;
+        queue!(stdout(), style::Print(&clear), cursor::Hide)?;
         Ok(())
     }
 
     /// Write text to the command line
     pub fn write_to_command_line(&mut self, content: &str) -> Result<()> {
-        queue!(self.output, cursor::SavePosition)?;
+        queue!(stdout(), cursor::SavePosition)?;
         // Remove what used to be in the command line
         self.reset_command_line()?;
 
         // Add the string to the front of the command line
         // TODO: Possibly validate length?
         self.go_to_cli()?;
-        queue!(self.output, style::Print(content), cursor::RestorePosition)?;
+        queue!(stdout(), style::Print(content), cursor::RestorePosition)?;
         Ok(())
     }
 
@@ -643,7 +637,7 @@ impl MainWindow {
         // Write the CLI cursor in the command line bounding box
         let cli_char_vertical = self.config.last_row + 1;
         execute!(
-            self.output,
+            stdout(),
             cursor::MoveTo(0, cli_char_vertical),
             style::Print(first_char)
         )?;
@@ -748,7 +742,7 @@ impl MainWindow {
 
         // Since building the UI hid the cursor, expose it again
         self.go_to_cli()?;
-        execute!(self.output, cursor::Show)?;
+        execute!(stdout(), cursor::Show)?;
 
         // Start the main event loop
         self.main()?;
@@ -757,7 +751,7 @@ impl MainWindow {
 
     /// Immediately exit the program
     pub fn quit(&mut self) -> Result<()> {
-        execute!(self.output, cursor::Show, Clear(ClearType::All))?;
+        execute!(stdout(), cursor::Show, Clear(ClearType::All))?;
         disable_raw_mode()?;
         std::process::exit(0);
     }

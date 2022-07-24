@@ -361,24 +361,21 @@ impl MainWindow {
     }
 
     /// Get the message at a specific index in the current buffer
-    /// TODO: Return a reference, not a new String
-    fn get_message_at_index(&self, index: usize) -> String {
+    fn get_message_at_index(&self, index: usize) -> &str {
         // if there is a regex active, use that, otherwise handle normally
         if self.config.regex_pattern.is_some() {
-            return self.messages()[self.config.matched_rows[index]].to_string();
+            return &self.messages()[self.config.matched_rows[index]];
         }
         match self.input_type {
-            InputType::Normal | InputType::Command | InputType::Startup => {
-                self.messages()[index].to_string()
-            }
+            InputType::Normal | InputType::Command | InputType::Startup => &self.messages()[index],
             InputType::Regex => {
                 if self.config.regex_pattern.is_none() {
-                    self.messages()[index].to_string()
+                    &self.messages()[index]
                 } else {
-                    self.messages()[self.config.matched_rows[index]].to_string()
+                    &self.messages()[self.config.matched_rows[index]]
                 }
             }
-            InputType::Parser => self.messages()[index].to_string(),
+            InputType::Parser => &self.messages()[index],
         }
     }
 
@@ -418,9 +415,19 @@ impl MainWindow {
     }
 
     /// Render the relevant part of the message buffer in the window
+    ///
+    /// Adding padding and printing over the rest of the line is better than
+    /// clearing the screen and writing again. This is because we can only fit
+    /// a few items into the render queue. Because the queue is flushed
+    /// automatically when it is full, we end up having a lot of partial screen
+    /// renders, i.e. a lot of flickering, which makes for bad UX. This is not
+    /// a perfect solution because we can still get partial renders if the
+    /// terminal has a lot of lines, but we are guaranteed to never have blank
+    /// lines in the render, which are what cause the flickering effect.
     fn render_text_in_output(&mut self) -> Result<()> {
+        let mut stdout = stdout();
         // Save the cursor position (i.e. if the user is editing text in the command line)
-        queue!(stdout(), cursor::SavePosition)?;
+        queue!(stdout, cursor::SavePosition)?;
 
         // Determine the start and end position of the render
         let (start, end) = self.determine_render_position();
@@ -439,13 +446,13 @@ impl MainWindow {
                 }
             }
             self.config.was_empty = true;
-            stdout().flush()?;
+            stdout.flush()?;
             return Ok(());
         }
 
         // Don't do anything if nothing changed; start at index 0
         if !self.config.aggregation_enabled && self.config.previous_render == (max(0, start), end) {
-            queue!(stdout(), cursor::RestorePosition)?;
+            queue!(stdout, cursor::RestorePosition)?;
             return Ok(());
         }
 
@@ -475,7 +482,7 @@ impl MainWindow {
         for index in (start..end).rev() {
             // Get the next message from the message pointer
             // We use String so we can modify `message` and not change the buffer
-            let mut message: String = self.get_message_at_index(index);
+            let mut message = self.get_message_at_index(index);
 
             // Trim any spaces or newlines from the end of the message
             message = message.trim_end().into();
@@ -490,31 +497,28 @@ impl MainWindow {
                 None => break,
             };
 
-            // TODO: make this faster
-            if self.config.highlight_match && self.config.regex_pattern.is_some() {
-                message = self.highlight_match(&message);
-            }
-
-            /*
-            Adding padding and printing over the rest of the line is better than
-            clearing the screen and writing again. This is because we can only fit
-            a few items into the render queue. Because the queue is flushed
-            automatically when it is full, we end up having a lot of partial screen
-            renders, i.e. a lot of flickering, which makes for bad UX. This is not
-            a perfect solution because we can still get partial renders if the
-            terminal has a lot of lines, but we are guaranteed to never have blank
-            lines in the render, which are what cause the flickering effect.
-            */
+            // See method docs for note on why we need this padding
             let message_padding_size = (width * message_rows) - message_length;
             let padding = " ".repeat(message_padding_size);
 
-            // Render message
-            message.push_str(&padding);
-            queue!(
-                stdout(),
-                cursor::MoveTo(0, current_row),
-                style::Print(message)
-            )?;
+            // TODO: make this faster
+            if !(self.config.highlight_match && self.config.regex_pattern.is_some()) {
+                // Render message normally
+                queue!(
+                    stdout,
+                    cursor::MoveTo(0, current_row),
+                    style::Print(message),
+                    style::Print(padding)
+                )?;
+            } else {
+                // Render message with highlight (additional allocation)
+                queue!(
+                    stdout,
+                    cursor::MoveTo(0, current_row),
+                    style::Print(self.highlight_match(&message)),
+                    style::Print(padding)
+                )?;
+            }
         }
 
         // Overwrite any new blank lines
@@ -523,13 +527,13 @@ impl MainWindow {
             let clear_line = " ".repeat(width);
             (0..current_row).for_each(|row| {
                 // No `?` here because it is inside of a closure
-                queue!(stdout(), cursor::MoveTo(0, row), style::Print(&clear_line),).unwrap()
+                queue!(stdout, cursor::MoveTo(0, row), style::Print(&clear_line),).unwrap()
             });
         }
 
         // Restore the cursor position and flush the queue
-        queue!(stdout(), cursor::RestorePosition)?;
-        stdout().flush()?;
+        queue!(stdout, cursor::RestorePosition)?;
+        stdout.flush()?;
         Ok(())
     }
 

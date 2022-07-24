@@ -1,7 +1,7 @@
 use std::{
     cmp::max,
     io::{stdout, Write},
-    panic, thread,
+    panic,
     time::{Duration, Instant},
 };
 

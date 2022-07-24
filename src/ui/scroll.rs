@@ -66,7 +66,7 @@ mod tests {
         scroll::down(&mut logria);
 
         let (start, end) = logria.determine_render_position();
-        assert_eq!(start, 92);
+        assert_eq!(start, 93);
         assert_eq!(end, 100);
     }
 
@@ -102,7 +102,7 @@ mod tests {
         scroll::bottom(&mut logria);
 
         let (start, end) = logria.determine_render_position();
-        assert_eq!(start, 92);
+        assert_eq!(start, 93);
         assert_eq!(end, 100);
     }
 
@@ -138,7 +138,7 @@ mod tests {
         scroll::pg_up(&mut logria);
 
         let (start, end) = logria.determine_render_position();
-        assert_eq!(start, 85);
+        assert_eq!(start, 86);
         assert_eq!(end, 93);
     }
 
@@ -156,7 +156,7 @@ mod tests {
         scroll::pg_down(&mut logria);
 
         let (start, end) = logria.determine_render_position();
-        assert_eq!(start, 6);
+        assert_eq!(start, 7);
         assert_eq!(end, 14);
     }
 
@@ -174,7 +174,7 @@ mod tests {
         scroll::down(&mut logria);
 
         let (start, end) = logria.determine_render_position();
-        assert_eq!(start, 92);
+        assert_eq!(start, 93);
         assert_eq!(end, 100);
     }
 
@@ -220,7 +220,7 @@ mod tests {
         scroll::down(&mut logria);
 
         let (start, end) = logria.determine_render_position();
-        assert_eq!(start, 12);
+        assert_eq!(start, 13);
         assert_eq!(end, 20);
     }
 

@@ -355,7 +355,7 @@ impl MainWindow {
         self.config.current_end = end; // Save this row so we know where we are
         let mut start: usize = 0; // default start
         if end > self.config.last_row as usize {
-            start = (end.checked_sub(self.config.last_row as usize)).unwrap_or(end) as usize;
+            start = (end.checked_sub(self.config.last_row as usize)).unwrap_or(start);
         }
         (start, end)
     }
@@ -419,12 +419,6 @@ impl MainWindow {
 
     /// Render the relevant part of the message buffer in the window
     fn render_text_in_output(&mut self) -> Result<()> {
-        // Start the render from the last row
-        let mut current_row = self.config.last_row;
-
-        // Cast to usize so we can reference this instead of casting every time we need
-        let width = self.config.width as usize;
-
         // Save the cursor position (i.e. if the user is editing text in the command line)
         queue!(stdout(), cursor::SavePosition)?;
 
@@ -470,6 +464,12 @@ impl MainWindow {
 
         // Since we are rendering if we got here, lock in the new render state
         self.config.previous_render = (max(0, start), end);
+
+        // Start the render from the last row
+        let mut current_row = self.config.last_row;
+
+        // Cast to usize so we can reference this instead of casting every time we need
+        let width = self.config.width as usize;
 
         // Render each message from bottom to top
         for index in (start..end).rev() {
@@ -814,7 +814,6 @@ impl MainWindow {
         // Handle directing input to the correct handlers during operation
         loop {
             // TODO: We need to use shared state concurrency here to make the app not block on I/O
-            // ? https://keliris.dev/improving-spotify-tui/
             // Update streams and poll rate
             // let t_0 = Instant::now();
             let num_new_messages = self.receive_streams();
@@ -852,7 +851,7 @@ impl MainWindow {
                     }
                 }
             }
-            // possibly sleep, cleanup, etc
+
             // Process matches if we just switched or if there are new messages
             if num_new_messages > 0 || self.config.did_switch {
                 // Process extension methods
@@ -896,7 +895,7 @@ mod render_tests {
         logria.config.scroll_state = ScrollState::Bottom;
 
         let (start, end) = logria.determine_render_position();
-        assert_eq!(start, 92);
+        assert_eq!(start, 93);
         assert_eq!(end, 100);
     }
 
@@ -940,7 +939,7 @@ mod render_tests {
         // Set current scroll state
         logria.config.current_end = 80;
         let (start, end) = logria.determine_render_position();
-        assert_eq!(start, 72);
+        assert_eq!(start, 73);
         assert_eq!(end, 80);
     }
 

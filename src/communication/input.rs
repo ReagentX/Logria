@@ -143,6 +143,7 @@ pub mod streams {
                             .current_dir(current_dir().unwrap())
                             .stdout(Stdio::piped())
                             .stderr(Stdio::piped())
+                            .stdin(Stdio::null())
                             .spawn()
                         {
                             Ok(connected) => connected,

@@ -1,4 +1,9 @@
-use std::{collections::HashSet, path::Path, result::Result};
+use std::{
+    collections::HashSet,
+    path::Path,
+    result::Result,
+    sync::{Arc, Mutex},
+};
 
 use is_executable::is_executable;
 
@@ -216,8 +221,8 @@ fn determine_stream_type(command: &str) -> SessionType {
 pub fn build_streams_from_input(
     commands: &[String],
     save: bool,
-) -> Result<Vec<InputStream>, LogriaError> {
-    let mut streams: Vec<InputStream> = vec![];
+) -> Result<Vec<Arc<Mutex<InputStream>>>, LogriaError> {
+    let mut streams: Vec<Arc<Mutex<InputStream>>> = vec![];
     let mut stream_types: HashSet<SessionType> = HashSet::new();
     for command in commands {
         // Determine if command is a file, create FileInput if it is, CommandInput if not
@@ -225,7 +230,7 @@ pub fn build_streams_from_input(
             SessionType::Command => {
                 // None indicates default poll rate
                 match CommandInput::build(command.to_owned(), command.to_owned()) {
-                    Ok(stream) => streams.push(stream),
+                    Ok(stream) => streams.push(Arc::new(Mutex::new(stream))),
                     Err(why) => return Err(why),
                 };
                 stream_types.insert(SessionType::Command);
@@ -235,7 +240,7 @@ pub fn build_streams_from_input(
                 let path = Path::new(command);
                 let name = path.file_name().unwrap().to_str().unwrap().to_string();
                 match FileInput::build(name, command.to_owned()) {
-                    Ok(stream) => streams.push(stream),
+                    Ok(stream) => streams.push(Arc::new(Mutex::new(stream))),
                     Err(why) => return Err(why),
                 };
                 stream_types.insert(SessionType::File);
@@ -265,23 +270,25 @@ pub fn build_streams_from_input(
 }
 
 /// Build app streams from a session struct
-pub fn build_streams_from_session(session: Session) -> Result<Vec<InputStream>, LogriaError> {
+pub fn build_streams_from_session(
+    session: Session,
+) -> Result<Vec<Arc<Mutex<InputStream>>>, LogriaError> {
     match session.stream_type {
         SessionType::Command => {
-            let mut streams: Vec<InputStream> = vec![];
+            let mut streams: Vec<Arc<Mutex<InputStream>>> = vec![];
             for command in session.commands {
                 match CommandInput::build(command.to_owned(), command.to_owned()) {
-                    Ok(stream) => streams.push(stream),
+                    Ok(stream) => streams.push(Arc::new(Mutex::new(stream))),
                     Err(why) => return Err(why),
                 };
             }
             Ok(streams)
         }
         SessionType::File => {
-            let mut streams: Vec<InputStream> = vec![];
+            let mut streams: Vec<Arc<Mutex<InputStream>>> = vec![];
             for command in session.commands {
                 match FileInput::build(command.to_owned(), command.to_owned()) {
-                    Ok(stream) => streams.push(stream),
+                    Ok(stream) => streams.push(Arc::new(Mutex::new(stream))),
                     Err(why) => return Err(why),
                 };
             }
@@ -373,52 +380,52 @@ mod stream_tests {
     fn test_build_file_stream() {
         let commands = vec![String::from("README.md")];
         let streams = build_streams_from_input(&commands, false).unwrap();
-        assert_eq!(streams[0]._type, "FileInput");
+        assert_eq!(streams[0].lock().unwrap()._type, "FileInput");
     }
 
     #[test]
     fn test_build_command_stream() {
         let commands = vec![String::from("ls -la ~")];
         let streams = build_streams_from_input(&commands, false).unwrap();
-        assert_eq!(streams[0]._type, "CommandInput");
+        assert_eq!(streams[0].lock().unwrap()._type, "CommandInput");
     }
 
     #[test]
     fn test_build_command_and_file_streams() {
         let commands = vec![String::from("ls -la ~"), String::from("README.md")];
         let streams = build_streams_from_input(&commands, false).unwrap();
-        assert_eq!(streams[0]._type, "CommandInput");
-        assert_eq!(streams[1]._type, "FileInput");
+        assert_eq!(streams[0].lock().unwrap()._type, "CommandInput");
+        assert_eq!(streams[1].lock().unwrap()._type, "FileInput");
     }
 
     #[test]
     fn test_build_multiple_command_streams() {
         let commands = vec![String::from("ls -la ~"), String::from("ls /")];
         let streams = build_streams_from_input(&commands, false).unwrap();
-        assert_eq!(streams[0]._type, "CommandInput");
-        assert_eq!(streams[1]._type, "CommandInput");
+        assert_eq!(streams[0].lock().unwrap()._type, "CommandInput");
+        assert_eq!(streams[1].lock().unwrap()._type, "CommandInput");
     }
 
     #[test]
     fn test_build_multiple_file_streams() {
         let commands = vec![String::from("README.md"), String::from("Cargo.toml")];
         let streams = build_streams_from_input(&commands, false).unwrap();
-        assert_eq!(streams[0]._type, "FileInput");
-        assert_eq!(streams[1]._type, "FileInput");
+        assert_eq!(streams[0].lock().unwrap()._type, "FileInput");
+        assert_eq!(streams[1].lock().unwrap()._type, "FileInput");
     }
 
     #[test]
     fn test_build_file_stream_from_session() {
         let session = Session::new(&[String::from("README.md")], SessionType::File);
         let streams = build_streams_from_session(session).unwrap();
-        assert_eq!(streams[0]._type, "FileInput");
+        assert_eq!(streams[0].lock().unwrap()._type, "FileInput");
     }
 
     #[test]
     fn test_build_command_stream_from_session() {
         let session = Session::new(&[String::from("ls -l")], SessionType::Command);
         let streams = build_streams_from_session(session).unwrap();
-        assert_eq!(streams[0]._type, "CommandInput");
+        assert_eq!(streams[0].lock().unwrap()._type, "CommandInput");
     }
 
     #[test]
@@ -428,7 +435,7 @@ mod stream_tests {
             SessionType::Mixed,
         );
         let streams = build_streams_from_session(session).unwrap();
-        assert_eq!(streams[0]._type, "CommandInput");
-        assert_eq!(streams[1]._type, "FileInput");
+        assert_eq!(streams[0].lock().unwrap()._type, "CommandInput");
+        assert_eq!(streams[1].lock().unwrap()._type, "FileInput");
     }
 }

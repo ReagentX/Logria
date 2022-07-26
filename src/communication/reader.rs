@@ -2,6 +2,8 @@ use std::{
     cmp::max,
     io::{stdout, Write},
     panic,
+    sync::{mpsc::channel, Arc, Mutex},
+    thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
 
@@ -41,6 +43,7 @@ use crate::{
         scroll::ScrollState,
     },
     util::{
+        error::LogriaError,
         poll::{ms_per_message, RollingMean},
         sanitizers::length::LengthFinder,
         types::Del,
@@ -109,7 +112,7 @@ pub struct LogriaConfig {
     /// The current scroll mode
     pub scroll_state: ScrollState,
     /// Can be a vector of FileInputs, CommandInputs, etc
-    pub streams: Vec<InputStream>,
+    pub streams: Vec<Arc<Mutex<InputStream>>>,
     /// Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
     previous_render: (usize, usize),
     /// True if the previously rendered buffer had no data in it, False otherwise
@@ -128,9 +131,9 @@ pub struct MainWindow {
     pub config: LogriaConfig,
     pub input_type: InputType,
     pub previous_input_type: InputType,
-    // pub output: Stdout,
     pub mc_handler: MultipleChoiceHandler,
     length_finder: LengthFinder,
+    should_die: bool,
 }
 
 impl MainWindow {
@@ -205,6 +208,7 @@ impl MainWindow {
             previous_input_type: InputType::Startup,
             length_finder: LengthFinder::new(),
             mc_handler: MultipleChoiceHandler::new(),
+            should_die: false,
             config: LogriaConfig {
                 poll_rate: DEFAULT,
                 smart_poll_rate,
@@ -747,9 +751,6 @@ impl MainWindow {
         // Since building the UI hid the cursor, expose it again
         self.go_to_cli()?;
         execute!(stdout(), cursor::Show)?;
-
-        // Start the main event loop
-        self.main()?;
         Ok(())
     }
 
@@ -758,7 +759,7 @@ impl MainWindow {
         execute!(stdout(), cursor::Show, Clear(ClearType::All))?;
         disable_raw_mode()?;
         for stream in &self.config.streams {
-            *stream.should_die.lock().unwrap() = true;
+            *stream.lock().unwrap().should_die.lock().unwrap() = true;
         }
         std::process::exit(0);
     }
@@ -769,11 +770,11 @@ impl MainWindow {
         for stream in &self.config.streams {
             // Read from streams until there is no more input
             // ? May lock if logs come in too fast
-            while let Ok(data) = stream.stderr.try_recv() {
+            while let Ok(data) = stream.lock().unwrap().stderr.try_recv() {
                 total_messages += 1;
                 self.config.stderr_messages.push(data);
             }
-            while let Ok(data) = stream.stdout.try_recv() {
+            while let Ok(data) = stream.lock().unwrap().stdout.try_recv() {
                 total_messages += 1;
                 self.config.stdout_messages.push(data);
             }
@@ -782,7 +783,7 @@ impl MainWindow {
     }
 
     /// Main app loop
-    fn main(&mut self) -> Result<()> {
+    pub fn main<'a>(mut app: MainWindow) -> Result<()> {
         // Exit event
         let exit_key = KeyEvent {
             modifiers: KeyModifiers::CONTROL,
@@ -790,100 +791,146 @@ impl MainWindow {
         };
         let refresh_key = KeyCode::F(5);
 
-        // Instantiate handlers
-        let mut normal_handler = NormalHandler::new();
-        let mut command_handler = CommandHandler::new();
-        let mut regex_handler = RegexHandler::new();
-        let mut parser_handler = ParserHandler::new();
-        let mut startup_handler = StartupHandler::new();
-
         // Setup startup messages
-        self.config.generate_auxiliary_messages = Some(StartupHandler::get_startup_text);
-        self.render_auxiliary_text()?;
+        app.config.generate_auxiliary_messages = Some(StartupHandler::get_startup_text);
+        app.render_auxiliary_text()?;
 
         // Put the cursor in the command line
-        self.go_to_cli()?;
+        app.go_to_cli()?;
 
         // Initial message collection
-        self.receive_streams();
+        app.receive_streams();
 
         // Default is StdErr, swap based on number of messages
-        if self.config.stdout_messages.len() > self.config.stderr_messages.len() {
-            self.config.stream_type = StreamType::StdOut;
+        if app.config.stdout_messages.len() > app.config.stderr_messages.len() {
+            app.config.stream_type = StreamType::StdOut;
         }
 
         // Render anything new in case the streams are already finished
-        self.render_text_in_output()?;
+        app.render_text_in_output()?;
 
         // Handle directing input to the correct handlers during operation
+        let shared_app = Arc::new(Mutex::new(app));
+        let app_streams = shared_app.clone();
+        let app_render = shared_app.clone();
+
+        // Stream reading thread
+        let num_new_messages = Arc::new(Mutex::new(0));
+        let num_message_stream = num_new_messages.clone();
+        let num_message_render = num_new_messages.clone();
+        let stream_process: JoinHandle<Arc<Mutex<MainWindow>>> = thread::spawn(move || {
+            loop {
+                // Update streams and poll rate
+                let mut app = app_streams.lock().unwrap();
+                *num_message_stream.lock().unwrap() = app.receive_streams();
+                let elapsed = app.config.loop_time.elapsed();
+                app.handle_smart_poll_rate(elapsed, *num_new_messages.lock().unwrap());
+                thread::sleep(Duration::from_secs(2));
+                let sleep = Duration::from_millis(app.config.poll_rate);
+                drop(app);
+                thread::sleep(sleep);
+                if app_streams.lock().unwrap().should_die {
+                    return app_streams;
+                }
+            }
+        });
+
+        // UI Render thread
+        let (send_key, receive_key) = channel::<KeyEvent>();
+        let render_process: JoinHandle<Result<Arc<Mutex<MainWindow>>>> = thread::spawn(move || {
+            // Instantiate handlers
+            let mut normal_handler = NormalHandler::new();
+            let mut command_handler = CommandHandler::new();
+            let mut regex_handler = RegexHandler::new();
+            let mut parser_handler = ParserHandler::new();
+            let mut startup_handler = StartupHandler::new();
+
+            loop {
+                // Get input
+                // let input: KeyEvent = receive_key.recv().unwrap();
+                // Otherwise, match input to action
+                let mut app = app_render.lock().unwrap();
+                if let Ok(input) = receive_key.try_recv() {
+                    match app.input_type {
+                        InputType::Normal => {
+                            normal_handler.receive_input(&mut app, input.code)?;
+                        }
+                        InputType::Command => {
+                            command_handler.receive_input(&mut app, input.code)?;
+                        }
+                        InputType::Regex => {
+                            regex_handler.receive_input(&mut app, input.code)?;
+                        }
+                        InputType::Parser => {
+                            parser_handler.receive_input(&mut app, input.code)?;
+                        }
+                        InputType::Startup => {
+                            startup_handler.receive_input(&mut app, input.code)?;
+                        }
+                    }
+                }
+
+                // Process matches if we just switched or if there are new messages
+                if *num_message_render.lock().unwrap() > 0 || app.config.did_switch {
+                    // Process extension methods
+                    match app.input_type {
+                        InputType::Regex => {
+                            if app.config.regex_pattern.is_some() {
+                                regex_handler.process_matches(&mut app)?;
+                            } else if app.config.did_switch {
+                                app.config.did_switch = false;
+                            }
+                        }
+                        InputType::Parser => {
+                            if app.config.parser_state == ParserState::Full {
+                                parser_handler.process_matches(&mut app)?;
+                            }
+                            if app.config.did_switch {
+                                // 2 ticks, one to process the current input and another to refresh
+                                // Did I just write a hack for my own app?
+                                parser_handler.receive_input(&mut app, refresh_key)?;
+                                parser_handler.receive_input(&mut app, refresh_key)?;
+                                app.config.did_switch = false;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                app.render_text_in_output().unwrap();
+                drop(app);
+                // TODO: Make this smarter?
+                thread::sleep(Duration::from_millis(1));
+                if app_render.lock().unwrap().should_die {
+                    return Ok(app_render);
+                }
+            }
+        });
+
+        // Main thread loop
         loop {
             // TODO: We need to use shared state concurrency here to make the app not block on I/O
-            // Update streams and poll rate
-            // let t_0 = Instant::now();
-            let num_new_messages = self.receive_streams();
-            self.handle_smart_poll_rate(self.config.loop_time.elapsed(), num_new_messages);
-            // self.write_to_command_line(&format!(
-            //     "{} in {:?}",
-            //     num_new_messages, self.config.poll_rate
-            // ))?;
-
-            if poll(Duration::from_millis(self.config.poll_rate))? {
+            if poll(Duration::from_secs(1))? {
                 match read()? {
                     Event::Key(input) => {
                         // Die on Ctrl-C
                         if input == exit_key {
-                            self.quit()?;
+                            break;
                         }
-
-                        // Otherwise, match input to action
-                        match self.input_type {
-                            InputType::Normal => normal_handler.receive_input(self, input.code)?,
-                            InputType::Command => {
-                                command_handler.receive_input(self, input.code)?
-                            }
-                            InputType::Regex => regex_handler.receive_input(self, input.code)?,
-                            InputType::Parser => parser_handler.receive_input(self, input.code)?,
-                            InputType::Startup => {
-                                startup_handler.receive_input(self, input.code)?
-                            }
-                        }
+                        send_key.send(input).unwrap();
                     }
                     Event::Mouse(_) => {} // Probably remove
                     Event::Resize(_, _) => {
-                        self.update_dimensions()?;
-                        self.redraw()?;
+                        shared_app.lock().unwrap().update_dimensions()?;
+                        shared_app.lock().unwrap().redraw()?;
                     }
                 }
-            }
-
-            // Process matches if we just switched or if there are new messages
-            if num_new_messages > 0 || self.config.did_switch {
-                // Process extension methods
-                match self.input_type {
-                    InputType::Regex => {
-                        if self.config.regex_pattern.is_some() {
-                            regex_handler.process_matches(self)?;
-                        } else if self.config.did_switch {
-                            self.config.did_switch = false;
-                        }
-                    }
-                    InputType::Parser => {
-                        if self.config.parser_state == ParserState::Full {
-                            parser_handler.process_matches(self)?;
-                        }
-                        if self.config.did_switch {
-                            // 2 ticks, one to process the current input and another to refresh
-                            // Did I just write a hack for my own app?
-                            parser_handler.receive_input(self, refresh_key)?;
-                            parser_handler.receive_input(self, refresh_key)?;
-                            self.config.did_switch = false;
-                        }
-                    }
-                    _ => {}
-                }
-                self.render_text_in_output()?;
             }
         }
+        shared_app.lock().unwrap().quit().unwrap();
+        println!("Done");
+        let s = stream_process.join().unwrap();
+        let v = render_process.join().unwrap();
+        Ok(())
     }
 }
 

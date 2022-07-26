@@ -25,8 +25,15 @@ fn main() -> Result<()> {
         let exec: Option<Vec<String>> = options.value_of("exec").map(|text| vec![text.to_string()]);
 
         // Start app
+        // TODO: App should be stored like Arc<Mutex<App>> and shared between threads
+        // ? Compute happens in the command subprocesses
+        // ? Subprocesses can own the stdin and stdout vectors
+        // ? To know if we neeed to render we can also share new messages memory
+        // ? Input maybe in Tokio event loop? Async may be overhead
         let mut app = MainWindow::new(history, smart_poll_rate);
         app.start(exec)?;
+        // Start the main event loop
+        MainWindow::main(app)?;
     }
     Ok(())
 }

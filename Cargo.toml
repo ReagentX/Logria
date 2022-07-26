@@ -13,18 +13,18 @@ exclude = ["/resources", ".github", "docs", "build.sh"]
 publish = false
 
 [dependencies]
-clap = "2.34.0"
+clap = "2.34.0"  # TODO: Upgrade this
 dirs = "4.0.0"
-crossterm = "0.22.1"
-regex = "1.5.6"
-tokio = { version = "1.18.1", features = [
+crossterm = "0.24.0"
+regex = "1.6.0"
+tokio = { version = "1.20.0", features = [
     "process",
     "io-util",
     "rt-multi-thread",
     "macros",
 ] }
-serde = { version = "1.0.132", features = ["derive"] }
-serde_json = "1.0.59"
-time = { version = "0.3.9", features = ["formatting", "parsing"] }
+serde = { version = "1.0.139", features = ["derive"] }
+serde_json = "1.0.82"
+time = { version = "0.3.11", features = ["formatting", "parsing"] }
 format_num = "0.1.0"
 is_executable = "1.0.1"

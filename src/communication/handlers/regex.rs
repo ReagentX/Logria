@@ -85,6 +85,7 @@ impl ProcessorMethods for RegexHandler {
         window.config.current_status = None;
         window.update_input_type(Normal)?;
         window.set_cli_cursor(None)?;
+        self.input_handler.gather(window)?;
         window.redraw()?;
         Ok(())
     }

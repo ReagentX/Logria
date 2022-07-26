@@ -1,5 +1,7 @@
-use std::cmp::{max, min};
-use std::io::Write;
+use std::{
+    cmp::{max, min},
+    io::{stdout, Write},
+};
 
 use crossterm::{cursor, event::KeyCode, queue, style, terminal::size, Result};
 
@@ -43,13 +45,13 @@ impl UserInputHandler {
 
         // Insert the word to the screen
         queue!(
-            window.output,
+            stdout(),
             cursor::MoveTo(1, self.y()),
             style::Print(self.get_content()),
             cursor::MoveTo(self.last_write, self.y()),
             cursor::Show
         )?;
-        window.output.flush()?;
+        stdout().flush()?;
         Ok(())
     }
 
@@ -104,7 +106,7 @@ impl UserInputHandler {
     /// Move the cursor left
     fn move_left(&mut self, window: &mut MainWindow) -> Result<()> {
         self.last_write = max(1, self.last_write.checked_sub(1).unwrap_or(1));
-        queue!(window.output, cursor::MoveTo(self.last_write, self.y()),)?;
+        queue!(stdout(), cursor::MoveTo(self.last_write, self.y()),)?;
         Ok(())
     }
 
@@ -112,7 +114,7 @@ impl UserInputHandler {
     fn move_right(&mut self, window: &mut MainWindow) -> Result<()> {
         // TODO: possible index errors here
         self.last_write = min(self.content.len() as u16 + 1, self.last_write + 1);
-        queue!(window.output, cursor::MoveTo(self.last_write, self.y()))?;
+        queue!(stdout(), cursor::MoveTo(self.last_write, self.y()))?;
         Ok(())
     }
 
@@ -136,7 +138,7 @@ impl UserInputHandler {
         window.write_to_command_line(content)?;
         self.content = content.chars().collect();
         queue!(
-            window.output,
+            stdout(),
             cursor::MoveTo(self.last_write, self.y()),
             cursor::Show
         )?;
@@ -150,7 +152,7 @@ impl UserInputHandler {
         self.content.clear();
 
         // Hide the cursor
-        queue!(window.output, cursor::Hide)?;
+        queue!(stdout(), cursor::Hide)?;
 
         // Reset the last written spot
         self.last_write = 1;
@@ -182,7 +184,7 @@ impl Handler for UserInputHandler {
     }
 
     fn receive_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
-        queue!(window.output, cursor::Show)?;
+        queue!(stdout(), cursor::Show)?;
         match key {
             // Remove data
             KeyCode::Delete => self.delete(window)?,
@@ -199,7 +201,7 @@ impl Handler for UserInputHandler {
             // Insert char
             command => self.insert_char(window, command)?,
         }
-        window.output.flush()?;
+        stdout().flush()?;
         Ok(())
     }
 }

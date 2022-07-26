@@ -1,6 +1,6 @@
 use std::{
     cmp::max,
-    io::{stdout, Stdout, Write},
+    io::{stdout, Write},
     panic,
     time::{Duration, Instant},
 };
@@ -48,47 +48,79 @@ use crate::{
 };
 
 pub struct LogriaConfig {
-    pub width: u16,         // Window width
-    pub height: u16,        // Window height
-    pub last_row: u16,      // The last row we can render, aka number of lines visible in the tty
-    pub current_end: usize, // Current last row we have rendered
+    /// Window width
+    pub width: u16,
+    /// Window height
+    pub height: u16,
+    /// The last row we can render, aka number of lines visible in the tty
+    pub last_row: u16,
+    /// Current last row we have rendered
+    pub current_end: usize,
 
     // Message buffers
+    /// Messages read from standard error
     stderr_messages: Vec<String>,
+    /// Messages read from standard output
     stdout_messages: Vec<String>,
+    /// The stream type Logria is currently displaying
     pub stream_type: StreamType,
-    pub previous_stream_type: StreamType, // The previous stream the user was looking at
-    pub auxiliary_messages: Vec<String>,  // Messages displayed by extensions
+    /// The previous stream the user was looking at
+    pub previous_stream_type: StreamType,
+    /// Messages displayed by extensions
+    pub auxiliary_messages: Vec<String>,
 
     // Regex settings
-    pub regex_pattern: Option<regex::bytes::Regex>, // Current regex pattern
-    pub matched_rows: Vec<usize>, // List of index of matches when regex filtering is active
-    pub last_index_regexed: usize, // The last index the filtering function saw
-    color_replace_regex: Regex,   // A regex to remove ANSI color codes
-    pub highlight_match: bool,    // Determines whether we highlight the matched text to the user
+    /// Current regex pattern
+    pub regex_pattern: Option<regex::bytes::Regex>,
+    /// List of index of matches when regex filtering is active
+    pub matched_rows: Vec<usize>,
+    /// The last index the filtering function saw
+    pub last_index_regexed: usize,
+    /// A regex to remove ANSI color codes
+    color_replace_regex: Regex,
+    /// Determines whether we highlight the matched text to the user
+    pub highlight_match: bool,
 
     // Parser settings
-    pub parser_index: usize,         // Index for the parser to look at
-    pub parser_state: ParserState,   // The state of the current parser
-    pub aggregation_enabled: bool,   // Whether we are aggregating log data or not
-    pub last_index_processed: usize, // The last index the parsing function saw
-    pub num_to_aggregate: usize,     // The number of items to get when aggregating a Counter
+    /// Index for the parser to look at
+    pub parser_index: usize,
+    /// The state of the current parser
+    pub parser_state: ParserState,
+    /// Whether we are aggregating log data or not
+    pub aggregation_enabled: bool,
+    /// The last index the parsing function saw
+    pub last_index_processed: usize,
+    /// The number of items to get when aggregating a Counter
+    pub num_to_aggregate: usize,
 
     // App state
-    loop_time: Instant, // How long a loop of the main app takes
-    pub poll_rate: u64, // The rate at which we check for new messages
-    pub message_speed_tracker: RollingMean, // A deque based moving average tracker
-    smart_poll_rate: bool, // Whether we reduce the poll rate to the message receive speed
-    pub use_history: bool, // Whether the app records user input to a history tape
+    /// How long a loop of the main app takes
+    loop_time: Instant,
+    /// The rate at which we check for new messages
+    pub poll_rate: u64,
+    /// A deque based moving average tracker
+    pub message_speed_tracker: RollingMean,
+    /// Whether we reduce the poll rate to the message receive speed
+    smart_poll_rate: bool,
+    /// Whether the app records user input to a history tape
+    pub use_history: bool,
 
     // Render data
+    /// The current scroll mode
     pub scroll_state: ScrollState,
-    pub streams: Vec<InputStream>, // Can be a vector of FileInputs, CommandInputs, etc
-    previous_render: (usize, usize), // Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
-    was_empty: bool, // True if the previously rendered buffer had no data in it, False otherwise
-    pub did_switch: bool, // True if we just swapped input types, False otherwise
-    pub delete_func: Del, // Pointer to function used to delete items for the `: r` command
-    pub current_status: Option<String>, // Current status of the app  if there is one, i.e. if regex or parsers are active
+    /// Can be a vector of FileInputs, CommandInputs, etc
+    pub streams: Vec<InputStream>,
+    /// Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
+    previous_render: (usize, usize),
+    /// True if the previously rendered buffer had no data in it, False otherwise
+    was_empty: bool,
+    /// True if we just swapped input types, False otherwise
+    pub did_switch: bool,
+    /// Pointer to function used to delete items for the `: r` command
+    pub delete_func: Del,
+    /// Current status of the app  if there is one, i.e. if regex or parsers are active
+    pub current_status: Option<String>,
+    /// Function that can generate messages for display
     pub generate_auxiliary_messages: Option<fn() -> Vec<String>>,
 }
 
@@ -96,7 +128,7 @@ pub struct MainWindow {
     pub config: LogriaConfig,
     pub input_type: InputType,
     pub previous_input_type: InputType,
-    pub output: Stdout,
+    // pub output: Stdout,
     pub mc_handler: MultipleChoiceHandler,
     length_finder: LengthFinder,
 }
@@ -171,7 +203,6 @@ impl MainWindow {
         MainWindow {
             input_type: InputType::Startup,
             previous_input_type: InputType::Startup,
-            output: stdout(),
             length_finder: LengthFinder::new(),
             mc_handler: MultipleChoiceHandler::new(),
             config: LogriaConfig {
@@ -324,30 +355,27 @@ impl MainWindow {
         self.config.current_end = end; // Save this row so we know where we are
         let mut start: usize = 0; // default start
         if end > self.config.last_row as usize {
-            start = (end as u16 - self.config.last_row - 1) as usize;
+            start = (end.checked_sub(self.config.last_row as usize)).unwrap_or(start);
         }
         (start, end)
     }
 
     /// Get the message at a specific index in the current buffer
-    /// TODO: Return a reference, not a new String
-    fn get_message_at_index(&self, index: usize) -> String {
+    fn get_message_at_index(&self, index: usize) -> &str {
         // if there is a regex active, use that, otherwise handle normally
         if self.config.regex_pattern.is_some() {
-            return self.messages()[self.config.matched_rows[index]].to_string();
+            return &self.messages()[self.config.matched_rows[index]];
         }
         match self.input_type {
-            InputType::Normal | InputType::Command | InputType::Startup => {
-                self.messages()[index].to_string()
-            }
+            InputType::Normal | InputType::Command | InputType::Startup => &self.messages()[index],
             InputType::Regex => {
                 if self.config.regex_pattern.is_none() {
-                    self.messages()[index].to_string()
+                    &self.messages()[index]
                 } else {
-                    self.messages()[self.config.matched_rows[index]].to_string()
+                    &self.messages()[self.config.matched_rows[index]]
                 }
             }
-            InputType::Parser => self.messages()[index].to_string(),
+            InputType::Parser => &self.messages()[index],
         }
     }
 
@@ -387,15 +415,19 @@ impl MainWindow {
     }
 
     /// Render the relevant part of the message buffer in the window
+    ///
+    /// Adding padding and printing over the rest of the line is better than
+    /// clearing the screen and writing again. This is because we can only fit
+    /// a few items into the render queue. Because the queue is flushed
+    /// automatically when it is full, we end up having a lot of partial screen
+    /// renders, i.e. a lot of flickering, which makes for bad UX. This is not
+    /// a perfect solution because we can still get partial renders if the
+    /// terminal has a lot of lines, but we are guaranteed to never have blank
+    /// lines in the render, which are what cause the flickering effect.
     fn render_text_in_output(&mut self) -> Result<()> {
-        // Start the render from the last row
-        let mut current_row = self.config.last_row;
-
-        // Cast to usize so we can reference this instead of casting every time we need
-        let width = self.config.width as usize;
-
+        let mut stdout = stdout();
         // Save the cursor position (i.e. if the user is editing text in the command line)
-        queue!(self.output, cursor::SavePosition)?;
+        queue!(stdout, cursor::SavePosition)?;
 
         // Determine the start and end position of the render
         let (start, end) = self.determine_render_position();
@@ -414,13 +446,13 @@ impl MainWindow {
                 }
             }
             self.config.was_empty = true;
-            self.output.flush()?;
+            stdout.flush()?;
             return Ok(());
         }
 
         // Don't do anything if nothing changed; start at index 0
         if !self.config.aggregation_enabled && self.config.previous_render == (max(0, start), end) {
-            queue!(self.output, cursor::RestorePosition)?;
+            queue!(stdout, cursor::RestorePosition)?;
             return Ok(());
         }
 
@@ -440,11 +472,17 @@ impl MainWindow {
         // Since we are rendering if we got here, lock in the new render state
         self.config.previous_render = (max(0, start), end);
 
+        // Start the render from the last row
+        let mut current_row = self.config.last_row;
+
+        // Cast to usize so we can reference this instead of casting every time we need
+        let width = self.config.width as usize;
+
         // Render each message from bottom to top
         for index in (start..end).rev() {
             // Get the next message from the message pointer
             // We use String so we can modify `message` and not change the buffer
-            let mut message: String = self.get_message_at_index(index);
+            let mut message = self.get_message_at_index(index);
 
             // Trim any spaces or newlines from the end of the message
             message = message.trim_end().into();
@@ -459,31 +497,28 @@ impl MainWindow {
                 None => break,
             };
 
-            // TODO: make this faster
-            if self.config.highlight_match && self.config.regex_pattern.is_some() {
-                message = self.highlight_match(&message);
-            }
-
-            /*
-            Adding padding and printing over the rest of the line is better than
-            clearing the screen and writing again. This is because we can only fit
-            a few items into the render queue. Because the queue is flushed
-            automatically when it is full, we end up having a lot of partial screen
-            renders, i.e. a lot of flickering, which makes for bad UX. This is not
-            a perfect solution because we can still get partial renders if the
-            terminal has a lot of lines, but we are guaranteed to never have blank
-            lines in the render, which are what cause the flickering effect.
-            */
+            // See method docs for note on why we need this padding
             let message_padding_size = (width * message_rows) - message_length;
             let padding = " ".repeat(message_padding_size);
 
-            // Render message
-            message.push_str(&padding);
-            queue!(
-                self.output,
-                cursor::MoveTo(0, current_row),
-                style::Print(message)
-            )?;
+            // TODO: make this faster
+            if !(self.config.highlight_match && self.config.regex_pattern.is_some()) {
+                // Render message normally
+                queue!(
+                    stdout,
+                    cursor::MoveTo(0, current_row),
+                    style::Print(message),
+                    style::Print(padding)
+                )?;
+            } else {
+                // Render message with highlight (additional allocation)
+                queue!(
+                    stdout,
+                    cursor::MoveTo(0, current_row),
+                    style::Print(self.highlight_match(&message)),
+                    style::Print(padding)
+                )?;
+            }
         }
 
         // Overwrite any new blank lines
@@ -492,18 +527,13 @@ impl MainWindow {
             let clear_line = " ".repeat(width);
             (0..current_row).for_each(|row| {
                 // No `?` here because it is inside of a closure
-                queue!(
-                    self.output,
-                    cursor::MoveTo(0, row),
-                    style::Print(&clear_line),
-                )
-                .unwrap()
+                queue!(stdout, cursor::MoveTo(0, row), style::Print(&clear_line),).unwrap()
             });
         }
 
         // Restore the cursor position and flush the queue
-        queue!(self.output, cursor::RestorePosition)?;
-        self.output.flush()?;
+        queue!(stdout, cursor::RestorePosition)?;
+        stdout.flush()?;
         Ok(())
     }
 
@@ -535,7 +565,7 @@ impl MainWindow {
     /// Move the cursor to the CLI window
     pub fn go_to_cli(&mut self) -> Result<()> {
         let cli_position = self.config.height - 2;
-        queue!(self.output, cursor::MoveTo(1, cli_position))?;
+        queue!(stdout(), cursor::MoveTo(1, cli_position))?;
         Ok(())
     }
 
@@ -546,7 +576,7 @@ impl MainWindow {
         self.go_to_cli()?;
         self.reset_command_line()?;
         self.set_cli_cursor(None)?;
-        queue!(self.output, cursor::Show)?;
+        queue!(stdout(), cursor::Show)?;
         Ok(())
     }
 
@@ -562,14 +592,14 @@ impl MainWindow {
     /// TODO: faster?
     pub fn reset_output(&mut self) -> Result<()> {
         let last_row = self.config.last_row - 1;
-        execute!(self.output, cursor::SavePosition)?;
+        execute!(stdout(), cursor::SavePosition)?;
         queue!(
-            self.output,
+            stdout(),
             cursor::MoveTo(1, last_row),
             Clear(ClearType::CurrentLine),
             Clear(ClearType::FromCursorUp),
         )?;
-        execute!(self.output, cursor::RestorePosition)?;
+        execute!(stdout(), cursor::RestorePosition)?;
         Ok(())
     }
 
@@ -581,20 +611,20 @@ impl MainWindow {
         self.go_to_cli()?;
 
         // If the cursor was visible, hide it
-        queue!(self.output, style::Print(&clear), cursor::Hide)?;
+        queue!(stdout(), style::Print(&clear), cursor::Hide)?;
         Ok(())
     }
 
     /// Write text to the command line
     pub fn write_to_command_line(&mut self, content: &str) -> Result<()> {
-        queue!(self.output, cursor::SavePosition)?;
+        queue!(stdout(), cursor::SavePosition)?;
         // Remove what used to be in the command line
         self.reset_command_line()?;
 
         // Add the string to the front of the command line
         // TODO: Possibly validate length?
         self.go_to_cli()?;
-        queue!(self.output, style::Print(content), cursor::RestorePosition)?;
+        queue!(stdout(), style::Print(content), cursor::RestorePosition)?;
         Ok(())
     }
 
@@ -611,7 +641,7 @@ impl MainWindow {
         // Write the CLI cursor in the command line bounding box
         let cli_char_vertical = self.config.last_row + 1;
         execute!(
-            self.output,
+            stdout(),
             cursor::MoveTo(0, cli_char_vertical),
             style::Print(first_char)
         )?;
@@ -716,7 +746,7 @@ impl MainWindow {
 
         // Since building the UI hid the cursor, expose it again
         self.go_to_cli()?;
-        execute!(self.output, cursor::Show)?;
+        execute!(stdout(), cursor::Show)?;
 
         // Start the main event loop
         self.main()?;
@@ -725,8 +755,11 @@ impl MainWindow {
 
     /// Immediately exit the program
     pub fn quit(&mut self) -> Result<()> {
-        execute!(self.output, cursor::Show, Clear(ClearType::All))?;
+        execute!(stdout(), cursor::Show, Clear(ClearType::All))?;
         disable_raw_mode()?;
+        for stream in &self.config.streams {
+            *stream.should_die.lock().unwrap() = true;
+        }
         std::process::exit(0);
     }
 
@@ -784,6 +817,7 @@ impl MainWindow {
 
         // Handle directing input to the correct handlers during operation
         loop {
+            // TODO: We need to use shared state concurrency here to make the app not block on I/O
             // Update streams and poll rate
             // let t_0 = Instant::now();
             let num_new_messages = self.receive_streams();
@@ -821,7 +855,7 @@ impl MainWindow {
                     }
                 }
             }
-            // possibly sleep, cleanup, etc
+
             // Process matches if we just switched or if there are new messages
             if num_new_messages > 0 || self.config.did_switch {
                 // Process extension methods
@@ -865,7 +899,7 @@ mod render_tests {
         logria.config.scroll_state = ScrollState::Bottom;
 
         let (start, end) = logria.determine_render_position();
-        assert_eq!(start, 92);
+        assert_eq!(start, 93);
         assert_eq!(end, 100);
     }
 
@@ -909,7 +943,7 @@ mod render_tests {
         // Set current scroll state
         logria.config.current_end = 80;
         let (start, end) = logria.determine_render_position();
-        assert_eq!(start, 72);
+        assert_eq!(start, 73);
         assert_eq!(end, 80);
     }
 

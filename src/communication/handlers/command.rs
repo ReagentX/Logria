@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::io::{Write, stdout};
 
 use crossterm::{event::KeyCode, Result};
 
@@ -24,7 +24,7 @@ impl CommandHandler {
         window.write_status()?;
         window.config.delete_func = None;
         window.set_cli_cursor(None)?;
-        window.output.flush()?;
+        stdout().flush()?;
         Ok(())
     }
 

@@ -481,11 +481,10 @@ impl MainWindow {
         // Render each message from bottom to top
         for index in (start..end).rev() {
             // Get the next message from the message pointer
-            // We use String so we can modify `message` and not change the buffer
             let mut message = self.get_message_at_index(index);
 
             // Trim any spaces or newlines from the end of the message
-            message = message.trim_end().into();
+            message = message.trim_end();
 
             // Get some metadata we need to render the message
             let message_length = self.length_finder.get_real_length(&message);
@@ -501,7 +500,6 @@ impl MainWindow {
             let message_padding_size = (width * message_rows) - message_length;
             let padding = " ".repeat(message_padding_size);
 
-            // TODO: make this faster
             if !(self.config.highlight_match && self.config.regex_pattern.is_some()) {
                 // Render message normally
                 queue!(
@@ -817,15 +815,9 @@ impl MainWindow {
 
         // Handle directing input to the correct handlers during operation
         loop {
-            // TODO: We need to use shared state concurrency here to make the app not block on I/O
             // Update streams and poll rate
-            // let t_0 = Instant::now();
             let num_new_messages = self.receive_streams();
             self.handle_smart_poll_rate(self.config.loop_time.elapsed(), num_new_messages);
-            // self.write_to_command_line(&format!(
-            //     "{} in {:?}",
-            //     num_new_messages, self.config.poll_rate
-            // ))?;
 
             if poll(Duration::from_millis(self.config.poll_rate))? {
                 match read()? {

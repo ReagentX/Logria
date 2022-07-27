@@ -117,8 +117,8 @@ impl Handler for StartupHandler {
             KeyCode::Right => scroll::bottom(window),
             KeyCode::Home => scroll::top(window),
             KeyCode::End => scroll::bottom(window),
-            KeyCode::PageUp => scroll::pg_down(window),
-            KeyCode::PageDown => scroll::pg_up(window),
+            KeyCode::PageUp => scroll::pg_up(window),
+            KeyCode::PageDown => scroll::pg_down(window),
 
             // Mode change for remove or config commands
             KeyCode::Char(':') => window.set_command_mode(Some(Session::del))?,

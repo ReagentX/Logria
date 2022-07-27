@@ -68,8 +68,8 @@ impl Handler for NormalHandler {
             KeyCode::Right => scroll::bottom(window),
             KeyCode::Home => scroll::top(window),
             KeyCode::End => scroll::bottom(window),
-            KeyCode::PageUp => scroll::pg_down(window),
-            KeyCode::PageDown => scroll::pg_up(window),
+            KeyCode::PageUp => scroll::pg_up(window),
+            KeyCode::PageDown => scroll::pg_down(window),
 
             // Modes
             KeyCode::Char(':') => window.set_command_mode(None)?,

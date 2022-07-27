@@ -121,8 +121,8 @@ impl Handler for RegexHandler {
                 KeyCode::Right => scroll::bottom(window),
                 KeyCode::Home => scroll::top(window),
                 KeyCode::End => scroll::bottom(window),
-                KeyCode::PageUp => scroll::pg_down(window),
-                KeyCode::PageDown => scroll::pg_up(window),
+                KeyCode::PageUp => scroll::pg_up(window),
+                KeyCode::PageDown => scroll::pg_down(window),
 
                 // Build new regex
                 KeyCode::Char('/') => {

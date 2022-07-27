@@ -88,7 +88,7 @@ impl UserInputHandler {
     fn backspace(&mut self, window: &mut MainWindow) -> Result<()> {
         if self.last_write >= 1 && !self.content.is_empty() {
             self.content.remove(self.position_as_index() - 1);
-            self.move_left(window)?;
+            self.move_left()?;
             self.write(window)?;
         }
         Ok(())
@@ -104,14 +104,14 @@ impl UserInputHandler {
     }
 
     /// Move the cursor left
-    fn move_left(&mut self, window: &mut MainWindow) -> Result<()> {
+    fn move_left(&mut self) -> Result<()> {
         self.last_write = max(1, self.last_write.checked_sub(1).unwrap_or(1));
         queue!(stdout(), cursor::MoveTo(self.last_write, self.y()),)?;
         Ok(())
     }
 
     /// Move the cursor right
-    fn move_right(&mut self, window: &mut MainWindow) -> Result<()> {
+    fn move_right(&mut self) -> Result<()> {
         // TODO: possible index errors here
         self.last_write = min(self.content.len() as u16 + 1, self.last_write + 1);
         queue!(stdout(), cursor::MoveTo(self.last_write, self.y()))?;
@@ -192,8 +192,8 @@ impl Handler for UserInputHandler {
 
             // Move cursor
             // TODO: Possibly opt+left to skip words/symbols
-            KeyCode::Left => self.move_left(window)?,
-            KeyCode::Right => self.move_right(window)?,
+            KeyCode::Left => self.move_left()?,
+            KeyCode::Right => self.move_right()?,
 
             KeyCode::Up => self.tape_back(window)?,
             KeyCode::Down => self.tape_forward(window)?,

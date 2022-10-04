@@ -15,7 +15,7 @@ publish = false
 [dependencies]
 clap = "2.34.0"  # TODO: Upgrade this
 dirs = "4.0.0"
-crossterm = "0.24.0"
+crossterm = "0.25.0"
 regex = "1.6.0"
 tokio = { version = "1.20.1", features = [
     "process",

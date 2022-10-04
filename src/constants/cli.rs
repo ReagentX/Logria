@@ -30,6 +30,7 @@ pub mod cli_chars {
     pub const PARSER_CHAR: &str = "+";
 }
 
+#[allow(dead_code)]
 pub mod messages {
 
     // Startup messages
@@ -51,8 +52,6 @@ pub mod messages {
     // Config messages
     pub const CONFIG_START_MESSAGES: [&str; 2] = [
         "Saved data paths:",
-        // f"Parsers:  {USER_HOME}/{SAVED_PATTERNS_PATH}",
-        // f"Sessions: {USER_HOME}/{SAVED_SESSIONS_PATH}",
         "To configure new parameters, enter `session` or `parser`",
     ];
     pub const CREATE_SESSION_START_MESSAGES: [&str; 1] =
@@ -118,7 +117,7 @@ pub mod messages {
     );
     pub const PIPE_INPUT_ERROR: &str = concat!(
         "Piping to Logria is not supported as it cannot\n",
-        "both listen to stdin as well as get user input \n",
+        "both listen to stdin as well as get user input\n",
         "from your tty. Process substitution is also not\n",
         "allowed, as Logria is unable to read from the\n",
         "file descriptor created by the shell.\n",
@@ -129,7 +128,7 @@ pub mod messages {
         "\n",
         "To capture command output, start Logria and\n",
         "enter the command during the setup process,\n",
-        "invoke Logria with `logria -e \"command\", or",
+        "invoke Logria with `logria -e \"command\", or\n",
         "create a valid session file."
     );
 }

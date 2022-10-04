@@ -1,30 +1,30 @@
 [package]
-name = "logria"
-version = "0.0.0"
 authors = ["Christopher Sardegna <logria@reagentx.net>"]
-edition = "2021"
+categories = ["command-line-interface", "command-line-utilities"]
 description = "A powerful CLI tool that puts log analytics at your fingertips."
+edition = "2021"
+exclude = ["/resources", ".github", "docs", "build.sh"]
+keywords = ["cli", "tui", "logs", "log-parsing", "log-analytics"]
+license-file = "LICENSE"
+name = "logria"
+publish = false
 readme = "README.md"
 repository = "https://github.com/ReagentX/Logria"
-license-file = "LICENSE"
-keywords = ["cli", "tui", "logs", "log-parsing", "log-analytics"]
-categories = ["command-line-interface", "command-line-utilities"]
-exclude = ["/resources", ".github", "docs", "build.sh"]
-publish = false
+version = "0.0.0"
 
 [dependencies]
-clap = "2.34.0"  # TODO: Upgrade this
-dirs = "4.0.0"
+clap = {version = "4.0.9", features = ["cargo"]}
 crossterm = "0.25.0"
-regex = "1.6.0"
-tokio = { version = "1.20.1", features = [
-    "process",
-    "io-util",
-    "rt-multi-thread",
-    "macros",
-] }
-serde = { version = "1.0.139", features = ["derive"] }
-serde_json = "1.0.82"
-time = { version = "0.3.11", features = ["formatting", "parsing"] }
+dirs = "4.0.0"
 format_num = "0.1.0"
 is_executable = "1.0.1"
+regex = "1.6.0"
+serde = {version = "1.0.139", features = ["derive"]}
+serde_json = "1.0.82"
+time = {version = "0.3.11", features = ["formatting", "parsing"]}
+tokio = {version = "1.20.1", features = [
+  "process",
+  "io-util",
+  "rt-multi-thread",
+  "macros",
+]}

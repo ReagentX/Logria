@@ -80,7 +80,7 @@ impl Counter {
         if let Some(order) = self.order.get_mut(count) {
             // If there was data there, remove the existing item
             if !order.is_empty() {
-                order.retain(|i| i != item);
+                order.remove(item);
                 if order.is_empty() {
                     self.order.remove(count);
                 }
@@ -111,12 +111,9 @@ impl Counter {
     /// Increment an item into the counter, creating if it does not exist
     fn increment(&mut self, item: &str) {
         let old_count = self.state.get(item).unwrap_or(&0).to_owned();
-        let new_count = old_count.checked_add(1);
-        match new_count {
-            Some(count) => self.state.insert(item.to_owned(), count),
-            None => self.state.insert(item.to_owned(), old_count),
-        };
-        self.update_order(item, &old_count, &new_count.unwrap_or(old_count));
+        let new_count = old_count.checked_add(1).unwrap_or(old_count);
+        self.state.insert(item.to_owned(), new_count);
+        self.update_order(item, &old_count, &new_count);
     }
 
     /// Reduce an item from the counter, removing if it becomes 0

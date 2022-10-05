@@ -115,7 +115,7 @@ impl ParserHandler {
         num_to_get: &usize,
         render: bool,
     ) -> std::result::Result<Vec<String>, LogriaError> {
-        match &self.parser {
+        match &mut self.parser {
             Some(parser) => {
                 // Split message into a Vec<&str> of its parts
                 let message_parts: std::result::Result<Vec<&str>, LogriaError> = match parser
@@ -146,16 +146,13 @@ impl ParserHandler {
                         // If we got this far, allocate the return value
                         let mut aggregated_data = vec![];
                         for (idx, part) in message_parts.iter().enumerate() {
-                            // Clone here so we can use a mutable reference later
-                            if let Some(item) =
-                                self.parser.as_ref().unwrap().order.get(idx).cloned()
-                            {
-                                if let Some(aggregator) =
-                                    self.parser.as_mut().unwrap().aggregator_map.get_mut(&item)
-                                {
+                            if let Some(item) = parser.order.get(idx).cloned() {
+                                if let Some(aggregator) = parser.aggregator_map.get_mut(&item) {
                                     aggregator.update(part)?;
                                     if render {
+                                        // Name of aggregated part
                                         aggregated_data.push(item);
+                                        // Messages generated for that aggregator
                                         aggregated_data.extend(aggregator.messages(num_to_get));
                                     }
                                 } else {

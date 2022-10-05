@@ -15,14 +15,17 @@ use util::options::from_command_line;
 fn main() -> Result<()> {
     // Get options from command line
     let options = from_command_line();
-    if options.is_present("docs") {
+    if options.get_flag("docs") {
         println!("{}", DOCS);
-    } else if options.is_present("paths") {
+    } else if options.get_flag("paths") {
         print_paths();
     } else {
-        let history = !options.is_present("history");
-        let smart_poll_rate = !options.is_present("mindless");
-        let exec: Option<Vec<String>> = options.value_of("exec").map(|text| vec![text.to_string()]);
+        let history = !options.get_flag("history");
+        let smart_poll_rate = !options.get_flag("mindless");
+        let exec: Option<Vec<String>> = match options.try_get_one("exec") {
+            Ok(cmd) => cmd.map(|text: &String| vec![text.to_string()]),
+            Err(_) => None,
+        };
 
         // Start app
         let mut app = MainWindow::new(history, smart_poll_rate);

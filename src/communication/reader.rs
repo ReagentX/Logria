@@ -7,7 +7,7 @@ use std::{
 
 use crossterm::{
     cursor,
-    event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers},
+    event::{poll, read, Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers},
     execute, queue, style,
     terminal::{disable_raw_mode, size, Clear, ClearType},
     Result,
@@ -71,7 +71,7 @@ pub struct LogriaConfig {
 
     // Regex settings
     /// Current regex pattern
-    pub regex_pattern: Option<regex::bytes::Regex>,
+    pub regex_pattern: Option<Regex>,
     /// List of index of matches when regex filtering is active
     pub matched_rows: Vec<usize>,
     /// The last index the filtering function saw
@@ -605,7 +605,7 @@ impl MainWindow {
     pub fn reset_command_line(&mut self) -> Result<()> {
         // Leave padding for surrounding rectangle, we cannot use deleteln because it destroys the rectangle
         // TODO: Store this string as a class attribute, re-calculate on resize
-        let clear = " ".repeat((self.config.width - 3) as usize);
+        let clear = " ".repeat((self.config.width - 2) as usize);
         self.go_to_cli()?;
 
         // If the cursor was visible, hide it
@@ -785,6 +785,8 @@ impl MainWindow {
         let exit_key = KeyEvent {
             modifiers: KeyModifiers::CONTROL,
             code: KeyCode::Char('c'),
+            kind: KeyEventKind::Press,
+            state: KeyEventState::NONE,
         };
         let refresh_key = KeyCode::F(5);
 
@@ -845,6 +847,9 @@ impl MainWindow {
                         self.update_dimensions()?;
                         self.redraw()?;
                     }
+                    Event::FocusGained => {}
+                    Event::FocusLost => {}
+                    Event::Paste(_) => {}
                 }
             }
 

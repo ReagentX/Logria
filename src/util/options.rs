@@ -1,42 +1,49 @@
-use clap::{crate_version, App, Arg, ArgMatches};
+use clap::{command, crate_version, Arg, ArgAction, ArgMatches};
 
 use crate::constants::app::NAME;
 use crate::constants::cli::messages;
 
-pub fn from_command_line() -> ArgMatches<'static> {
-    let matches = App::new(NAME)
+pub fn from_command_line() -> ArgMatches {
+    let matches = command!(NAME)
         .version(crate_version!())
         .about(messages::APP_DESCRIPTION)
         .arg(
-            Arg::with_name("history")
-                .short("i")
+            Arg::new("history")
+                .short('h')
                 .long("no-history")
+                .required(false)
+                .action(ArgAction::SetTrue)
                 .help(messages::HISTORY_HELP),
         )
         .arg(
-            Arg::with_name("mindless")
-                .short("m")
+            Arg::new("mindless")
+                .short('m')
                 .long("mindless")
+                .required(false)
+                .action(ArgAction::SetTrue)
                 .help(messages::SMART_POLL_RATE_HELP),
         )
         .arg(
-            Arg::with_name("docs")
-                .short("-d")
+            Arg::new("docs")
+                .short('d')
                 .long("docs")
+                .required(false)
+                .action(ArgAction::SetTrue)
                 .help(messages::DOCS_HELP),
         )
         .arg(
-            Arg::with_name("paths")
-                .short("-p")
+            Arg::new("paths")
+                .short('p')
                 .long("paths")
+                .required(false)
+                .action(ArgAction::SetTrue)
                 .help(messages::PATHS_HELP),
         )
         .arg(
-            Arg::with_name("exec")
-                .short("e")
+            Arg::new("exec")
+                .short('e')
                 .long("exec")
                 .help(messages::EXEC_HELP)
-                .takes_value(true)
                 .value_name("stream"),
         )
         .get_matches();

@@ -67,7 +67,7 @@ pub mod streams {
             // Remove, as file input should be immediately buffered...
             let path = Path::new(&command);
             // Ensure file exists
-            let file = match File::open(&path) {
+            let file = match File::open(path) {
                 // The `description` method of `io::Error` returns a string that describes the error
                 Err(why) => {
                     return Err(LogriaError::CannotRead(

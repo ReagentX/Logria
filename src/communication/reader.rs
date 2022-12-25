@@ -101,7 +101,7 @@ pub struct LogriaConfig {
     /// A deque based moving average tracker
     pub message_speed_tracker: RollingMean,
     /// Whether we reduce the poll rate to the message receive speed
-    smart_poll_rate: bool,
+    pub smart_poll_rate: bool,
     /// Whether the app records user input to a history tape
     pub use_history: bool,
 
@@ -487,7 +487,7 @@ impl MainWindow {
             message = message.trim_end();
 
             // Get some metadata we need to render the message
-            let message_length = self.length_finder.get_real_length(&message);
+            let message_length = self.length_finder.get_real_length(message);
             let message_rows = max(1, ((message_length) + (width - 1)) / width);
 
             // Update the current row, stop writing if there is no more space
@@ -513,7 +513,7 @@ impl MainWindow {
                 queue!(
                     stdout,
                     cursor::MoveTo(0, current_row),
-                    style::Print(self.highlight_match(&message)),
+                    style::Print(self.highlight_match(message)),
                     style::Print(padding)
                 )?;
             }

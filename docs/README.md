@@ -54,22 +54,21 @@ Start Logria by invoking it as a command line application:
 
 ```zsh
 chris@home ~ % logria -h
-Logria
 A powerful CLI tool that puts log analytics at your fingertips.
 
 USAGE:
     logria [FLAGS] [OPTIONS]
 
-FLAGS:
-    -d, --docs          Prints documentation
-    -h, --help          Prints help information
-    -i, --no-history    Disable command history disk cache
-    -m, --mindless      Disable variable polling rate based on incoming message rate
-    -p, --paths         Prints current conficuration paths
-    -V, --version       Prints version information
+Usage: logria [OPTIONS]
 
-OPTIONS:
-    -e, --exec <stream>    Command to listen to, ex: logria -e "tail -f log.txt"
+Options:
+  -t, --no-history-tape  Disable command history disk cache
+  -m, --mindless         Disable variable polling rate based on incoming message rate
+  -d, --docs             Prints documentation
+  -p, --paths            Prints current conficuration paths
+  -e, --exec <stream>    Command to listen to, ex: logria -e "tail -f log.txt"
+  -h, --help             Print help information
+  -V, --version          Print version information
 ```
 
 Start Logria by invoking it as a command line application:

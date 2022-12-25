@@ -85,13 +85,13 @@ See [parser](/docs/parsers.md) docs.
 
 This is a Rust implementation of my [Python](https://github.com/ReagentX/Logria-py) proof-of-concept.
 
-### What is Logria For
+### When to use Logria
 
 Logria is best leveraged to watch live logs from multiple processes and filter them for events you want to see. My most common use case is watching logs from multiple Linode/EC2 instances via `ssh` or multiple CloudWatch streams using [`awslogs`](https://github.com/jorgebastida/awslogs).
 
 I also use it to analyze the logs from my Apache web servers that print logs in the common log format.
 
-### What is Logria Not For
+### When to avoid Logria
 
 Logria is not a tool for detailed log analytics. [`lnav`](https://lnav.org/features) or [`angle-grinder`](https://github.com/rcoh/angle-grinder/) will both do the job better.
 

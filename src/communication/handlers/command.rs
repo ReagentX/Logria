@@ -117,7 +117,11 @@ impl CommandHandler {
         else if command.starts_with("poll ") {
             match self.resolve_poll_rate(command) {
                 Ok(val) => {
+                    window.config.smart_poll_rate = false;
                     window.config.poll_rate = val;
+                    window.write_to_command_line(&format!(
+                        "Smart polling disabled, polling every {val}ms"
+                    ))?;
                 }
                 Err(why) => {
                     window.write_to_command_line(&format!(
@@ -144,11 +148,6 @@ impl CommandHandler {
                 window.config.use_history = false;
                 window.write_to_command_line("History tape disabled!")?;
             }
-        }
-        // Go back to start screen, must be before `: r`
-        else if command.starts_with("restart") {
-            // TODO: Make this work
-            window.write_to_command_line("Restart")?
         }
         // Remove saved sessions from the main screen
         else if command.starts_with('r') {

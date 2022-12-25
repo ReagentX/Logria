@@ -9,7 +9,6 @@
 | `:agg #` | set the limit for aggregation counters be `top #`, i.e. `top 5` or `top 1` |
 | `:history on` | enable command history disk cache |
 | `:history off` | disable command history disk cache |
-| `:restart` | go back to the setup screen to change sessions |
 
 ## Notes
 

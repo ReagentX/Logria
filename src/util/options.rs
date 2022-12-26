@@ -4,13 +4,13 @@ use crate::constants::app::NAME;
 use crate::constants::cli::messages;
 
 pub fn from_command_line() -> ArgMatches {
-    let matches = command!(NAME)
+    command!(NAME)
         .version(crate_version!())
         .about(messages::APP_DESCRIPTION)
         .arg(
-            Arg::new("history")
-                .short('h')
-                .long("no-history")
+            Arg::new("tape")
+                .short('t')
+                .long("no-history-tape")
                 .required(false)
                 .action(ArgAction::SetTrue)
                 .help(messages::HISTORY_HELP),
@@ -46,6 +46,5 @@ pub fn from_command_line() -> ArgMatches {
                 .help(messages::EXEC_HELP)
                 .value_name("stream"),
         )
-        .get_matches();
-    matches
+        .get_matches()
 }

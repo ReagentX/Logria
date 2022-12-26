@@ -13,7 +13,7 @@ pub fn extract_number(message: &str) -> Option<f64> {
     // For each char, check if it is a sign, digit, or digit separator
     // If it is, flip the float switch, and build the float string
     for (_, char) in message.char_indices() {
-        if char.is_digit(10) || char == '.' || char == ',' || char == '-' {
+        if char.is_ascii_digit() || char == '.' || char == ',' || char == '-' {
             if !in_float {
                 in_float = !in_float;
             }

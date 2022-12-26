@@ -109,10 +109,10 @@ pub mod messages {
         "    |                 | integer (in milliseconds)             |\n",
         "    | :r #            | when launching logria or viewing      |\n",
         "    |                 | sessions, this will delete item #     |\n",
-        "    | :restart        | go back to the setup screen to change |\n",
-        "    |                 | sessions, this will delete item #     |\n",
         "    | :agg #          | set the limit for aggregation counters|\n",
         "    |                 | be top #, i.e. top 5 or top 1         |\n",
+        "    | :history on     | enable command history disk cache     |\n",
+        "    | :history off    | disable command history disk cache    |\n",
         "    +-----------------+---------------------------------------|\n"
     );
     pub const PIPE_INPUT_ERROR: &str = concat!(

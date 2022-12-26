@@ -20,7 +20,7 @@ fn main() -> Result<()> {
     } else if options.get_flag("paths") {
         print_paths();
     } else {
-        let history = !options.get_flag("history");
+        let history = !options.get_flag("tape");
         let smart_poll_rate = !options.get_flag("mindless");
         let exec: Option<Vec<String>> = match options.try_get_one("exec") {
             Ok(cmd) => cmd.map(|text: &String| vec![text.to_string()]),

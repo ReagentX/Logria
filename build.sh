@@ -15,7 +15,7 @@ if [ -n "$VERSION" ]; then
     # Update version number in Cargo.toml for build
     # macOS sed requires the weird empty string param
     # Otherwise it returns `invalid command code C`
-    sed -i '' "s/0.0.0/$VERSION/g" Cargo.toml
+    sed -i '' "s/version = \"0.0.0\"/version = \"$VERSION\"/g" Cargo.toml
 
     # Build for Apple Silicon
     cargo build --target aarch64-apple-darwin --release
@@ -26,7 +26,7 @@ if [ -n "$VERSION" ]; then
     cp target/x86_64-apple-darwin/release/logria output/logria-x86_64-apple-darwin
 
     # Put the version number back
-    sed -i '' "s/$VERSION/0.0.0/g" Cargo.toml
+    sed -i '' "s/version = \"$VERSION\"/version = \"0.0.0\"/g" Cargo.toml
     unset VERSION
 else
     echo 'No version tag set!'

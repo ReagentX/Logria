@@ -6,8 +6,9 @@
 | `:q` | exit Logria |
 | `:poll #` | update [poll rate](#poll-rate) to #, where # is an integer |
 | `:r #` | when launching logria or viewing sessions, this will delete item # |
-| `:restart` | go back to the setup screen to change sessions |
 | `:agg #` | set the limit for aggregation counters be `top #`, i.e. `top 5` or `top 1` |
+| `:history on` | enable command history disk cache |
+| `:history off` | disable command history disk cache |
 
 ## Notes
 

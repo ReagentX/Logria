@@ -1,4 +1,4 @@
-use std::io::{Write, stdout};
+use std::io::{stdout, Write};
 
 use crossterm::{event::KeyCode, Result};
 
@@ -117,7 +117,11 @@ impl CommandHandler {
         else if command.starts_with("poll ") {
             match self.resolve_poll_rate(command) {
                 Ok(val) => {
+                    window.config.smart_poll_rate = false;
                     window.config.poll_rate = val;
+                    window.write_to_command_line(&format!(
+                        "Smart polling disabled, polling every {val}ms"
+                    ))?;
                 }
                 Err(why) => {
                     window.write_to_command_line(&format!(
@@ -127,25 +131,23 @@ impl CommandHandler {
                 }
             }
         }
-        // Enter configuration mode
-        else if command.starts_with("config") {
-            // TODO: Make this work
-            window.write_to_command_line("Config mode")?
-        }
         // Enter history mode
-        else if command.starts_with("history") {
-            // TODO: Make this work
-            window.write_to_command_line("History mode")?
+        else if command.starts_with("history on") {
+            if window.config.use_history {
+                window.write_to_command_line("History tape already enabled!")?;
+            } else {
+                window.config.use_history = true;
+                window.write_to_command_line("History tape enabled!")?;
+            }
         }
         // Exit history mode
         else if command.starts_with("history off") {
-            // TODO: Make this work
-            window.write_to_command_line("History off")?
-        }
-        // Go back to start screen, must be before `: r`
-        else if command.starts_with("restart") {
-            // TODO: Make this work
-            window.write_to_command_line("Restart")?
+            if !window.config.use_history {
+                window.write_to_command_line("History tape already disabled!")?;
+            } else {
+                window.config.use_history = false;
+                window.write_to_command_line("History tape disabled!")?;
+            }
         }
         // Remove saved sessions from the main screen
         else if command.starts_with('r') {

@@ -50,8 +50,6 @@ If you want to specify a different path, either set `LOGRIA_ROOT` to replace the
 
 To see availalbe commands, invoke Logria with `-h`:
 
-Start Logria by invoking it as a command line application:
-
 ```zsh
 chris@home ~ % logria -h
 A powerful CLI tool that puts log analytics at your fingertips.

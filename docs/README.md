@@ -145,4 +145,4 @@ Typing `:` and entering `:q` will exit the app.
 ## Notes / Caveats
 
 - When using `tmux` or other emulators that change the `$TERM` environment variable, you must set the default terminal to something that supports color. In `tmux`, this is as simple as adding `set -g default-terminal "screen-256color"` to `.tmux.conf`.
-- The package version in `Cargo.toml` is `0.0.0`. This is because during CICD that value gets [replaced](/.github/workflows/release.yml) with the current release tag name.
+- The package version in `Cargo.toml` is `0.0.0`. This is because during release that value gets [replaced](/.github/workflows/release.yml) with the current release tag name.

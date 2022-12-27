@@ -22,7 +22,7 @@ Sessions are stored as `JSON` in [`$LOGRIA_USER_HOME/$LOGRIA_ROOT/sessions`](REA
 }
 ```
 
-If [`$LOGRIA_USER_HOME/$LOGRIA_ROOT/sessions`](README.md#directory-configuration) does not exist, Logira will attempt to create it.
+If [`$LOGRIA_USER_HOME/$LOGRIA_ROOT/sessions`](README.md#directory-configuration) does not exist, Logria will attempt to create it.
 
 ## Elements
 
@@ -32,7 +32,7 @@ All sessions have two keys:
   - Contains a list of commands to listen on
 - `stream_type`
   - Contains a string of the type of input handler to use, either `File` or `Command`
-  - `File` creates a `FileInputHander` and `Command` creates a `CommandInputHandler`
+  - `File` creates a `FileInputHandler` and `Command` creates a `CommandInputHandler`
 
 ## Interpreting Sessions at Runtime
 

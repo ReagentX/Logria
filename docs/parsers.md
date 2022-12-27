@@ -120,7 +120,7 @@ Methods currently include [`Mean`](#mean-and-sum), [`Sum`](#mean-and-sum), [`Cou
 
 #### Mean and Sum
 
-Both of these methods search for the first occurance of a number in the parsed message.
+Both of these methods search for the first occurrence of a number in the parsed message.
 
 `Mean` will display the mean, the count, and the sum of the parsed floats:
 
@@ -150,7 +150,7 @@ extract_number("this is a 123.123. test");  // None, invalid
 
 This uses a data structure similar to Python's [`collections.Counter`](https://docs.python.org/3/library/collections.html#collections.Counter) to keep track of messages. Each message is hashed, so identical messages will get incremented. It defaults to displaying the top 5 results; this can be adjusted using the `:agg` [command](commands.md#commands).
 
-When activated, it will display the ordinal count of each occurance as well as its ratio to the total amount of messages counted:
+When activated, it will display the ordinal count of each occurrence as well as its ratio to the total amount of messages counted:
 
 ```txt
 Level
@@ -159,7 +159,7 @@ Level
     ERROR: 886 (17%)
 ```
 
-`Mode` is a special case of `Couter` where the top `n` is frozen to `1`.
+`Mode` is a special case of `Counter` where the top `n` is frozen to `1`.
 
 #### Date, Time, and DateTime
 
@@ -167,7 +167,7 @@ Level
 
 `Date` will default all messages to [midnight](https://docs.rs/time/latest/time/struct.Time.html#associatedconstant.MIDNIGHT) and `Time` will default all messages to [min](https://docs.rs/time/latest/time/struct.Date.html#associatedconstant.MIN).
 
-When activated, these methds display the rate at which messages are received, the total number of messgaes, and the earliest and latest timestamps.
+When activated, these methods display the rate at which messages are received, the total number of messages, and the earliest and latest timestamps.
 
 ```txt
 Timestamp

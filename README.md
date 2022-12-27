@@ -17,7 +17,9 @@ There are several options to install this app.
 
 ### Normal Usage
 
-`cargo install logria` (not supported in alpha stage)
+This binary is available on [crates.io](https://crates.io/crates/logria)
+
+`cargo install logria` is the best way to install the app for normal use.
 
 ### Development
 

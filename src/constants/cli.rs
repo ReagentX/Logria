@@ -76,13 +76,13 @@ pub mod messages {
 
     // Startup messages
     pub const APP_DESCRIPTION: &str =
-        "A powerful CLI tool that puts log analytics at your fingertips.";
+        "A powerful CLI tool that puts log aggregation at your fingertips.";
     pub const EXEC_HELP: &str = "Command to listen to, ex: logria -e \"tail -f log.txt\"";
     pub const HISTORY_HELP: &str = "Disable command history disk cache";
     pub const SMART_POLL_RATE_HELP: &str =
         "Disable variable polling rate based on incoming message rate";
     pub const DOCS_HELP: &str = "Prints documentation";
-    pub const PATHS_HELP: &str = "Prints current conficuration paths";
+    pub const PATHS_HELP: &str = "Prints current configuration paths";
     pub const DOCS: &str = concat!(
         "CONTROLS:\n",
         "    +------+--------------------------------------------------+\n",
@@ -123,7 +123,7 @@ pub mod messages {
         "file descriptor created by the shell.\n",
         "\n",
         "Piping from Logria is also not supported because\n",
-        "the interface is fundementally interactive and\n",
+        "the interface is fundamentally interactive and\n",
         "thus requires a tty.\n",
         "\n",
         "To capture command output, start Logria and\n",

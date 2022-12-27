@@ -90,7 +90,7 @@ impl Date {
                 unit: String::from(""),
                 parser_type: DateParserType::Date,
             },
-            // If we only care about the time, use the same date and the latest/earliset possible times
+            // If we only care about the time, use the same date and the latest/earliest possible times
             DateParserType::Time => Date {
                 format: format.to_owned(),
                 earliest: DateTime::new(Dt::MIN, Tm::from_hms(23, 59, 59).unwrap()),

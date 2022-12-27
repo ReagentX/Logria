@@ -3,6 +3,12 @@ use serde::{Deserialize, Serialize};
 
 /// Attempts to quickly extract a float from a string; may have weird effects
 /// if numbers are poorly formatted or are immediately next to each other.
+/// 
+/// This function requires allocation because `parse::<f64>()` fails
+/// for strings that contain digit separators.
+/// 
+/// Simply selecting the number range from `message` can fail for cases
+/// like  `"-83,234.34".parse::<f64>();`
 pub fn extract_number(message: &str) -> Option<f64> {
     // Result float to parse
     let mut result = String::new();
@@ -17,6 +23,7 @@ pub fn extract_number(message: &str) -> Option<f64> {
             if !in_float {
                 in_float = !in_float;
             }
+            // Exclude digit separators; this is the part that requires allocation
             if char != ',' {
                 result.push(char);
             }

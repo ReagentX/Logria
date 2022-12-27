@@ -15,9 +15,9 @@ A powerful CLI tool that puts log aggregation at your fingertips.
 
 There are several options to install this app.
 
-### Normal Usage
+### Cargo (recommended)
 
-This binary is available on [crates.io](https://crates.io/crates/logria)
+This binary is available on [crates.io](https://crates.io/crates/logria).
 
 `cargo install logria` is the best way to install the app for normal use.
 

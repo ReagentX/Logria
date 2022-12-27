@@ -26,7 +26,7 @@ This folder contains the documentation on how to interact with Logria programmat
 
 ### Directory Configuration
 
-By default, Logria will create a `/Logria/` directory to store [parsers](parsers.md), [sessions](sessions.md), and an input history tape in. The loction is [platform dependent](https://docs.rs/dirs/latest/dirs/fn.config_dir.html).
+By default, Logria will create a `/Logria/` directory to store [parsers](parsers.md), [sessions](sessions.md), and an input history tape in. The location is [platform dependent](https://docs.rs/dirs/latest/dirs/fn.config_dir.html).
 
 #### Platform-Specific Directory Locations
 
@@ -48,7 +48,7 @@ If you want to specify a different path, either set `LOGRIA_ROOT` to replace the
 
 ## Sample Usage Session
 
-To see availalbe commands, invoke Logria with `-h`:
+To see available commands, invoke Logria with `-h`:
 
 ```zsh
 chris@home ~ % logria -h
@@ -63,7 +63,7 @@ Options:
   -t, --no-history-tape  Disable command history disk cache
   -m, --mindless         Disable variable polling rate based on incoming message rate
   -d, --docs             Prints documentation
-  -p, --paths            Prints current conficuration paths
+  -p, --paths            Prints current configuration paths
   -e, --exec <stream>    Command to listen to, ex: logria -e "tail -f log.txt"
   -h, --help             Print help information
   -V, --version          Print version information
@@ -139,8 +139,8 @@ Typing `:` and entering `:q` will exit the app.
 
 ## Logo Colors
 
-- Letters: ![#e63462](https://via.placeholder.com/15/e63462/000000?text=+) `#e63462`
-- Accent: ![#333745](https://via.placeholder.com/15/333745/000000?text=+) `#333745`
+- Letters: ![#e63462](../resources/img/e63462.png) `#e63462`
+- Accent: ![#333745](../resources/img/333745.png) `#333745`
 
 ## Notes / Caveats
 

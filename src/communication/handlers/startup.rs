@@ -131,7 +131,9 @@ impl Handler for StartupHandler {
                     Ok(command) => command,
                     Err(why) => panic!("Unable to gather text: {:?}", why),
                 };
-                self.process_command(window, &command)?;
+                if !command.is_empty() {
+                    self.process_command(window, &command)?;
+                }
             }
 
             // User input

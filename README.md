@@ -15,9 +15,9 @@ A powerful CLI tool that puts log aggregation at your fingertips.
 
 There are several options to install this app.
 
-### Normal Usage
+### Cargo (recommended)
 
-This binary is available on [crates.io](https://crates.io/crates/logria)
+This binary is available on [crates.io](https://crates.io/crates/logria).
 
 `cargo install logria` is the best way to install the app for normal use.
 
@@ -27,14 +27,14 @@ See [Advanced Installation](docs/README.md#advanced-installation).
 
 ## Usage
 
-There are a few main ways to invoke Logria:
+There are a few ways to invoke Logria:
 
 - Directly:
   - `logria`
   - Opens to the setup screen
 - With args:
   - `logria -e 'tail -f log.txt'`
-  - Opens a pipe to `tail -f log.txt` and skips setup
+  - Opens a process for `tail -f log.txt` and skips setup
   - `logria -h` will show the help page with all possible options
 
 For more details, see [Sample Usage Session](docs/README.md#sample-usage-session).

@@ -18,6 +18,7 @@ use std::{
     fs::File,
     io::{BufRead, BufReader},
     path::Path,
+    process::Command,
     process::Stdio,
     result::Result,
     sync::{
@@ -25,12 +26,6 @@ use std::{
         Arc, Mutex,
     },
     thread, time,
-};
-
-use tokio::{
-    io::{AsyncBufReadExt, BufReader as TokioBufReader},
-    process::Command,
-    runtime::Runtime,
 };
 
 #[derive(Debug)]
@@ -130,57 +125,49 @@ impl Input for CommandInput {
         let process = thread::Builder::new()
             .name(format!("CommandInput: {}", name))
             .spawn(move || {
-                let runtime = Runtime::new().unwrap();
-                runtime.block_on(async {
-                    let command_to_run = CommandInput::parse_command(&command);
-                    let mut proc_read = match Command::new(command_to_run[0])
-                        .args(&command_to_run[1..])
-                        .current_dir(current_dir().unwrap())
-                        .stdout(Stdio::piped())
-                        .stderr(Stdio::piped())
-                        .stdin(Stdio::null())
-                        .spawn()
-                    {
-                        Ok(connected) => connected,
-                        Err(why) => panic!("Unable to connect to process: {}", why),
-                    };
+                let command_to_run = CommandInput::parse_command(&command);
+                let mut proc_read = match Command::new(command_to_run[0])
+                    .args(&command_to_run[1..])
+                    .current_dir(current_dir().unwrap())
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .stdin(Stdio::null())
+                    .spawn()
+                {
+                    Ok(connected) => connected,
+                    Err(why) => panic!("Unable to connect to process: {}", why),
+                };
 
-                    // Create buffers from stderr and stdout handles
-                    let mut stdout = TokioBufReader::new(proc_read.stdout.take().unwrap()).lines();
-                    let mut stderr = TokioBufReader::new(proc_read.stderr.take().unwrap()).lines();
+                // Create buffers from stderr and stdout handles
+                let mut stdout = BufReader::new(proc_read.stdout.take().unwrap()).lines();
+                let mut stderr = BufReader::new(proc_read.stderr.take().unwrap()).lines();
 
-                    loop {
-                        thread::sleep(time::Duration::from_millis(poll_rate.mean()));
+                loop {
+                    // TODO: Solve this:
+                    // If we sleep too long here then we can run into an issue where
+                    // We read too slowly from the BufReader, which has a maximum size of 8 KiB
+                    // If we exceed that size, the app freezes and cannot read new data..?
+                    thread::sleep(time::Duration::from_millis(poll_rate.mean()));
 
-                        let timestamp = time::Instant::now();
-                        let mut counter = 0;
+                    let timestamp = time::Instant::now();
+                    let mut counter = 0;
 
-                        loop {
-                            tokio::select! {
-                                Ok(line) = stdout.next_line() => {
-                                    if let Some(l) = line {
-                                        out_tx.send(l).unwrap();
-                                        counter += 1;
-                                    } else { break }
-                                }
-                                Ok(line) = stderr.next_line() => {
-                                    if let Some(l) = line {
-                                        err_tx.send(l).unwrap();
-                                        counter += 1;
-                                    } else { break }
-                                }
-                                else => break
-                            }
-
-                            if *die.lock().unwrap() {
-                                proc_read.kill().await.unwrap();
-                                break;
-                            }
-                        }
-
-                        poll_rate.update(ms_per_message(timestamp.elapsed(), counter));
+                    if let Some(Ok(line)) = stdout.next() {
+                        out_tx.send(line).unwrap();
+                        counter += 1;
                     }
-                });
+                    if let Some(Ok(line)) = stderr.next() {
+                        err_tx.send(line).unwrap();
+                        counter += 1;
+                    }
+
+                    if *die.lock().unwrap() {
+                        proc_read.kill().unwrap();
+                        break;
+                    }
+
+                    poll_rate.update(ms_per_message(timestamp.elapsed(), counter));
+                }
             });
 
         Ok(InputStream {

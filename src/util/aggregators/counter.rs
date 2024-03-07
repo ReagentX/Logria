@@ -31,12 +31,7 @@ impl Aggregator for Counter {
         let mut total_added = 0;
 
         // Get the keys sorted from highest to lowest
-        let mut counts: Vec<u64> = self
-            .order
-            .keys()
-            .into_iter()
-            .map(|f| f.to_owned())
-            .collect();
+        let mut counts: Vec<u64> = self.order.keys().map(|f| f.to_owned()).collect();
         counts.sort_unstable();
 
         // Get the value under each key
@@ -72,7 +67,7 @@ impl Counter {
 
     /// Determine the total number of items in the Counter
     fn total(&self) -> u64 {
-        self.state.values().into_iter().sum()
+        self.state.values().sum()
     }
 
     /// Remove an item from the internal order

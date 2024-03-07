@@ -48,7 +48,7 @@ pub fn top(window: &mut MainWindow) {
 #[cfg(test)]
 mod tests {
     use crate::{
-        communication::{input::input_type::InputType::Regex, reader::MainWindow},
+        communication::{input::InputType::Regex, reader::MainWindow},
         ui::scroll,
     };
 

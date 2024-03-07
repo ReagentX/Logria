@@ -1,204 +1,196 @@
-use std::{collections::HashSet, path::Path, result::Result};
-
 use is_executable::is_executable;
 
 use crate::{
-    communication::input::streams::{CommandInput, FileInput, Input, InputStream},
     extensions::{
         extension::ExtensionMethods,
         session::{Session, SessionType},
     },
-    util::error::LogriaError,
-};
-
-pub mod streams {
-    use std::{
-        env::current_dir,
-        error::Error,
-        fs::File,
-        io::{BufRead, BufReader},
-        path::Path,
-        process::Stdio,
-        result::Result,
-        sync::{
-            mpsc::{channel, Receiver},
-            Arc, Mutex,
-        },
-        thread, time,
-    };
-
-    use tokio::{
-        io::{AsyncBufReadExt, BufReader as TokioBufReader},
-        process::Command,
-        runtime::Runtime,
-    };
-
-    use crate::util::{
+    util::{
         error::LogriaError,
         poll::{ms_per_message, RollingMean},
-    };
+    },
+};
 
-    #[derive(Debug)]
-    pub struct InputStream {
-        pub stdout: Receiver<String>,
-        pub stderr: Receiver<String>,
-        pub process_name: String,
-        pub process: Result<std::thread::JoinHandle<()>, std::io::Error>,
-        pub should_die: Arc<Mutex<bool>>,
-        pub _type: String,
-    }
+use std::{
+    collections::HashSet,
+    env::current_dir,
+    error::Error,
+    fs::File,
+    io::{BufRead, BufReader},
+    path::Path,
+    process::Stdio,
+    result::Result,
+    sync::{
+        mpsc::{channel, Receiver},
+        Arc, Mutex,
+    },
+    thread, time,
+};
 
-    pub trait Input {
-        fn build(name: String, command: String) -> Result<InputStream, LogriaError>;
-    }
+use tokio::{
+    io::{AsyncBufReadExt, BufReader as TokioBufReader},
+    process::Command,
+    runtime::Runtime,
+};
 
-    #[derive(Debug)]
-    pub struct FileInput {}
+#[derive(Debug)]
+pub struct InputStream {
+    pub stdout: Receiver<String>,
+    pub stderr: Receiver<String>,
+    pub process_name: String,
+    pub process: Result<std::thread::JoinHandle<()>, std::io::Error>,
+    pub should_die: Arc<Mutex<bool>>,
+    pub _type: String,
+}
 
-    impl Input for FileInput {
-        /// Create a file input
-        /// poll_rate is unused since the file will be read all at once
-        fn build(name: String, command: String) -> Result<InputStream, LogriaError> {
-            // Setup multiprocessing queues
-            let (_, err_rx) = channel();
-            let (out_tx, out_rx) = channel();
+pub trait Input {
+    fn build(name: String, command: String) -> Result<InputStream, LogriaError>;
+}
 
-            // Try and open a handle to the file
-            // Remove, as file input should be immediately buffered...
-            let path = Path::new(&command);
-            // Ensure file exists
-            let file = match File::open(path) {
-                // The `description` method of `io::Error` returns a string that describes the error
-                Err(why) => {
-                    return Err(LogriaError::CannotRead(
-                        command,
-                        <dyn Error>::to_string(&why),
-                    ))
-                }
-                Ok(file) => file,
-            };
+#[derive(Debug)]
+pub struct FileInput {}
 
-            // Start process
-            let process = thread::Builder::new()
-                .name(format!("FileInput: {}", name))
-                .spawn(move || {
-                    // Create a buffer and read from it
-                    let reader = BufReader::new(file);
-                    for line in reader.lines() {
-                        if line.is_ok() {
-                            out_tx
-                                .send(match line {
-                                    Ok(a) => a,
-                                    _ => unreachable!(),
-                                })
-                                .unwrap();
-                        }
+impl Input for FileInput {
+    /// Create a file input
+    /// poll_rate is unused since the file will be read all at once
+    fn build(name: String, command: String) -> Result<InputStream, LogriaError> {
+        // Setup multiprocessing queues
+        let (_, err_rx) = channel();
+        let (out_tx, out_rx) = channel();
+
+        // Try and open a handle to the file
+        // Remove, as file input should be immediately buffered...
+        let path = Path::new(&command);
+        // Ensure file exists
+        let file = match File::open(path) {
+            // The `description` method of `io::Error` returns a string that describes the error
+            Err(why) => {
+                return Err(LogriaError::CannotRead(
+                    command,
+                    <dyn Error>::to_string(&why),
+                ))
+            }
+            Ok(file) => file,
+        };
+
+        // Start process
+        let process = thread::Builder::new()
+            .name(format!("FileInput: {}", name))
+            .spawn(move || {
+                // Create a buffer and read from it
+                let reader = BufReader::new(file);
+                for line in reader.lines() {
+                    if line.is_ok() {
+                        out_tx
+                            .send(match line {
+                                Ok(a) => a,
+                                _ => unreachable!(),
+                            })
+                            .unwrap();
                     }
-                });
+                }
+            });
 
-            Ok(InputStream {
-                stdout: out_rx,
-                stderr: err_rx,
-                process_name: name,
-                process,
-                should_die: Arc::new(Mutex::new(false)),
-                _type: String::from("FileInput"),
-            })
-        }
+        Ok(InputStream {
+            stdout: out_rx,
+            stderr: err_rx,
+            process_name: name,
+            process,
+            should_die: Arc::new(Mutex::new(false)),
+            _type: String::from("FileInput"),
+        })
     }
+}
 
-    #[derive(Debug)]
-    pub struct CommandInput {}
+#[derive(Debug)]
+pub struct CommandInput {}
 
-    impl CommandInput {
-        /// Parse a command string to a list of parts for `subprocess`
-        fn parse_command(command: &str) -> Vec<&str> {
-            command.split(' ').collect()
-        }
+impl CommandInput {
+    /// Parse a command string to a list of parts for `subprocess`
+    fn parse_command(command: &str) -> Vec<&str> {
+        command.split(' ').collect()
     }
+}
 
-    impl Input for CommandInput {
-        /// Create a command input
-        fn build(name: String, command: String) -> Result<InputStream, LogriaError> {
-            // Setup multiprocessing queues
-            let (err_tx, err_rx) = channel();
-            let (out_tx, out_rx) = channel();
+impl Input for CommandInput {
+    /// Create a command input
+    fn build(name: String, command: String) -> Result<InputStream, LogriaError> {
+        // Setup multiprocessing queues
+        let (err_tx, err_rx) = channel();
+        let (out_tx, out_rx) = channel();
 
-            // Provide check for termination outside of the thread
-            let should_die = Arc::new(Mutex::new(false));
-            let die = should_die.clone();
+        // Provide check for termination outside of the thread
+        let should_die = Arc::new(Mutex::new(false));
+        let die = should_die.clone();
 
-            // Handle poll rate
-            let mut poll_rate = RollingMean::new(5);
+        // Handle poll rate
+        let mut poll_rate = RollingMean::new(5);
 
-            // Start reading from the queues
-            let process = thread::Builder::new()
-                .name(format!("CommandInput: {}", name))
-                .spawn(move || {
-                    let runtime = Runtime::new().unwrap();
-                    runtime.block_on(async {
-                        let command_to_run = CommandInput::parse_command(&command);
-                        let mut proc_read = match Command::new(command_to_run[0])
-                            .args(&command_to_run[1..])
-                            .current_dir(current_dir().unwrap())
-                            .stdout(Stdio::piped())
-                            .stderr(Stdio::piped())
-                            .stdin(Stdio::null())
-                            .spawn()
-                        {
-                            Ok(connected) => connected,
-                            Err(why) => panic!("Unable to connect to process: {}", why),
-                        };
+        // Start reading from the queues
+        let process = thread::Builder::new()
+            .name(format!("CommandInput: {}", name))
+            .spawn(move || {
+                let runtime = Runtime::new().unwrap();
+                runtime.block_on(async {
+                    let command_to_run = CommandInput::parse_command(&command);
+                    let mut proc_read = match Command::new(command_to_run[0])
+                        .args(&command_to_run[1..])
+                        .current_dir(current_dir().unwrap())
+                        .stdout(Stdio::piped())
+                        .stderr(Stdio::piped())
+                        .stdin(Stdio::null())
+                        .spawn()
+                    {
+                        Ok(connected) => connected,
+                        Err(why) => panic!("Unable to connect to process: {}", why),
+                    };
 
-                        // Create buffers from stderr and stdout handles
-                        let mut stdout =
-                            TokioBufReader::new(proc_read.stdout.take().unwrap()).lines();
-                        let mut stderr =
-                            TokioBufReader::new(proc_read.stderr.take().unwrap()).lines();
+                    // Create buffers from stderr and stdout handles
+                    let mut stdout = TokioBufReader::new(proc_read.stdout.take().unwrap()).lines();
+                    let mut stderr = TokioBufReader::new(proc_read.stderr.take().unwrap()).lines();
+
+                    loop {
+                        thread::sleep(time::Duration::from_millis(poll_rate.mean()));
+
+                        let timestamp = time::Instant::now();
+                        let mut counter = 0;
 
                         loop {
-                            thread::sleep(time::Duration::from_millis(poll_rate.mean()));
-
-                            let timestamp = time::Instant::now();
-                            let mut counter = 0;
-
-                            loop {
-                                tokio::select! {
-                                    Ok(line) = stdout.next_line() => {
-                                        if let Some(l) = line {
-                                            out_tx.send(l).unwrap();
-                                            counter += 1;
-                                        } else { break }
-                                    }
-                                    Ok(line) = stderr.next_line() => {
-                                        if let Some(l) = line {
-                                            err_tx.send(l).unwrap();
-                                            counter += 1;
-                                        } else { break }
-                                    }
-                                    else => break
+                            tokio::select! {
+                                Ok(line) = stdout.next_line() => {
+                                    if let Some(l) = line {
+                                        out_tx.send(l).unwrap();
+                                        counter += 1;
+                                    } else { break }
                                 }
-
-                                if *die.lock().unwrap() {
-                                    proc_read.kill().await.unwrap();
-                                    break;
+                                Ok(line) = stderr.next_line() => {
+                                    if let Some(l) = line {
+                                        err_tx.send(l).unwrap();
+                                        counter += 1;
+                                    } else { break }
                                 }
+                                else => break
                             }
 
-                            poll_rate.update(ms_per_message(timestamp.elapsed(), counter));
+                            if *die.lock().unwrap() {
+                                proc_read.kill().await.unwrap();
+                                break;
+                            }
                         }
-                    });
-                });
 
-            Ok(InputStream {
-                stdout: out_rx,
-                stderr: err_rx,
-                process_name: name,
-                process,
-                should_die,
-                _type: String::from("CommandInput"),
-            })
-        }
+                        poll_rate.update(ms_per_message(timestamp.elapsed(), counter));
+                    }
+                });
+            });
+
+        Ok(InputStream {
+            stdout: out_rx,
+            stderr: err_rx,
+            process_name: name,
+            process,
+            should_die,
+            _type: String::from("CommandInput"),
+        })
     }
 }
 
@@ -292,24 +284,20 @@ pub fn build_streams_from_session(session: Session) -> Result<Vec<InputStream>, 
     }
 }
 
-pub mod input_type {
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub enum InputType {
-        Normal,
-        Command,
-        Regex,
-        Parser,
-        Startup,
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InputType {
+    Normal,
+    Command,
+    Regex,
+    Parser,
+    Startup,
 }
 
-pub mod stream_type {
-    #[derive(Debug, Clone, Copy)]
-    pub enum StreamType {
-        StdErr,
-        StdOut,
-        Auxiliary,
-    }
+#[derive(Debug, Clone, Copy)]
+pub enum StreamType {
+    StdErr,
+    StdOut,
+    Auxiliary,
 }
 
 #[cfg(test)]

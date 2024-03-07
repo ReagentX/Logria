@@ -8,7 +8,7 @@ use crate::{
         handlers::{
             handler::Handler, multiple_choice::MultipleChoiceHandler, processor::ProcessorMethods,
         },
-        input::{input_type::InputType::Normal, stream_type::StreamType},
+        input::{InputType::Normal, StreamType},
         reader::MainWindow,
     },
     extensions::{
@@ -427,7 +427,7 @@ mod parse_tests {
     use crate::{
         communication::{
             handlers::{handler::Handler, parser::ParserState, processor::ProcessorMethods},
-            input::{input_type::InputType, stream_type::StreamType},
+            input::{InputType, StreamType},
             reader::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
@@ -671,7 +671,7 @@ mod regex_tests {
                 handler::Handler, parser::ParserHandler, parser::ParserState,
                 processor::ProcessorMethods,
             },
-            input::{input_type::InputType, stream_type::StreamType},
+            input::{InputType, StreamType},
             reader::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
@@ -840,7 +840,7 @@ mod split_tests {
     use crate::{
         communication::{
             handlers::{handler::Handler, parser::ParserState, processor::ProcessorMethods},
-            input::{input_type::InputType, stream_type::StreamType},
+            input::{InputType, StreamType},
             reader::MainWindow,
         },
         extensions::parser::{Parser, PatternType},
@@ -980,7 +980,7 @@ mod failure_tests {
     use crate::{
         communication::{
             handlers::{handler::Handler, parser::ParserState, processor::ProcessorMethods},
-            input::{input_type::InputType, stream_type::StreamType},
+            input::{InputType, StreamType},
             reader::MainWindow,
         },
         extensions::parser::{Parser, PatternType},

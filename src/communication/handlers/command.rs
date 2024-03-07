@@ -6,7 +6,7 @@ use super::handler::Handler;
 use crate::{
     communication::{
         handlers::user_input::UserInputHandler,
-        input::{input_type::InputType, stream_type::StreamType},
+        input::{InputType, StreamType},
         reader::MainWindow,
     },
     ui::scroll::ScrollState,

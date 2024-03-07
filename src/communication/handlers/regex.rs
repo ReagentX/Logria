@@ -4,8 +4,7 @@ use regex::bytes::Regex;
 use super::{handler::Handler, processor::ProcessorMethods};
 use crate::{
     communication::{
-        handlers::user_input::UserInputHandler, input::input_type::InputType::Normal,
-        reader::MainWindow,
+        handlers::user_input::UserInputHandler, input::InputType::Normal, reader::MainWindow,
     },
     constants::cli::{cli_chars::NORMAL_CHAR, patterns::ANSI_COLOR_PATTERN},
     ui::scroll,
@@ -169,7 +168,7 @@ mod tests {
 
     use crate::communication::{
         handlers::{handler::Handler, processor::ProcessorMethods},
-        input::input_type::InputType,
+        input::InputType,
         reader::MainWindow,
     };
 

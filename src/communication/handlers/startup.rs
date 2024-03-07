@@ -6,8 +6,7 @@ use super::{handler::Handler, user_input::UserInputHandler};
 use crate::{
     communication::{
         input::{
-            build_streams_from_input, build_streams_from_session, input_type::InputType,
-            stream_type::StreamType::StdErr,
+            build_streams_from_input, build_streams_from_session, InputType, StreamType::StdErr,
         },
         reader::MainWindow,
     },
@@ -149,7 +148,7 @@ mod startup_tests {
     use crate::{
         communication::{
             handlers::handler::Handler,
-            input::{input_type::InputType, stream_type::StreamType},
+            input::{InputType, StreamType},
             reader::MainWindow,
         },
         constants::cli::messages::START_MESSAGE,

@@ -26,10 +26,7 @@ use crate::{
             regex::RegexHandler,
             startup::StartupHandler,
         },
-        input::{
-            build_streams_from_input, input_type::InputType, stream_type::StreamType,
-            streams::InputStream,
-        },
+        input::{build_streams_from_input, InputStream, InputType, StreamType},
     },
     constants::cli::{
         cli_chars, colors,
@@ -1016,7 +1013,7 @@ mod render_tests {
 
 #[cfg(test)]
 mod poll_rate_tests {
-    use crate::communication::{input::input_type::InputType, reader::MainWindow};
+    use crate::communication::{input::InputType, reader::MainWindow};
     use std::time::Duration;
 
     #[test]

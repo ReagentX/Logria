@@ -12,18 +12,18 @@ repository = "https://github.com/ReagentX/Logria"
 version = "0.0.0"
 
 [dependencies]
-clap = {version = "4.0.10", features = ["cargo"]}
-crossterm = "0.25.0"
-dirs = "4.0.0"
-format_num = "0.1.0"
-is_executable = "1.0.1"
-regex = "1.6.0"
-serde = {version = "1.0.139", features = ["derive"]}
-serde_json = "1.0.82"
-time = {version = "0.3.11", features = ["formatting", "parsing"]}
-tokio = {version = "1.25.0", features = [
+clap = { version = "=4.5.23", features = ["cargo"] }
+crossterm = "=0.25.0"
+dirs = "=5.0.1"
+format_num = "=0.1.0"
+is_executable = "=1.0.4"
+regex = "=1.11.1"
+serde = { version = "=1.0.216", features = ["derive"] }
+serde_json = "=1.0.134"
+time = { version = "=0.3.37", features = ["formatting", "parsing"] }
+tokio = { version = "=1.42.0", features = [
   "process",
   "io-util",
   "rt-multi-thread",
   "macros",
-]}
+] }

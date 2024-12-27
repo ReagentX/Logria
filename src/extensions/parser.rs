@@ -623,7 +623,7 @@ mod aggregate_tests {
             map,
         );
         parser.setup();
-        assert!(parser.aggregator_map.get("1").is_some());
+        assert!(parser.aggregator_map.contains_key("1"));
     }
 
     #[test]
@@ -641,7 +641,7 @@ mod aggregate_tests {
             map,
         );
         parser.setup();
-        assert!(parser.aggregator_map.get("1").is_some());
+        assert!(parser.aggregator_map.contains_key("1"));
     }
 
     #[test]
@@ -661,7 +661,7 @@ mod aggregate_tests {
             map,
         );
         parser.setup();
-        assert!(parser.aggregator_map.get("1").is_some());
+        assert!(parser.aggregator_map.contains_key("1"));
     }
 
     #[test]
@@ -676,7 +676,7 @@ mod aggregate_tests {
             map,
         );
         parser.setup();
-        assert!(parser.aggregator_map.get("1").is_some());
+        assert!(parser.aggregator_map.contains_key("1"));
     }
 
     #[test]
@@ -691,7 +691,7 @@ mod aggregate_tests {
             map,
         );
         parser.setup();
-        assert!(parser.aggregator_map.get("1").is_some());
+        assert!(parser.aggregator_map.contains_key("1"));
     }
 
     #[test]
@@ -706,7 +706,7 @@ mod aggregate_tests {
             map,
         );
         parser.setup();
-        assert!(parser.aggregator_map.get("1").is_some());
+        assert!(parser.aggregator_map.contains_key("1"));
     }
 
     #[test]
@@ -721,7 +721,7 @@ mod aggregate_tests {
             map,
         );
         parser.setup();
-        assert!(parser.aggregator_map.get("1").is_some());
+        assert!(parser.aggregator_map.contains_key("1"));
     }
 
     #[test]
@@ -736,6 +736,6 @@ mod aggregate_tests {
             map,
         );
         parser.setup();
-        assert!(parser.aggregator_map.get("1").is_some());
+        assert!(parser.aggregator_map.contains_key("1"));
     }
 }

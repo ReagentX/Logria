@@ -1,6 +1,6 @@
-use std::io::stdout;
+use std::io::{stdout, Result};
 
-use crossterm::{cursor, event::KeyCode, queue, Result};
+use crossterm::{cursor, event::KeyCode, queue};
 
 use super::handler::Handler;
 use crate::{

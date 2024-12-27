@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 
-use crossterm::Result;
+use std::io::Result;
 
 mod communication;
 mod constants;

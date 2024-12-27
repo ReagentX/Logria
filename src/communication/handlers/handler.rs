@@ -1,4 +1,5 @@
-use crossterm::Result;
+use std::io::Result;
+
 use crossterm::event::KeyCode;
 
 use crate::communication::reader::MainWindow;

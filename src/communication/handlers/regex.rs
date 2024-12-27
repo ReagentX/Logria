@@ -1,4 +1,6 @@
-use crossterm::{event::KeyCode, Result};
+use std::io::Result;
+
+use crossterm::event::KeyCode;
 use regex::bytes::Regex;
 
 use super::{handler::Handler, processor::ProcessorMethods};

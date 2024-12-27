@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Result};
 
-use crossterm::{event::KeyCode, Result};
+use crossterm::event::KeyCode;
 
 use super::{handler::Handler, user_input::UserInputHandler};
 use crate::{

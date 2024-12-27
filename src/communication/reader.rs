@@ -1,6 +1,6 @@
 use std::{
     cmp::max,
-    io::{stdout, Write},
+    io::{stdout, Result, Write},
     panic,
     time::{Duration, Instant},
 };
@@ -10,7 +10,6 @@ use crossterm::{
     event::{poll, read, Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers},
     execute, queue, style,
     terminal::{disable_raw_mode, size, Clear, ClearType},
-    Result,
 };
 use regex::bytes::Regex;
 
@@ -19,7 +18,6 @@ use crate::{
         handlers::{
             command::CommandHandler,
             handler::Handler,
-            multiple_choice::MultipleChoiceHandler,
             normal::NormalHandler,
             parser::{ParserHandler, ParserState},
             processor::ProcessorMethods,
@@ -125,8 +123,6 @@ pub struct MainWindow {
     pub config: LogriaConfig,
     pub input_type: InputType,
     pub previous_input_type: InputType,
-    // pub output: Stdout,
-    pub mc_handler: MultipleChoiceHandler,
     length_finder: LengthFinder,
 }
 
@@ -201,7 +197,6 @@ impl MainWindow {
             input_type: InputType::Startup,
             previous_input_type: InputType::Startup,
             length_finder: LengthFinder::new(),
-            mc_handler: MultipleChoiceHandler::new(),
             config: LogriaConfig {
                 poll_rate: DEFAULT,
                 smart_poll_rate,
@@ -485,7 +480,7 @@ impl MainWindow {
 
             // Get some metadata we need to render the message
             let message_length = self.length_finder.get_real_length(message);
-            let message_rows = max(1, ((message_length) + (width - 1)) / width);
+            let message_rows = max(1, (message_length).div_ceil(width));
 
             // Update the current row, stop writing if there is no more space
             current_row = match current_row.checked_sub(max(1, message_rows as u16)) {

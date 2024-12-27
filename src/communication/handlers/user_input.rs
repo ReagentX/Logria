@@ -1,9 +1,9 @@
 use std::{
     cmp::{max, min},
-    io::{stdout, Write},
+    io::{stdout, Write, Result},
 };
 
-use crossterm::{cursor, event::KeyCode, queue, style, terminal::size, Result};
+use crossterm::{cursor, event::KeyCode, queue, style, terminal::size};
 
 use crate::{
     communication::{handlers::handler::Handler, reader::MainWindow},

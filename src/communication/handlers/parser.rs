@@ -1,6 +1,6 @@
-use std::path::Path;
+use std::{io::Result, path::Path};
 
-use crossterm::{event::KeyCode, Result};
+use crossterm::event::KeyCode;
 use regex::Regex;
 
 use crate::{
@@ -279,7 +279,7 @@ impl Handler for ParserHandler {
         }
     }
 
-    fn receive_input(&mut self, window: &mut MainWindow, key: KeyCode) -> crossterm::Result<()> {
+    fn receive_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
         // Enable command mode for parsers
         if key == KeyCode::Char(':') {
             window.set_command_mode(Some(Parser::del))?;

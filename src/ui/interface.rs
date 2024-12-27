@@ -1,5 +1,6 @@
-use crossterm::{cursor, execute, queue, style, terminal, tty::IsTty, Result};
-use std::io::{stdin, stdout, Stdout, Write};
+use std::io::{stdin, stdout, Result, Stdout, Write};
+
+use crossterm::{cursor, execute, queue, style, terminal, tty::IsTty};
 
 use crate::communication::reader::MainWindow;
 

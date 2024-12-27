@@ -1,4 +1,4 @@
-use crossterm::Result;
+use std::io::Result;
 
 use crate::communication::reader::MainWindow;
 

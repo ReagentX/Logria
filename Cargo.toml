@@ -13,7 +13,7 @@ version = "0.0.0"
 
 [dependencies]
 clap = { version = "=4.5.23", features = ["cargo"] }
-crossterm = "=0.25.0"
+crossterm = "=0.28.1"
 dirs = "=5.0.1"
 format_num = "=0.1.0"
 is_executable = "=1.0.4"

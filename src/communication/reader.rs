@@ -1,6 +1,6 @@
 use std::{
     cmp::max,
-    io::{stdout, Write},
+    io::{stdout, Result, Write},
     panic,
     time::{Duration, Instant},
 };
@@ -10,7 +10,6 @@ use crossterm::{
     event::{poll, read, Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers},
     execute, queue, style,
     terminal::{disable_raw_mode, size, Clear, ClearType},
-    Result,
 };
 use regex::bytes::Regex;
 

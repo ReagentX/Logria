@@ -1,6 +1,6 @@
-use std::io::{stdout, Write};
+use std::io::{stdout, Result, Write};
 
-use crossterm::{event::KeyCode, Result};
+use crossterm::event::KeyCode;
 
 use super::handler::Handler;
 use crate::{

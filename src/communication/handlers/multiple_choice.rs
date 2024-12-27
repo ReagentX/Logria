@@ -1,7 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Result};
 
 use crossterm::event::KeyCode;
-use crossterm::Result;
 
 use crate::{
     communication::{

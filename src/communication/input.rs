@@ -37,8 +37,6 @@ use tokio::{
 pub struct InputStream {
     pub stdout: Receiver<String>,
     pub stderr: Receiver<String>,
-    pub process_name: String,
-    pub process: Result<std::thread::JoinHandle<()>, std::io::Error>,
     pub should_die: Arc<Mutex<bool>>,
     pub _type: String,
 }
@@ -74,7 +72,7 @@ impl Input for FileInput {
         };
 
         // Start process
-        let process = thread::Builder::new()
+        let _ = thread::Builder::new()
             .name(format!("FileInput: {}", name))
             .spawn(move || {
                 // Create a buffer and read from it
@@ -94,8 +92,6 @@ impl Input for FileInput {
         Ok(InputStream {
             stdout: out_rx,
             stderr: err_rx,
-            process_name: name,
-            process,
             should_die: Arc::new(Mutex::new(false)),
             _type: String::from("FileInput"),
         })
@@ -127,7 +123,7 @@ impl Input for CommandInput {
         let mut poll_rate = RollingMean::new(5);
 
         // Start reading from the queues
-        let process = thread::Builder::new()
+        let _ = thread::Builder::new()
             .name(format!("CommandInput: {}", name))
             .spawn(move || {
                 let runtime = Runtime::new().unwrap();
@@ -186,8 +182,6 @@ impl Input for CommandInput {
         Ok(InputStream {
             stdout: out_rx,
             stderr: err_rx,
-            process_name: name,
-            process,
             should_die,
             _type: String::from("CommandInput"),
         })

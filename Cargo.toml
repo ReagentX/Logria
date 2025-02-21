@@ -2,7 +2,7 @@
 authors = ["Christopher Sardegna <logria@reagentx.net>"]
 categories = ["command-line-interface", "command-line-utilities"]
 description = "A powerful CLI tool that puts log analytics at your fingertips."
-edition = "2021"
+edition = "2024"
 exclude = ["/resources", ".github", "docs", "build.sh"]
 keywords = ["cli", "tui", "logs", "log-parsing", "log-analytics"]
 license = "GPL-3.0-or-later"
@@ -12,16 +12,16 @@ repository = "https://github.com/ReagentX/Logria"
 version = "0.0.0"
 
 [dependencies]
-clap = { version = "=4.5.23", features = ["cargo"] }
+clap = { version = "=4.5.30", features = ["cargo"] }
 crossterm = "=0.28.1"
-dirs = "=5.0.1"
+dirs = "=6.0.0"
 format_num = "=0.1.0"
 is_executable = "=1.0.4"
 regex = "=1.11.1"
-serde = { version = "=1.0.216", features = ["derive"] }
-serde_json = "=1.0.134"
+serde = { version = "=1.0.218", features = ["derive"] }
+serde_json = "=1.0.139"
 time = { version = "=0.3.37", features = ["formatting", "parsing"] }
-tokio = { version = "=1.42.0", features = [
+tokio = { version = "=1.43.0", features = [
   "process",
   "io-util",
   "rt-multi-thread",

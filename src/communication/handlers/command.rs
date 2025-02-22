@@ -1,4 +1,4 @@
-use std::io::{stdout, Result, Write};
+use std::io::{Result, Write, stdout};
 
 use crossterm::event::KeyCode;
 
@@ -10,7 +10,7 @@ use crate::{
         reader::MainWindow,
     },
     ui::scroll::ScrollState,
-    util::{credits::gen, error::LogriaError},
+    util::{credits::gen_credits, error::LogriaError},
 };
 
 pub struct CommandHandler {
@@ -88,7 +88,7 @@ impl CommandHandler {
                         return Err(LogriaError::InvalidCommand(format!(
                             "range invalid: {:?}",
                             &range
-                        )))
+                        )));
                     }
                 }
 
@@ -184,7 +184,7 @@ impl CommandHandler {
         else if command.starts_with("credits") {
             // Since getting here implies that we are now in command mode, check if the previous input type was startup
             if let InputType::Startup = window.previous_input_type {
-                window.config.generate_auxiliary_messages = Some(gen);
+                window.config.generate_auxiliary_messages = Some(gen_credits);
                 window.config.stream_type = StreamType::Auxiliary;
                 window.config.scroll_state = ScrollState::Top;
                 window.render_auxiliary_text()?;

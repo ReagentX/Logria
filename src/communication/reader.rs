@@ -1,15 +1,15 @@
 use std::{
     cmp::max,
-    io::{stdout, Result, Write},
+    io::{Result, Write, stdout},
     panic,
     time::{Duration, Instant},
 };
 
 use crossterm::{
     cursor,
-    event::{poll, read, Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers},
+    event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, poll, read},
     execute, queue, style,
-    terminal::{disable_raw_mode, size, Clear, ClearType},
+    terminal::{Clear, ClearType, disable_raw_mode, size},
 };
 use regex::bytes::Regex;
 
@@ -24,7 +24,7 @@ use crate::{
             regex::RegexHandler,
             startup::StartupHandler,
         },
-        input::{build_streams_from_input, InputStream, InputType, StreamType},
+        input::{InputStream, InputType, StreamType, build_streams_from_input},
     },
     constants::cli::{
         cli_chars, colors,
@@ -36,7 +36,7 @@ use crate::{
         scroll::ScrollState,
     },
     util::{
-        poll::{ms_per_message, RollingMean},
+        poll::{RollingMean, ms_per_message},
         sanitizers::length::LengthFinder,
         types::Del,
     },
@@ -640,9 +640,9 @@ impl MainWindow {
 
     /// Redraw auxiliary text the given function pointer
     pub fn render_auxiliary_text(&mut self) -> Result<()> {
-        if let Some(gen) = self.config.generate_auxiliary_messages {
+        if let Some(gen_func) = self.config.generate_auxiliary_messages {
             self.config.auxiliary_messages.clear();
-            self.config.auxiliary_messages.extend(gen());
+            self.config.auxiliary_messages.extend(gen_func());
             self.redraw()?;
         } else {
             self.write_to_command_line("Cannot write auxiliary messages with no function!")?;

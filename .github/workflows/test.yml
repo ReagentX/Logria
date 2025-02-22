@@ -3,24 +3,19 @@ name: Test
 on:
   pull_request:
     branches:
-        - release
-        - develop
+      - release
+      - develop
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   Test:
-
+    name: Logria Tests
     runs-on: ubuntu-latest
 
     steps:
-    - name: Setup Rust
-      uses: actions/checkout@v4
-      run: |
-        rustup update stable && rustup default stable
-    - name: Run tests
-      uses: actions/checkout@v4
-      run: cargo test --verbose
-    - name: Run linting
-      run: cargo clippy
+      - uses: actions/checkout@v4
+      - run: rustup update stable && rustup default stable
+      - run: cargo test --verbose
+      - run: cargo clippy

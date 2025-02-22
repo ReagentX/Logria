@@ -10,12 +10,26 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  Test:
+  Setup:
     name: Logria Tests
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
       - run: rustup update stable && rustup default stable
+
+  Test:
+    name: Logria Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
       - run: cargo test --verbose
+
+  Lint:
+    name: Logria Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
       - run: cargo clippy

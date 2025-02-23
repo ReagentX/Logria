@@ -7,7 +7,7 @@ use crate::{
     },
     util::{
         error::LogriaError,
-        poll::{ms_per_message, RollingMean},
+        poll::{RollingMean, ms_per_message},
     },
 };
 
@@ -18,19 +18,13 @@ use std::{
     fs::File,
     io::{BufRead, BufReader},
     path::Path,
-    process::Stdio,
+    process::{Command, Stdio},
     result::Result,
     sync::{
-        mpsc::{channel, Receiver},
         Arc, Mutex,
+        mpsc::{Receiver, channel},
     },
     thread, time,
-};
-
-use tokio::{
-    io::{AsyncBufReadExt, BufReader as TokioBufReader},
-    process::Command,
-    runtime::Runtime,
 };
 
 #[derive(Debug)]
@@ -66,7 +60,7 @@ impl Input for FileInput {
                 return Err(LogriaError::CannotRead(
                     command,
                     <dyn Error>::to_string(&why),
-                ))
+                ));
             }
             Ok(file) => file,
         };
@@ -119,64 +113,115 @@ impl Input for CommandInput {
         let should_die = Arc::new(Mutex::new(false));
         let die = should_die.clone();
 
-        // Handle poll rate
-        let mut poll_rate = RollingMean::new(5);
+        // Handle poll rate for each stream
+        let poll_rate_stdout = Arc::new(Mutex::new(RollingMean::new(5)));
+        let poll_rate_stderr = Arc::new(Mutex::new(RollingMean::new(5)));
 
         // Start reading from the queues
         let _ = thread::Builder::new()
             .name(format!("CommandInput: {}", name))
             .spawn(move || {
-                let runtime = Runtime::new().unwrap();
-                runtime.block_on(async {
-                    let command_to_run = CommandInput::parse_command(&command);
-                    let mut proc_read = match Command::new(command_to_run[0])
-                        .args(&command_to_run[1..])
-                        .current_dir(current_dir().unwrap())
-                        .stdout(Stdio::piped())
-                        .stderr(Stdio::piped())
-                        .stdin(Stdio::null())
-                        .spawn()
-                    {
-                        Ok(connected) => connected,
-                        Err(why) => panic!("Unable to connect to process: {}", why),
-                    };
+                let command_to_run = CommandInput::parse_command(&command);
+                let mut child = match Command::new(command_to_run[0])
+                    .args(&command_to_run[1..])
+                    .current_dir(current_dir().unwrap())
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .stdin(Stdio::null())
+                    .spawn()
+                {
+                    Ok(child) => child,
+                    Err(why) => panic!("Unable to connect to process: {}", why),
+                };
 
-                    // Create buffers from stderr and stdout handles
-                    let mut stdout = TokioBufReader::new(proc_read.stdout.take().unwrap()).lines();
-                    let mut stderr = TokioBufReader::new(proc_read.stderr.take().unwrap()).lines();
+                // Get stdout and stderr handles
+                let stdout = child.stdout.take().unwrap();
+                let stderr = child.stderr.take().unwrap();
 
+                // Create readers
+                let mut stdout_reader = BufReader::new(stdout);
+                let mut stderr_reader = BufReader::new(stderr);
+
+                // Create threads to read stdout and stderr independently
+                let die_clone = die.clone();
+                let poll_stdout = poll_rate_stdout.clone();
+                let stdout_handle = thread::spawn(move || {
                     loop {
-                        thread::sleep(time::Duration::from_millis(poll_rate.mean()));
+                        thread::sleep(time::Duration::from_millis(
+                            poll_stdout.lock().unwrap().mean(),
+                        ));
 
+                        let mut buf_stdout = String::new();
                         let timestamp = time::Instant::now();
-                        let mut counter = 0;
+                        stdout_reader.read_line(&mut buf_stdout).unwrap();
 
-                        loop {
-                            tokio::select! {
-                                Ok(line) = stdout.next_line() => {
-                                    if let Some(l) = line {
-                                        out_tx.send(l).unwrap();
-                                        counter += 1;
-                                    } else { break }
-                                }
-                                Ok(line) = stderr.next_line() => {
-                                    if let Some(l) = line {
-                                        err_tx.send(l).unwrap();
-                                        counter += 1;
-                                    } else { break }
-                                }
-                                else => break
-                            }
-
-                            if *die.lock().unwrap() {
-                                proc_read.kill().await.unwrap();
-                                break;
-                            }
+                        if buf_stdout.is_empty() {
+                            poll_stdout
+                                .lock()
+                                .unwrap()
+                                .update(ms_per_message(timestamp.elapsed(), 0));
+                            continue;
                         }
 
-                        poll_rate.update(ms_per_message(timestamp.elapsed(), counter));
+                        if out_tx.send(buf_stdout).is_err() {
+                            break;
+                        }
+
+                        poll_stdout
+                            .lock()
+                            .unwrap()
+                            .update(ms_per_message(timestamp.elapsed(), 1));
+
+                        if *die_clone.lock().unwrap() {
+                            break;
+                        }
                     }
                 });
+
+                let die_clone = die.clone();
+                let poll_stderr = poll_rate_stderr.clone();
+                let stderr_handle = thread::spawn(move || {
+                    loop {
+                        thread::sleep(time::Duration::from_millis(
+                            poll_stderr.lock().unwrap().mean(),
+                        ));
+
+                        let mut buf_stderr = String::new();
+                        let timestamp = time::Instant::now();
+                        stderr_reader.read_line(&mut buf_stderr).unwrap();
+
+                        if buf_stderr.is_empty() {
+                            poll_stderr
+                                .lock()
+                                .unwrap()
+                                .update(ms_per_message(timestamp.elapsed(), 0));
+                            continue;
+                        }
+
+                        if err_tx.send(buf_stderr).is_err() {
+                            break;
+                        }
+
+                        poll_stderr
+                            .lock()
+                            .unwrap()
+                            .update(ms_per_message(timestamp.elapsed(), 1));
+
+                        if *die_clone.lock().unwrap() {
+                            break;
+                        }
+                    }
+                });
+
+                // Wait for both readers to complete
+                stdout_handle.join().unwrap();
+                stderr_handle.join().unwrap();
+
+                // Kill the child process if requested
+                if *die.lock().unwrap() {
+                    let _ = child.kill();
+                }
+                let _ = child.wait();
             });
 
         Ok(InputStream {

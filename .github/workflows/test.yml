@@ -17,5 +17,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: rustup update stable && rustup default stable
-      - run: cargo test --verbose
       - run: cargo clippy
+      - run: cargo test --verbose

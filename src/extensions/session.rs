@@ -41,7 +41,7 @@ impl ExtensionMethods for Session {
         let session_json = serde_json::to_string_pretty(&self).unwrap();
         let path = format!("{}/{}", sessions(), file_name);
         match write(&path, session_json) {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
             Err(why) => Err(LogriaError::CannotWrite(path, <dyn Error>::to_string(&why))),
         }
     }
@@ -56,12 +56,12 @@ impl ExtensionMethods for Session {
             }
             let file_name = &files[*i];
             match remove_file(file_name) {
-                Ok(_) => {}
+                Ok(()) => {}
                 Err(why) => {
                     return Err(LogriaError::CannotRemove(
                         file_name.to_owned(),
                         <dyn Error>::to_string(&why),
-                    ))
+                    ));
                 }
             }
         }
@@ -154,15 +154,16 @@ mod tests {
     #[test]
     fn test_list_full() {
         let list = Session::list_full();
-        assert!(list
-            .iter()
-            .any(|i| i == &format!("{}/{}", sessions(), "ls -la")))
+        assert!(
+            list.iter()
+                .any(|i| i == &format!("{}/{}", sessions(), "ls -la"))
+        );
     }
 
     #[test]
     fn test_list_clean() {
         let list = Session::list_clean();
-        assert!(list.iter().any(|i| i == "ls -la"))
+        assert!(list.iter().any(|i| i == "ls -la"));
     }
 
     #[test]

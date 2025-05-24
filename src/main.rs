@@ -16,7 +16,7 @@ fn main() -> Result<()> {
     // Get options from command line
     let options = from_command_line();
     if options.get_flag("docs") {
-        println!("{}", DOCS);
+        println!("{DOCS}");
     } else if options.get_flag("paths") {
         print_paths();
     } else {

@@ -6,7 +6,7 @@ use super::{handler::Handler, user_input::UserInputHandler};
 use crate::{
     communication::{
         input::{
-            build_streams_from_input, build_streams_from_session, InputType, StreamType::StdErr,
+            InputType, StreamType::StdErr, build_streams_from_input, build_streams_from_session,
         },
         reader::MainWindow,
     },
@@ -28,12 +28,12 @@ impl StartupHandler {
         START_MESSAGE.iter().for_each(|&s| text.push(s.to_string()));
         sessions.iter().enumerate().for_each(|(i, s)| {
             let value = s.to_string();
-            text.push(format!("{}: {}", i, value));
+            text.push(format!("{i}: {value}"));
         });
         text
     }
 
-    /// Load the session_data hashmap internally
+    /// Load the `session_data` hashmap internally
     fn initialize(&mut self) {
         let sessions = Session::list_full();
         sessions.iter().enumerate().for_each(|(i, s)| {
@@ -44,57 +44,52 @@ impl StartupHandler {
 
     fn process_command(&mut self, window: &mut MainWindow, command: &str) -> Result<()> {
         let selection = command.parse::<usize>();
-        match selection {
-            Ok(item) => {
-                match self.session_data.get(&item) {
-                    Some(file_path) => {
-                        let session = Session::load(file_path);
-                        match session {
-                            // Successfully start the app
-                            Ok(session) => {
-                                window.config.streams = match build_streams_from_session(session) {
-                                    Ok(streams) => streams,
-                                    Err(why) => {
-                                        window.write_to_command_line(&why.to_string())?;
-                                        return Ok(());
-                                    }
-                                };
-                                window.config.stream_type = StdErr;
-                                window.update_input_type(InputType::Normal)?;
-                                window.config.generate_auxiliary_messages = None;
-                                window.config.message_speed_tracker.reset();
-                                window.reset_output()?;
-                                window.redraw()?;
-                            }
-                            Err(why) => {
-                                window.write_to_command_line(&format!(
-                                    "Unable to parse session: {:?}",
-                                    why
-                                ))?;
-                            }
+        if let Ok(item) = selection {
+            match self.session_data.get(&item) {
+                Some(file_path) => {
+                    let session = Session::load(file_path);
+                    match session {
+                        // Successfully start the app
+                        Ok(session) => {
+                            window.config.streams = match build_streams_from_session(session) {
+                                Ok(streams) => streams,
+                                Err(why) => {
+                                    window.write_to_command_line(&why.to_string())?;
+                                    return Ok(());
+                                }
+                            };
+                            window.config.stream_type = StdErr;
+                            window.update_input_type(InputType::Normal)?;
+                            window.config.generate_auxiliary_messages = None;
+                            window.config.message_speed_tracker.reset();
+                            window.reset_output()?;
+                            window.redraw()?;
+                        }
+                        Err(why) => {
+                            window.write_to_command_line(&format!(
+                                "Unable to parse session: {why:?}"
+                            ))?;
                         }
                     }
-                    None => {
-                        window.write_to_command_line("Invalid selection!")?;
-                    }
                 }
-                Ok(())
+                None => {
+                    window.write_to_command_line("Invalid selection!")?;
+                }
             }
-            Err(_) => {
-                window.config.streams = match build_streams_from_input(&[command.to_owned()], true)
-                {
-                    Ok(streams) => streams,
-                    Err(why) => {
-                        window.write_to_command_line(&why.to_string())?;
-                        build_streams_from_input(&[command.to_owned()], false).unwrap()
-                    }
-                };
-                window.config.stream_type = StdErr;
-                window.update_input_type(InputType::Normal)?;
-                window.reset_output()?;
-                window.redraw()?;
-                Ok(())
-            }
+            Ok(())
+        } else {
+            window.config.streams = match build_streams_from_input(&[command.to_owned()], true) {
+                Ok(streams) => streams,
+                Err(why) => {
+                    window.write_to_command_line(&why.to_string())?;
+                    build_streams_from_input(&[command.to_owned()], false).unwrap()
+                }
+            };
+            window.config.stream_type = StdErr;
+            window.update_input_type(InputType::Normal)?;
+            window.reset_output()?;
+            window.redraw()?;
+            Ok(())
         }
     }
 }
@@ -128,7 +123,7 @@ impl Handler for StartupHandler {
                 self.initialize();
                 let command = match self.input_handler.gather(window) {
                     Ok(command) => command,
-                    Err(why) => panic!("Unable to gather text: {:?}", why),
+                    Err(why) => panic!("Unable to gather text: {why:?}"),
                 };
                 if !command.is_empty() {
                     self.process_command(window, &command)?;
@@ -170,7 +165,7 @@ mod startup_tests {
     fn can_get_startup_text() {
         let text = StartupHandler::get_startup_text();
         let sessions = Session::list_full();
-        assert_eq!(text.len(), sessions.len() + START_MESSAGE.len())
+        assert_eq!(text.len(), sessions.len() + START_MESSAGE.len());
     }
 
     #[test]
@@ -219,9 +214,11 @@ mod startup_tests {
         handler.initialize();
 
         // Tests
-        assert!(handler
-            .process_command(&mut window, "zzzfake_file_name")
-            .is_ok());
+        assert!(
+            handler
+                .process_command(&mut window, "zzzfake_file_name")
+                .is_ok()
+        );
         assert!(matches!(window.input_type, InputType::Normal));
         assert!(matches!(window.config.stream_type, StreamType::StdErr));
         Session::del(&[Session::list_full().len() - 1]).unwrap();

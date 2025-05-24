@@ -19,36 +19,35 @@ pub enum LogriaError {
 impl Display for LogriaError {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result {
         match self {
-            LogriaError::InvalidRegex(why, msg) => write!(fmt, "{}: {}", why, msg),
+            LogriaError::InvalidRegex(why, msg) => write!(fmt, "{why}: {msg}"),
             LogriaError::WrongParserType => {
                 write!(fmt, "Cannot construct regex for a Split type parser")
             }
             LogriaError::InvalidExampleRegex(msg) => {
-                write!(fmt, "Invalid example: /{}/ has no captures", msg)
+                write!(fmt, "Invalid example: /{msg}/ has no captures")
             }
             LogriaError::InvalidExampleSplit(msg, count) => write!(
                 fmt,
-                "Invalid example: {:?} matches for {:?} methods",
-                msg, count
+                "Invalid example: {msg:?} matches for {count:?} methods"
             ),
-            LogriaError::CannotRead(path, why) => write!(fmt, "Couldn't open {:?}: {}", path, why),
+            LogriaError::CannotRead(path, why) => write!(fmt, "Couldn't open {path:?}: {why}"),
             LogriaError::CannotWrite(path, why) => {
-                write!(fmt, "Couldn't write {:?}: {}", path, why)
+                write!(fmt, "Couldn't write {path:?}: {why}")
             }
             LogriaError::CannotRemove(path, why) => {
-                write!(fmt, "Couldn't remove {:?}: {}", path, why)
+                write!(fmt, "Couldn't remove {path:?}: {why}")
             }
             LogriaError::CannotParseDate(msg) => {
-                write!(fmt, "Invalid format description: {}", msg)
+                write!(fmt, "Invalid format description: {msg}")
             }
             LogriaError::InvalidCommand(msg) => {
-                write!(fmt, "Invalid poll command: {}", msg)
+                write!(fmt, "Invalid poll command: {msg}")
             }
             LogriaError::CannotParseMessage(msg) => {
-                write!(fmt, "Unable to parse message: {}", msg)
+                write!(fmt, "Unable to parse message: {msg}")
             }
             LogriaError::InvalidParserState(msg) => {
-                write!(fmt, "Invalid parser state: {}", msg)
+                write!(fmt, "Invalid parser state: {msg}")
             }
         }
     }

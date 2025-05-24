@@ -31,7 +31,11 @@ impl Aggregator for Counter {
         let mut total_added = 0;
 
         // Get the keys sorted from highest to lowest
-        let mut counts: Vec<u64> = self.order.keys().map(|f| f.to_owned()).collect();
+        let mut counts: Vec<u64> = self
+            .order
+            .keys()
+            .map(std::borrow::ToOwned::to_owned)
+            .collect();
         counts.sort_unstable();
 
         // Get the value under each key
@@ -79,8 +83,8 @@ impl Counter {
                 if order.is_empty() {
                     self.order.remove(count);
                 }
-            };
-        };
+            }
+        }
     }
 
     /// Remove an item from the internal state
@@ -88,18 +92,15 @@ impl Counter {
         self.state.remove(item);
     }
 
-    /// Update the internal item order HashMap
+    /// Update the internal item order `HashMap`
     fn update_order(&mut self, item: &str, old_count: &u64, new_count: &u64) {
         self.purge_from_order(item, old_count);
-        match self.order.get_mut(new_count) {
-            Some(v) => {
-                v.insert(item.to_owned());
-            }
-            None => {
-                let mut set = BTreeSet::new();
-                set.insert(item.to_owned());
-                self.order.insert(*new_count, set);
-            }
+        if let Some(v) = self.order.get_mut(new_count) {
+            v.insert(item.to_owned());
+        } else {
+            let mut set = BTreeSet::new();
+            set.insert(item.to_owned());
+            self.order.insert(*new_count, set);
         }
     }
 
@@ -127,7 +128,7 @@ impl Counter {
             None => {
                 self.delete(item);
             }
-        };
+        }
     }
 
     /// Remove an item from the counter completely

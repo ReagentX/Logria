@@ -44,7 +44,7 @@ pub struct FileInput {}
 
 impl Input for FileInput {
     /// Create a file input
-    /// poll_rate is unused since the file will be read all at once
+    /// `poll_rate` is unused since the file will be read all at once
     fn build(name: String, command: String) -> Result<InputStream, LogriaError> {
         // Setup multiprocessing queues
         let (_, err_rx) = channel();
@@ -67,7 +67,7 @@ impl Input for FileInput {
 
         // Start process
         let _ = thread::Builder::new()
-            .name(format!("FileInput: {}", name))
+            .name(format!("FileInput: {name}"))
             .spawn(move || {
                 // Create a buffer and read from it
                 let reader = BufReader::new(file);
@@ -119,7 +119,7 @@ impl Input for CommandInput {
 
         // Start reading from the queues
         let _ = thread::Builder::new()
-            .name(format!("CommandInput: {}", name))
+            .name(format!("CommandInput: {name}"))
             .spawn(move || {
                 let command_to_run = CommandInput::parse_command(&command);
                 let mut child = match Command::new(command_to_run[0])
@@ -131,7 +131,7 @@ impl Input for CommandInput {
                     .spawn()
                 {
                     Ok(child) => child,
-                    Err(why) => panic!("Unable to connect to process: {}", why),
+                    Err(why) => panic!("Unable to connect to process: {why}"),
                 };
 
                 // Get stdout and stderr handles
@@ -235,12 +235,14 @@ impl Input for CommandInput {
 
 fn determine_stream_type(command: &str) -> SessionType {
     let path = Path::new(command);
-    match path.exists() {
-        true => match is_executable(path) {
-            true => SessionType::Command,
-            false => SessionType::File,
-        },
-        false => SessionType::Command,
+    if path.exists() {
+        if is_executable(path) {
+            SessionType::Command
+        } else {
+            SessionType::File
+        }
+    } else {
+        SessionType::Command
     }
 }
 
@@ -259,7 +261,7 @@ pub fn build_streams_from_input(
                 match CommandInput::build(command.to_owned(), command.to_owned()) {
                     Ok(stream) => streams.push(stream),
                     Err(why) => return Err(why),
-                };
+                }
                 stream_types.insert(SessionType::Command);
             }
             SessionType::File => {
@@ -269,7 +271,7 @@ pub fn build_streams_from_input(
                 match FileInput::build(name, command.to_owned()) {
                     Ok(stream) => streams.push(stream),
                     Err(why) => return Err(why),
-                };
+                }
                 stream_types.insert(SessionType::File);
             }
             _ => {}
@@ -289,7 +291,7 @@ pub fn build_streams_from_input(
             _ => SessionType::Mixed,
         };
         return match Session::new(commands, stream_type).save(&commands[0]) {
-            Ok(_) => Ok(streams),
+            Ok(()) => Ok(streams),
             Err(why) => Err(why),
         };
     }
@@ -302,20 +304,20 @@ pub fn build_streams_from_session(session: Session) -> Result<Vec<InputStream>, 
         SessionType::Command => {
             let mut streams: Vec<InputStream> = vec![];
             for command in session.commands {
-                match CommandInput::build(command.to_owned(), command.to_owned()) {
+                match CommandInput::build(command.clone(), command.clone()) {
                     Ok(stream) => streams.push(stream),
                     Err(why) => return Err(why),
-                };
+                }
             }
             Ok(streams)
         }
         SessionType::File => {
             let mut streams: Vec<InputStream> = vec![];
             for command in session.commands {
-                match FileInput::build(command.to_owned(), command.to_owned()) {
+                match FileInput::build(command.clone(), command.clone()) {
                     Ok(stream) => streams.push(stream),
                     Err(why) => return Err(why),
-                };
+                }
             }
             Ok(streams)
         }

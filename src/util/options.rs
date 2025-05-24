@@ -1,4 +1,4 @@
-use clap::{command, crate_version, Arg, ArgAction, ArgMatches};
+use clap::{Arg, ArgAction, ArgMatches, command, crate_version};
 
 use crate::constants::app::NAME;
 use crate::constants::cli::messages;

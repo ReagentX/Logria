@@ -57,7 +57,7 @@ impl ExtensionMethods for Parser {
         let path = format!("{}/{}", patterns(), file_name);
 
         match write(format!("{}/{}", patterns(), file_name), parser_json) {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
             Err(why) => Err(LogriaError::CannotWrite(path, <dyn Error>::to_string(&why))),
         }
     }
@@ -72,12 +72,12 @@ impl ExtensionMethods for Parser {
             }
             let file_name = &files[*i];
             match remove_file(file_name) {
-                Ok(_) => {}
+                Ok(()) => {}
                 Err(why) => {
                     return Err(LogriaError::CannotRemove(
                         file_name.to_owned(),
                         <dyn Error>::to_string(&why),
-                    ))
+                    ));
                 }
             }
         }
@@ -193,7 +193,7 @@ impl Parser {
                         self.aggregator_map
                             .insert(method_name.to_string(), Box::new(NoneAg::new()));
                     }
-                };
+                }
             }
         }
     }
@@ -202,7 +202,7 @@ impl Parser {
         if self.pattern_type == PatternType::Regex {
             match Regex::new(&self.pattern) {
                 Ok(pattern) => Ok(pattern),
-                Err(why) => Err(LogriaError::InvalidRegex(why, self.pattern.to_owned())),
+                Err(why) => Err(LogriaError::InvalidRegex(why, self.pattern.clone())),
             }
         } else {
             Err(LogriaError::WrongParserType)
@@ -221,7 +221,7 @@ impl Parser {
                             .for_each(|value| example.push(value.unwrap().as_str().to_string()));
                     } else {
                         {
-                            return Err(LogriaError::InvalidExampleRegex(self.pattern.to_owned()));
+                            return Err(LogriaError::InvalidExampleRegex(self.pattern.clone()));
                         }
                     }
                 }
@@ -234,9 +234,9 @@ impl Parser {
                     .split(&self.pattern)
                     .collect::<Vec<&str>>()
                     .iter()
-                    .for_each(|value| example.push(value.to_string()));
+                    .for_each(|value| example.push((*value).to_string()));
             }
-        };
+        }
 
         // Validate the size of the generated text
         if example.len() != self.aggregation_methods.len() {
@@ -287,9 +287,10 @@ mod parse_tests {
         parser.save("Hyphen Separated Test 3").unwrap();
 
         let list = Parser::list_full();
-        assert!(list
-            .iter()
-            .any(|i| i == &format!("{}/{}", patterns(), "Hyphen Separated Test 3")))
+        assert!(
+            list.iter()
+                .any(|i| i == &format!("{}/{}", patterns(), "Hyphen Separated Test 3"))
+        );
     }
 
     #[test]
@@ -318,7 +319,7 @@ mod parse_tests {
         parser.save("Hyphen Separated Test 3").unwrap();
 
         let list = Parser::list_clean();
-        assert!(list.iter().any(|i| i == "Hyphen Separated Test 3"))
+        assert!(list.iter().any(|i| i == "Hyphen Separated Test 3"));
     }
 
     #[test]
@@ -446,8 +447,18 @@ mod parse_tests {
         let parser = Parser::new(
             String::from("([^ ]*) ([^ ]*) ([^ ]*) \\[([^]]*)\\] \"([^\"]*)\" ([^ ]*) ([^ ]*)"),
             PatternType::Regex,
-            String::from("127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326"),
-            vec!["Remote Host".to_string(), "User ID".to_string(), "Username".to_string(), "Date".to_string(), "Request".to_string(), "Status".to_string(), "Size".to_string()],
+            String::from(
+                "127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326",
+            ),
+            vec![
+                "Remote Host".to_string(),
+                "User ID".to_string(),
+                "Username".to_string(),
+                "Date".to_string(),
+                "Request".to_string(),
+                "Status".to_string(),
+                "Size".to_string(),
+            ],
             map,
         );
         parser.save("Common Log Format Test 2").unwrap();
@@ -501,8 +512,18 @@ mod parse_tests {
         let parser = Parser::new(
             String::from("([^ ]*) ([^ ]*) ([^ ]*) \\[([^]]*)\\] \"([^\"]*)\" ([^ ]*) ([^ ]*)"),
             PatternType::Regex,
-            String::from("127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326"),
-            vec!["Remote Host".to_string(), "User ID".to_string(), "Username".to_string(), "Date".to_string(), "Request".to_string(), "Status".to_string(), "Size".to_string()],
+            String::from(
+                "127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326",
+            ),
+            vec![
+                "Remote Host".to_string(),
+                "User ID".to_string(),
+                "Username".to_string(),
+                "Date".to_string(),
+                "Request".to_string(),
+                "Status".to_string(),
+                "Size".to_string(),
+            ],
             map,
         );
         parser.save("Common Log Format Test 1").unwrap();
@@ -578,7 +599,7 @@ mod aggregate_tests {
         map.insert(String::from("Message"), AggregationMethod::Mode);
         map.insert(
             String::from("Level"),
-            AggregationMethod::Date("".to_string()),
+            AggregationMethod::Date(String::new()),
         );
         map.insert(
             String::from("Level"),
@@ -618,7 +639,7 @@ mod aggregate_tests {
         let mut parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
-            String::from(""),
+            String::new(),
             vec!["1".to_string()],
             map,
         );
@@ -636,7 +657,7 @@ mod aggregate_tests {
         let mut parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
-            String::from(""),
+            String::new(),
             vec!["1".to_string()],
             map,
         );
@@ -656,7 +677,7 @@ mod aggregate_tests {
         let mut parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
-            String::from(""),
+            String::new(),
             vec!["1".to_string()],
             map,
         );
@@ -671,7 +692,7 @@ mod aggregate_tests {
         let mut parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
-            String::from(""),
+            String::new(),
             vec!["1".to_string()],
             map,
         );
@@ -686,7 +707,7 @@ mod aggregate_tests {
         let mut parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
-            String::from(""),
+            String::new(),
             vec!["1".to_string()],
             map,
         );
@@ -701,7 +722,7 @@ mod aggregate_tests {
         let mut parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
-            String::from(""),
+            String::new(),
             vec!["1".to_string()],
             map,
         );
@@ -716,7 +737,7 @@ mod aggregate_tests {
         let mut parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
-            String::from(""),
+            String::new(),
             vec!["1".to_string()],
             map,
         );
@@ -731,7 +752,7 @@ mod aggregate_tests {
         let mut parser = Parser::new(
             String::from(" - "),
             PatternType::Split,
-            String::from(""),
+            String::new(),
             vec!["1".to_string()],
             map,
         );

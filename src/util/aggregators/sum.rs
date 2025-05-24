@@ -1,5 +1,5 @@
 use crate::util::{
-    aggregators::aggregator::{extract_number, Aggregator},
+    aggregators::aggregator::{Aggregator, extract_number},
     error::LogriaError,
 };
 use format_num::format_num;
@@ -14,7 +14,7 @@ impl Aggregator for Sum {
             self.total = f64::MAX;
         } else if let Some(number) = self.parse(message) {
             self.total += number;
-        };
+        }
         Ok(())
     }
 

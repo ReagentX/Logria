@@ -1,4 +1,4 @@
-use std::io::{stdin, stdout, Result, Stdout, Write};
+use std::io::{Result, Stdout, Write, stdin, stdout};
 
 use crossterm::{cursor, execute, queue, style, terminal, tty::IsTty};
 

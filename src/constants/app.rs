@@ -32,5 +32,5 @@ pub const LOGRIA: [&str; 33] = [
     "@rhamorim         https://twitter.com/rhamorim",
     "@javasux0         https://twitter.com/javasux0",
     "yonkeltron        https://github.com/yonkeltron",
-    "Simone Vittori    https://www.simonewebdesign.it"
+    "Simone Vittori    https://www.simonewebdesign.it",
 ];

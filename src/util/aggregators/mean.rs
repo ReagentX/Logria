@@ -1,5 +1,5 @@
 use crate::util::{
-    aggregators::aggregator::{extract_number, Aggregator},
+    aggregators::aggregator::{Aggregator, extract_number},
     error::LogriaError,
 };
 use format_num::format_num;
@@ -16,7 +16,7 @@ impl Aggregator for Mean {
             self.count = f64::MAX;
         } else {
             self.count += 1.;
-        };
+        }
 
         if self.total >= f64::MAX {
             self.total = f64::MAX;
@@ -29,7 +29,7 @@ impl Aggregator for Mean {
                     self.count -= 1.;
                 }
             }
-        };
+        }
 
         Ok(())
     }

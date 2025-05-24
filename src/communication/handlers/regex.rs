@@ -35,20 +35,20 @@ impl RegexHandler {
     fn set_pattern(&mut self, window: &mut MainWindow) -> Result<()> {
         let pattern = match self.input_handler.gather(window) {
             Ok(pattern) => pattern,
-            Err(why) => panic!("Unable to gather text: {:?}", why),
+            Err(why) => panic!("Unable to gather text: {why:?}"),
         };
 
         self.current_pattern = match Regex::new(&pattern) {
             Ok(regex) => {
-                window.config.current_status = Some(format!("Regex with pattern /{}/", pattern));
+                window.config.current_status = Some(format!("Regex with pattern /{pattern}/"));
                 window.write_status()?;
 
                 // Update the main window's regex
-                window.config.regex_pattern = Some(regex.to_owned());
+                window.config.regex_pattern = Some(regex.clone());
                 Some(regex)
             }
             Err(e) => {
-                window.write_to_command_line(&format!("Invalid regex: /{}/ ({})", pattern, e))?;
+                window.write_to_command_line(&format!("Invalid regex: /{pattern}/ ({e})"))?;
                 None
             }
         };
@@ -151,7 +151,7 @@ impl Handler for RegexHandler {
                     if self.current_pattern.is_some() {
                         window.reset_output()?;
                         self.process_matches(window)?;
-                    };
+                    }
                     window.redraw()?;
                 }
                 KeyCode::Esc => self.return_to_normal(window)?,

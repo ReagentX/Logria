@@ -2,7 +2,7 @@ use std::cmp::{max, min};
 
 use crate::util::{aggregators::aggregator::Aggregator, error::LogriaError};
 use format_num::format_num;
-use time::{format_description::parse, Date as Dt, PrimitiveDateTime as DateTime, Time as Tm};
+use time::{Date as Dt, PrimitiveDateTime as DateTime, Time as Tm, format_description::parse};
 
 pub enum DateParserType {
     Date,
@@ -72,7 +72,7 @@ impl Aggregator for Date {
                 out_v.push(format!("    Earliest: {}", self.earliest));
                 out_v.push(format!("    Latest: {}", self.latest));
             }
-        };
+        }
         out_v
     }
 }
@@ -87,7 +87,7 @@ impl Date {
                 latest: DateTime::new(Dt::MIN, Tm::MIDNIGHT),
                 count: 0,
                 rate: 0,
-                unit: String::from(""),
+                unit: String::new(),
                 parser_type: DateParserType::Date,
             },
             // If we only care about the time, use the same date and the latest/earliest possible times
@@ -97,7 +97,7 @@ impl Date {
                 latest: DateTime::new(Dt::MIN, Tm::MIDNIGHT),
                 count: 0,
                 rate: 0,
-                unit: String::from(""),
+                unit: String::new(),
                 parser_type: DateParserType::Time,
             },
             DateParserType::DateTime => Date {
@@ -106,7 +106,7 @@ impl Date {
                 latest: DateTime::new(Dt::MIN, Tm::MIDNIGHT),
                 count: 0,
                 rate: 0,
-                unit: String::from(""),
+                unit: String::new(),
                 parser_type: DateParserType::DateTime,
             },
         }
@@ -128,19 +128,19 @@ impl Date {
         let mut unit = "week";
         if difference.whole_days() < self.count {
             denominator = difference.whole_days();
-            unit = "day"
+            unit = "day";
         }
         if difference.whole_hours() < self.count {
             denominator = difference.whole_hours();
-            unit = "hour"
+            unit = "hour";
         }
         if difference.whole_minutes() < self.count {
             denominator = difference.whole_minutes();
-            unit = "minute"
+            unit = "minute";
         }
         if difference.whole_seconds() < self.count {
             denominator = difference.whole_seconds();
-            unit = "second"
+            unit = "second";
         }
         let mut per_unit = String::from("per ");
         per_unit.push_str(unit);
@@ -334,70 +334,70 @@ mod rate_tests {
     #[test]
     fn weekly() {
         let d = Date {
-            format: "".to_string(),
+            format: String::new(),
             earliest: DateTime::new(Dt::from_ordinal_date(2021, 1).unwrap(), Tm::MIDNIGHT),
             latest: DateTime::new(Dt::from_ordinal_date(2021, 15).unwrap(), Tm::MIDNIGHT),
             count: 10,
             rate: 0,
-            unit: String::from(""),
+            unit: String::new(),
             parser_type: DateParserType::Date,
         };
-        assert_eq!(d.determine_rate(), (5, "per week".to_string()))
+        assert_eq!(d.determine_rate(), (5, "per week".to_string()));
     }
 
     #[test]
     fn daily() {
         let d = Date {
-            format: "".to_string(),
+            format: String::new(),
             earliest: DateTime::new(Dt::from_ordinal_date(2021, 1).unwrap(), Tm::MIDNIGHT),
             latest: DateTime::new(Dt::from_ordinal_date(2021, 15).unwrap(), Tm::MIDNIGHT),
             count: 15,
             rate: 0,
-            unit: String::from(""),
+            unit: String::new(),
             parser_type: DateParserType::Date,
         };
-        assert_eq!(d.determine_rate(), (1, "per day".to_string()))
+        assert_eq!(d.determine_rate(), (1, "per day".to_string()));
     }
 
     #[test]
     fn hourly() {
         let d = Date {
-            format: "".to_string(),
+            format: String::new(),
             earliest: DateTime::new(Dt::from_ordinal_date(2021, 1).unwrap(), Tm::MIDNIGHT),
             latest: DateTime::new(Dt::from_ordinal_date(2021, 3).unwrap(), Tm::MIDNIGHT),
             count: 150,
             rate: 0,
-            unit: String::from(""),
+            unit: String::new(),
             parser_type: DateParserType::Date,
         };
-        assert_eq!(d.determine_rate(), (3, "per hour".to_string()))
+        assert_eq!(d.determine_rate(), (3, "per hour".to_string()));
     }
 
     #[test]
     fn minutely() {
         let d = Date {
-            format: "".to_string(),
+            format: String::new(),
             earliest: DateTime::new(Dt::from_ordinal_date(2021, 1).unwrap(), Tm::MIDNIGHT),
             latest: DateTime::new(Dt::from_ordinal_date(2021, 2).unwrap(), Tm::MIDNIGHT),
             count: 1500,
             rate: 0,
-            unit: String::from(""),
+            unit: String::new(),
             parser_type: DateParserType::Date,
         };
-        assert_eq!(d.determine_rate(), (1, "per minute".to_string()))
+        assert_eq!(d.determine_rate(), (1, "per minute".to_string()));
     }
 
     #[test]
     fn secondly() {
         let d = Date {
-            format: "".to_string(),
+            format: String::new(),
             earliest: DateTime::new(Dt::from_ordinal_date(2021, 1).unwrap(), Tm::MIDNIGHT),
             latest: DateTime::new(Dt::from_ordinal_date(2021, 2).unwrap(), Tm::MIDNIGHT),
             count: 100000,
             rate: 0,
-            unit: String::from(""),
+            unit: String::new(),
             parser_type: DateParserType::Date,
         };
-        assert_eq!(d.determine_rate(), (1, "per second".to_string()))
+        assert_eq!(d.determine_rate(), (1, "per second".to_string()));
     }
 }

@@ -1,4 +1,4 @@
-use std::io::{stdout, Result};
+use std::io::{Result, stdout};
 
 use crossterm::{cursor, event::KeyCode, queue};
 

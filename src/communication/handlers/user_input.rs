@@ -1,6 +1,6 @@
 use std::{
     cmp::{max, min},
-    io::{stdout, Write, Result},
+    io::{Result, Write, stdout},
 };
 
 use crossterm::{cursor, event::KeyCode, queue, style, terminal::size};
@@ -161,7 +161,7 @@ impl UserInputHandler {
         // Write to the history tape
         if window.config.use_history {
             match self.history.add_item(&result) {
-                Ok(_) => {}
+                Ok(()) => {}
                 Err(why) => window.write_to_command_line(&why.to_string())?,
             }
         }

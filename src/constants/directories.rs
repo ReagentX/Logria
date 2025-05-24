@@ -1,8 +1,8 @@
-use std::env;
 use crate::constants::{
     app::NAME,
     resolver::{get_env_var_or_default, get_home_dir},
 };
+use std::env;
 
 // Paths
 pub fn home() -> String {
@@ -45,20 +45,20 @@ pub fn print_paths() {
     result.push_str("Environment variables:\n");
     match env::var("LOGRIA_USER_HOME") {
         Ok(home) => {
-            result.push_str(&format!("LOGRIA_USER_HOME: {}\n", home));
-        },
+            result.push_str(&format!("LOGRIA_USER_HOME: {home}\n"));
+        }
         Err(_) => {
             result.push_str("LOGRIA_USER_HOME: Not Set\n");
-        },
-    };
+        }
+    }
     match env::var("LOGRIA_ROOT") {
         Ok(root) => {
-            result.push_str(&format!("LOGRIA_ROOT: {}\n", root));
-        },
+            result.push_str(&format!("LOGRIA_ROOT: {root}\n"));
+        }
         Err(_) => {
             result.push_str("LOGRIA_ROOT:      Not Set\n");
-        },
-    };
+        }
+    }
 
     result.push_str("\nExpanded paths:\n");
     result.push_str(&format!("Config root: {}\n", home()));
@@ -66,7 +66,7 @@ pub fn print_paths() {
     result.push_str(&format!("Patterns:    {}\n", patterns()));
     result.push_str(&format!("Sessions:    {}\n", sessions()));
     result.push_str(&format!("History:     {}", history()));
-    println!("{}", result);
+    println!("{result}");
 }
 
 #[cfg(test)]
@@ -79,7 +79,7 @@ mod tests {
         let t = directories::app_root();
         let mut root = config_dir().unwrap().to_str().unwrap().to_string();
         root.push_str("/Logria");
-        assert_eq!(t, root)
+        assert_eq!(t, root);
     }
 
     #[test]
@@ -87,7 +87,7 @@ mod tests {
         let t = directories::patterns();
         let mut root = config_dir().unwrap().to_str().unwrap().to_string();
         root.push_str("/Logria/parsers");
-        assert_eq!(t, root)
+        assert_eq!(t, root);
     }
 
     #[test]
@@ -95,7 +95,7 @@ mod tests {
         let t = directories::sessions();
         let mut root = config_dir().expect("").to_str().expect("").to_string();
         root.push_str("/Logria/sessions");
-        assert_eq!(t, root)
+        assert_eq!(t, root);
     }
 
     #[test]
@@ -103,7 +103,7 @@ mod tests {
         let t = directories::history();
         let mut root = config_dir().expect("").to_str().expect("").to_string();
         root.push_str("/Logria/history");
-        assert_eq!(t, root)
+        assert_eq!(t, root);
     }
 
     #[test]
@@ -111,7 +111,7 @@ mod tests {
         let t = directories::history_tape();
         let mut root = config_dir().expect("").to_str().expect("").to_string();
         root.push_str("/Logria/history/tape");
-        assert_eq!(t, root)
+        assert_eq!(t, root);
     }
 
     #[test]

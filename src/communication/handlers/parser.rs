@@ -42,7 +42,7 @@ impl ParserHandler {
         Parser::list_clean()
             .iter()
             .enumerate()
-            .for_each(|(index, choice)| body_text.push(format!("{}: {}", index, choice)));
+            .for_each(|(index, choice)| body_text.push(format!("{index}: {choice}")));
         body_text
     }
 
@@ -157,8 +157,7 @@ impl ParserHandler {
                                     }
                                 } else {
                                     return Err(LogriaError::InvalidParserState(format!(
-                                        "aggregator missing for {}!",
-                                        item
+                                        "aggregator missing for {item}!"
                                     )));
                                 }
                             } else {
@@ -264,7 +263,7 @@ impl ProcessorMethods for ParserHandler {
                     window.config.last_index_processed = index + 1;
                 }
             }
-        };
+        }
         Ok(())
     }
 }
@@ -290,15 +289,15 @@ impl Handler for ParserHandler {
         // Handle special cases for setup
         match window.config.parser_state {
             ParserState::Disabled | ParserState::NeedsParser => {
-                match self.mc_handler.get_choice() {
-                    Some(item) => match Parser::load(item) {
+                if let Some(item) = self.mc_handler.get_choice() {
+                    match Parser::load(item) {
                         Ok(mut parser) => {
                             // Tell the parser to redraw on the next tick
                             self.redraw = true;
 
                             // Update the status string
                             let name = Path::new(item).file_name().unwrap().to_str().unwrap();
-                            self.status.push_str(&format!("Parsing with {}", name));
+                            self.status.push_str(&format!("Parsing with {name}"));
 
                             // Update the parser struct's aggregation map
                             parser.setup();
@@ -320,21 +319,20 @@ impl Handler for ParserHandler {
                         Err(why) => {
                             window.write_to_command_line(&why.to_string())?;
                         }
-                    },
-                    None => {
-                        if self.redraw {
-                            // First loop this case hits
-                            window.config.stream_type = StreamType::Auxiliary;
-                            window.config.parser_state = ParserState::NeedsParser;
-                            window.config.generate_auxiliary_messages =
-                                Some(ParserHandler::parser_messages_handle);
-                            self.redraw = false;
-                            window.redraw()?;
-                        }
-                        window.render_auxiliary_text()?;
-                        self.select_parser(window)?;
-                        self.mc_handler.receive_input(window, key)?;
                     }
+                } else {
+                    if self.redraw {
+                        // First loop this case hits
+                        window.config.stream_type = StreamType::Auxiliary;
+                        window.config.parser_state = ParserState::NeedsParser;
+                        window.config.generate_auxiliary_messages =
+                            Some(ParserHandler::parser_messages_handle);
+                        self.redraw = false;
+                        window.redraw()?;
+                    }
+                    window.render_auxiliary_text()?;
+                    self.select_parser(window)?;
+                    self.mc_handler.receive_input(window, key)?;
                 }
             }
             ParserState::NeedsIndex => {
@@ -357,13 +355,13 @@ impl Handler for ParserHandler {
                         self.process_matches(window)?;
 
                         // Update the status string
-                        self.status.push_str(&format!(", field {}", item));
+                        self.status.push_str(&format!(", field {item}"));
 
                         // Clear the screen for new messages
                         window.reset_output()?;
 
                         // Write the new parser status to the command line
-                        window.config.current_status = Some(self.status.to_owned());
+                        window.config.current_status = Some(self.status.clone());
                         window.write_status()?;
                     }
                     None => {
@@ -392,17 +390,17 @@ impl Handler for ParserHandler {
 
                     // Swap to and from analytics mode
                     KeyCode::Char('a') => {
-                        if !window.config.aggregation_enabled {
-                            let new_status = self.status.to_owned();
+                        if window.config.aggregation_enabled {
+                            window.config.current_status = Some(self.status.clone());
+                            window.config.aggregation_enabled = false;
+                        } else {
+                            let new_status = self.status.clone();
                             window.config.current_status = Some(new_status.replace(
                                 &format!("field {}", window.config.parser_index),
                                 "aggregation mode",
                             ));
                             window.write_status()?;
                             window.config.aggregation_enabled = true;
-                        } else {
-                            window.config.current_status = Some(self.status.to_owned());
-                            window.config.aggregation_enabled = false;
                         }
                         window.config.last_index_processed = 0;
                         window.write_status()?;
@@ -413,7 +411,7 @@ impl Handler for ParserHandler {
                     KeyCode::Char('z') | KeyCode::Esc => self.return_to_normal(window)?,
 
                     _ => {}
-                };
+                }
             }
         }
         window.redraw()?;
@@ -454,7 +452,7 @@ mod parse_tests {
 
         let parsed_message = handler.parse(0, "I - Am - A - Test").unwrap().unwrap();
 
-        assert_eq!(parsed_message, String::from("I"))
+        assert_eq!(parsed_message, String::from("I"));
     }
 
     #[test]
@@ -479,7 +477,7 @@ mod parse_tests {
             .unwrap()
             .unwrap();
 
-        assert_eq!(parsed_message, String::from("65"))
+        assert_eq!(parsed_message, String::from("65"));
     }
 
     #[test]
@@ -909,7 +907,7 @@ mod split_tests {
             logria.config.auxiliary_messages[0..10],
             vec!["0", "", "2", "3", "4", "5", "6", "7", "8", "9"]
         );
-        assert_eq!(logria.config.auxiliary_messages.len(), 10)
+        assert_eq!(logria.config.auxiliary_messages.len(), 10);
     }
 
     #[test]

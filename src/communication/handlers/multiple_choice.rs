@@ -22,14 +22,14 @@ impl MultipleChoiceHandler {
         self.choices_map.clear();
         choices.iter().enumerate().for_each(|(index, choice)| {
             self.choices_map.insert(index, choice.to_owned());
-        })
+        });
     }
 
     /// Build body text for a set of choices
     pub fn get_body_text(&self) -> Vec<String> {
         let mut body_text: Vec<String> = vec![];
         (0..self.choices_map.len()).for_each(|key| {
-            body_text.push(format!("{}: {}", key, self.choices_map.get(&key).unwrap()))
+            body_text.push(format!("{}: {}", key, self.choices_map.get(&key).unwrap()));
         });
         body_text
     }
@@ -41,12 +41,12 @@ impl MultipleChoiceHandler {
                 if self.choices_map.contains_key(&res) {
                     self.result = Some(res.to_owned());
                 } else {
-                    window.write_to_command_line(&format!("Invalid item: {}", choice))?;
+                    window.write_to_command_line(&format!("Invalid item: {choice}"))?;
                 }
             }
             Err(why) => {
                 window
-                    .write_to_command_line(&format!("Invalid selection: {} ({:?})", choice, why))?;
+                    .write_to_command_line(&format!("Invalid selection: {choice} ({why:?})"))?;
             }
         }
         Ok(())
@@ -89,7 +89,7 @@ impl Handler for MultipleChoiceHandler {
             KeyCode::Enter => {
                 let choice = match self.input_handler.gather(window) {
                     Ok(pattern) => pattern,
-                    Err(why) => panic!("Unable to gather text: {:?}", why),
+                    Err(why) => panic!("Unable to gather text: {why:?}"),
                 };
                 self.validate_choice(window, &choice)?;
                 // Send 2 new refresh ticks from the main app loop when this method returns

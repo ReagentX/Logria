@@ -103,7 +103,7 @@ pub struct LogriaConfig {
     // Render data
     /// The current scroll mode
     pub scroll_state: ScrollState,
-    /// Can be a vector of FileInputs, CommandInputs, etc
+    /// Can be a vector of `FileInputs`, `CommandInputs`, etc
     pub streams: Vec<InputStream>,
     /// Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
     previous_render: (usize, usize),
@@ -492,20 +492,20 @@ impl MainWindow {
             let message_padding_size = (width * message_rows) - message_length;
             let padding = " ".repeat(message_padding_size);
 
-            if !(self.config.highlight_match && self.config.regex_pattern.is_some()) {
-                // Render message normally
-                queue!(
-                    stdout,
-                    cursor::MoveTo(0, current_row),
-                    style::Print(message),
-                    style::Print(padding)
-                )?;
-            } else {
+            if self.config.highlight_match && self.config.regex_pattern.is_some() {
                 // Render message with highlight (additional allocation)
                 queue!(
                     stdout,
                     cursor::MoveTo(0, current_row),
                     style::Print(self.highlight_match(message)),
+                    style::Print(padding)
+                )?;
+            } else {
+                // Render message normally
+                queue!(
+                    stdout,
+                    cursor::MoveTo(0, current_row),
+                    style::Print(message),
                     style::Print(padding)
                 )?;
             }
@@ -517,7 +517,7 @@ impl MainWindow {
             let clear_line = " ".repeat(width);
             (0..current_row).for_each(|row| {
                 // No `?` here because it is inside of a closure
-                queue!(stdout, cursor::MoveTo(0, row), style::Print(&clear_line),).unwrap()
+                queue!(stdout, cursor::MoveTo(0, row), style::Print(&clear_line),).unwrap();
             });
         }
 
@@ -696,7 +696,7 @@ impl MainWindow {
             looks like a normal println
             */
             panic::set_hook(Box::new(|_| {
-                println!("{}", PIPE_INPUT_ERROR);
+                println!("{PIPE_INPUT_ERROR}");
             }));
 
             panic!();
@@ -825,12 +825,12 @@ impl MainWindow {
                         match self.input_type {
                             InputType::Normal => normal_handler.receive_input(self, input.code)?,
                             InputType::Command => {
-                                command_handler.receive_input(self, input.code)?
+                                command_handler.receive_input(self, input.code)?;
                             }
                             InputType::Regex => regex_handler.receive_input(self, input.code)?,
                             InputType::Parser => parser_handler.receive_input(self, input.code)?,
                             InputType::Startup => {
-                                startup_handler.receive_input(self, input.code)?
+                                startup_handler.receive_input(self, input.code)?;
                             }
                         }
                     }

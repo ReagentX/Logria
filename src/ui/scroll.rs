@@ -38,11 +38,11 @@ pub fn pg_down(window: &mut MainWindow) {
 }
 
 pub fn bottom(window: &mut MainWindow) {
-    window.config.scroll_state = ScrollState::Bottom
+    window.config.scroll_state = ScrollState::Bottom;
 }
 
 pub fn top(window: &mut MainWindow) {
-    window.config.scroll_state = ScrollState::Top
+    window.config.scroll_state = ScrollState::Top;
 }
 
 #[cfg(test)]

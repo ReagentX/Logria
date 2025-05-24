@@ -32,13 +32,12 @@ impl CommandHandler {
         let parts: Vec<&str> = command.split(' ').collect(); // ["poll", "42", ...]
         if parts.len() < 2 {
             return Err(LogriaError::InvalidCommand(format!(
-                "No poll delay provided {:?}",
-                parts
+                "No poll delay provided {parts:?}"
             )));
         }
         match parts[1].parse::<u64>() {
             Ok(parsed) => Ok(parsed),
-            Err(why) => Err(LogriaError::InvalidCommand(format!("{:?}", why))),
+            Err(why) => Err(LogriaError::InvalidCommand(format!("{why:?}"))),
         }
     }
 
@@ -46,13 +45,12 @@ impl CommandHandler {
         let parts: Vec<&str> = command.split(' ').collect(); // ["agg", "42", ...]
         if parts.len() < 2 {
             return Err(LogriaError::InvalidCommand(format!(
-                "No aggregation count provided: {:?}",
-                parts
+                "No aggregation count provided: {parts:?}"
             )));
         }
         match parts[1].parse::<usize>() {
             Ok(parsed) => Ok(parsed),
-            Err(why) => Err(LogriaError::InvalidCommand(format!("{:?}", why))),
+            Err(why) => Err(LogriaError::InvalidCommand(format!("{why:?}"))),
         }
     }
 
@@ -62,7 +60,7 @@ impl CommandHandler {
     ) -> std::result::Result<Vec<usize>, LogriaError> {
         // Validate length
         if command.len() < 3 {
-            return Err(LogriaError::InvalidCommand(format!("{:?}", command)));
+            return Err(LogriaError::InvalidCommand(format!("{command:?}")));
         }
 
         // Remove "r " from the string
@@ -100,7 +98,7 @@ impl CommandHandler {
                         Ok(num) => {
                             out_l.push(num);
                         }
-                        Err(why) => return Err(LogriaError::InvalidCommand(format!("{:?}", why))),
+                        Err(why) => return Err(LogriaError::InvalidCommand(format!("{why:?}"))),
                     }
                 }
             }
@@ -125,8 +123,7 @@ impl CommandHandler {
                 }
                 Err(why) => {
                     window.write_to_command_line(&format!(
-                        "Failed to parse remove command: {:?}",
-                        why
+                        "Failed to parse remove command: {why:?}"
                     ))?;
                 }
             }
@@ -142,11 +139,11 @@ impl CommandHandler {
         }
         // Exit history mode
         else if command.starts_with("history off") {
-            if !window.config.use_history {
-                window.write_to_command_line("History tape already disabled!")?;
-            } else {
+            if window.config.use_history {
                 window.config.use_history = false;
                 window.write_to_command_line("History tape disabled!")?;
+            } else {
+                window.write_to_command_line("History tape already disabled!")?;
             }
         }
         // Remove saved sessions from the main screen
@@ -155,7 +152,7 @@ impl CommandHandler {
                 if let Ok(items) = self.resolve_delete_command(command) {
                     if let Some(del) = window.config.delete_func {
                         match del(&items) {
-                            Ok(_) => {}
+                            Ok(()) => {}
                             Err(why) => window.write_to_command_line(&why.to_string())?,
                         }
                         window.render_auxiliary_text()?;
@@ -169,8 +166,7 @@ impl CommandHandler {
                 } else {
                     {
                         window.write_to_command_line(&format!(
-                            "Failed to parse remove command: {:?} is invalid.",
-                            command
+                            "Failed to parse remove command: {command:?} is invalid."
                         ))?;
                     }
                 }
@@ -198,13 +194,12 @@ impl CommandHandler {
                 }
                 Err(why) => {
                     window.write_to_command_line(&format!(
-                        "Failed to parse aggregation count command: {:?}",
-                        why
+                        "Failed to parse aggregation count command: {why:?}"
                     ))?;
                 }
             }
         } else {
-            window.write_to_command_line(&format!("Invalid command: {:?}", command))?;
+            window.write_to_command_line(&format!("Invalid command: {command:?}"))?;
         }
         self.return_to_prev_state(window)?;
         Ok(())
@@ -224,7 +219,7 @@ impl Handler for CommandHandler {
             KeyCode::Enter => {
                 let command = match self.input_handler.gather(window) {
                     Ok(command) => command,
-                    Err(why) => panic!("Unable to gather text: {:?}", why),
+                    Err(why) => panic!("Unable to gather text: {why:?}"),
                 };
                 self.process_command(window, &command)?;
             }

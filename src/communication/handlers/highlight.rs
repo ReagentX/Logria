@@ -15,13 +15,13 @@ use crate::{
     ui::scroll,
 };
 
-pub struct RegexHandler {
+pub struct HighlightHandler {
     color_pattern: Regex,
     current_pattern: Option<Regex>,
     input_handler: UserInputHandler,
 }
 
-impl RegexHandler {
+impl HighlightHandler {
     /// Test a message to see if it matches the pattern while also escaping the color code
     fn test(&self, message: &str) -> bool {
         // TODO: Possibly without the extra allocation here?
@@ -43,7 +43,7 @@ impl RegexHandler {
 
         self.current_pattern = match Regex::new(&pattern) {
             Ok(regex) => {
-                window.config.current_status = Some(format!("Regex with pattern /{pattern}/"));
+                window.config.current_status = Some(format!("Highlight with pattern /{pattern}/"));
                 window.write_status()?;
 
                 // Update the main window's regex
@@ -61,7 +61,7 @@ impl RegexHandler {
     }
 }
 
-impl ProcessorMethods for RegexHandler {
+impl ProcessorMethods for HighlightHandler {
     /// Process matches, loading the buffer of indexes to matched messages in the main buffer
     fn process_matches(&mut self, window: &mut MainWindow) -> Result<()> {
         // TODO: Possibly async? Possibly loading indicator for large jobs?
@@ -106,9 +106,9 @@ impl ProcessorMethods for RegexHandler {
     }
 }
 
-impl Handler for RegexHandler {
-    fn new() -> RegexHandler {
-        RegexHandler {
+impl Handler for HighlightHandler {
+    fn new() -> HighlightHandler {
+        HighlightHandler {
             color_pattern: Regex::new(ANSI_COLOR_PATTERN).unwrap(),
             current_pattern: None,
             input_handler: UserInputHandler::new(),
@@ -125,7 +125,9 @@ impl Handler for RegexHandler {
                 KeyCode::Right => scroll::bottom(window),
                 KeyCode::Home => scroll::top(window),
                 KeyCode::End => scroll::bottom(window),
+                // TODO: Go to previous match
                 KeyCode::PageUp => scroll::pg_up(window),
+                // TODO: Go to next match
                 KeyCode::PageDown => scroll::pg_down(window),
 
                 // Build new regex
@@ -183,10 +185,10 @@ mod tests {
     #[test]
     fn test_can_filter() {
         let mut logria = MainWindow::_new_dummy();
-        let mut handler = super::RegexHandler::new();
+        let mut handler = super::HighlightHandler::new();
 
         // Set state to regex mode
-        logria.input_type = InputType::Regex;
+        logria.input_type = InputType::Highlight;
 
         // Set regex pattern
         let pattern = "0";
@@ -201,10 +203,10 @@ mod tests {
     #[test]
     fn test_can_filter_no_matches() {
         let mut logria = MainWindow::_new_dummy();
-        let mut handler = super::RegexHandler::new();
+        let mut handler = super::HighlightHandler::new();
 
         // Set state to regex mode
-        logria.input_type = InputType::Regex;
+        logria.input_type = InputType::Highlight;
 
         // Set regex pattern
         let pattern = "a";
@@ -217,10 +219,10 @@ mod tests {
     #[test]
     fn test_can_return_normal() {
         let mut logria = MainWindow::_new_dummy();
-        let mut handler = super::RegexHandler::new();
+        let mut handler = super::HighlightHandler::new();
 
         // Set state to regex mode
-        logria.input_type = InputType::Regex;
+        logria.input_type = InputType::Highlight;
 
         // Set regex pattern
         let pattern = "0";
@@ -237,10 +239,10 @@ mod tests {
     #[test]
     fn test_can_process() {
         let mut logria = MainWindow::_new_dummy();
-        let mut handler = super::RegexHandler::new();
+        let mut handler = super::HighlightHandler::new();
 
         // Set state to regex mode
-        logria.input_type = InputType::Regex;
+        logria.input_type = InputType::Highlight;
 
         // Set regex pattern
         let pattern = "0";
@@ -252,10 +254,10 @@ mod tests {
     #[test]
     fn test_can_process_no_pattern() {
         let mut logria = MainWindow::_new_dummy();
-        let mut handler = super::RegexHandler::new();
+        let mut handler = super::HighlightHandler::new();
 
         // Set state to regex mode
-        logria.input_type = InputType::Regex;
+        logria.input_type = InputType::Highlight;
         handler.process_matches(&mut logria).unwrap();
 
         assert_eq!(logria.config.matched_rows, Vec::<usize>::new());
@@ -265,20 +267,20 @@ mod tests {
     #[should_panic]
     fn test_test_no_pattern() {
         let mut logria = MainWindow::_new_dummy();
-        let handler = super::RegexHandler::new();
+        let handler = super::HighlightHandler::new();
 
         // Set state to regex mode
-        logria.input_type = InputType::Regex;
+        logria.input_type = InputType::Highlight;
         handler.test("test");
     }
 
     #[test]
     fn test_can_enter_command_mode() {
         let mut logria = MainWindow::_new_dummy();
-        let mut handler = super::RegexHandler::new();
+        let mut handler = super::HighlightHandler::new();
 
         // Set state to regex mode
-        logria.input_type = InputType::Regex;
+        logria.input_type = InputType::Highlight;
 
         // Set regex pattern
         let pattern = "0";
@@ -294,7 +296,10 @@ mod tests {
             .unwrap();
 
         // Ensure we have the same amount of messages as when the regex was active
-        assert_eq!(logria.config.matched_rows.len(), 10);
+        assert_eq!(
+            logria.config.matched_rows.len(),
+            10
+        );
 
         // Ensure we are in command mode
         assert_eq!(logria.input_type, InputType::Command);

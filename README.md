@@ -44,7 +44,8 @@ For more details, see [Sample Usage Session](docs/README.md#sample-usage-session
 | Key | Command |
 |--|--|
 | `:` | [command mode](docs/commands.md) |
-| `/` | regex search |
+| `/` | highlight search |
+| `r` | regex search |
 | `h` | if regex active, toggle highlighting of matches |
 | `s` | swap reading `stderr` and `stdout` |
 | `p` | activate parser |

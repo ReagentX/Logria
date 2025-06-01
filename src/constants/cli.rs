@@ -24,10 +24,18 @@ pub mod excludes {
 }
 
 pub mod cli_chars {
-    pub const NORMAL_CHAR: &str = "│";
-    pub const COMMAND_CHAR: &str = ":";
-    pub const REGEX_CHAR: &str = "/";
-    pub const PARSER_CHAR: &str = "+";
+    // For the command line interface
+    pub const NORMAL_STR: &str = "│";
+    pub const COMMAND_STR: &str = ":";
+    pub const REGEX_STR: &str = "r";
+    pub const HIGHLIGHT_STR: &str = "/";
+    pub const PARSER_STR: &str = "+";
+
+    // For matching on keycodes
+    pub const COMMAND_CHAR: char = ':';
+    pub const REGEX_CHAR: char = 'r';
+    pub const HIGHLIGHT_CHAR: char = '/';
+    pub const PARSER_CHAR: char = 'p';
 }
 
 #[allow(dead_code)]
@@ -89,7 +97,8 @@ pub mod messages {
         "    | Key  | Command                                          |\n",
         "    +======+==================================================+\n",
         "    |  :   | command mode                                     |\n",
-        "    |  /   | regex search                                     |\n",
+        "    |  /   | highlight search                                 |\n",
+        "    |  r   | regex search                                     |\n",
         "    |  h   | if regex active, toggle highlighting of matches  |\n",
         "    |  s   | swap reading `stderr` and `stdout`               |\n",
         "    |  p   | activate parser                                  |\n",

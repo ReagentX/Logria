@@ -105,7 +105,7 @@ Entering `2` will load and open handles to the commands in `Cmd - Generate Test 
 └────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Typing `/` and entering `100` will filter our stream down to only lines that match that pattern:
+Typing `r` and entering `100` will filter our stream down to only lines that match that pattern:
 
 ```log
 2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a first log! 43

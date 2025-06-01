@@ -330,6 +330,7 @@ pub enum InputType {
     Normal,
     Command,
     Regex,
+    Highlight,
     Parser,
     Startup,
 }

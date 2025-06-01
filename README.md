@@ -45,8 +45,8 @@ For more details, see [Sample Usage Session](docs/README.md#sample-usage-session
 |--|--|
 | `:` | [command mode](docs/commands.md) |
 | `/` | highlight search |
-| `r` | regex search |
-| `h` | if regex active, toggle highlighting of matches |
+| `r` | regex filter |
+| `h` | toggle highlighting of search/regex matches |
 | `s` | swap reading `stderr` and `stdout` |
 | `p` | activate parser |
 | `a` | toggle aggregation mode when parser is active |

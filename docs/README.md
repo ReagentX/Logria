@@ -128,7 +128,22 @@ Pressing `esc` will reset the filter:
 └────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Typing `:` and entering `:q` will exit the app.
+Typing `/` and entering `100` will show all logs, but add a highlight color to matched lines:
+
+```log
+2020-02-23 16:56:10,786 - __main__.<module> - MainProcess - INFO - I am the first log in the list
+2020-02-23 16:56:10,997 - __main__.<module> - MainProcess - INFO - I am a first log! 21
+2020-02-23 16:56:10,997 - __main__.<module> - MainProcess - INFO - I am a second log! 71
+2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a first log! 43   // will be highlighted
+2020-02-23 16:56:11,100 - __main__.<module> - MainProcess - INFO - I am a second log! 87  // will be highlighted
+┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Highlight with pattern /100/                                                                    │
+└────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+Using `Page Up` and `Page Down` will scroll to the previous and next match, respectively; centering the current match on the screen.
+
+Typing `:` and entering `q` will exit the app.
 
 ## Contributing Guidelines
 

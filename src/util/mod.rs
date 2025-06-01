@@ -1,4 +1,5 @@
 pub mod aggregators;
+pub mod binary_search;
 pub mod credits;
 pub mod error;
 pub mod history;

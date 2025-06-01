@@ -1,6 +1,6 @@
 use std::{
     borrow::Cow,
-    cmp::max,
+    cmp::{max, min},
     io::{Result, Write, stdout},
     panic,
     time::{Duration, Instant},
@@ -51,6 +51,8 @@ pub struct LogriaConfig {
     pub height: u16,
     /// The last row we can render, aka number of lines visible in the tty
     pub last_row: u16,
+    /// The center row of the screen
+    pub center_row: u16,
     /// Current last row we have rendered
     pub current_end: usize,
 
@@ -73,6 +75,8 @@ pub struct LogriaConfig {
     pub matched_rows: Vec<usize>,
     /// The last index the filtering function saw
     pub last_index_regexed: usize,
+    /// The currently selected row as we scroll between matches; represents an index in the [`LogriaConfig::matched_rows`] vector
+    pub current_matched_row: usize,
     /// A regex to remove ANSI color codes
     color_replace_regex: Regex,
     /// Determines whether we highlight the matched text to the user
@@ -108,7 +112,7 @@ pub struct LogriaConfig {
     /// Can be a vector of `FileInputs`, `CommandInputs`, etc
     pub streams: Vec<InputStream>,
     /// Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
-    previous_render: (usize, usize),
+    pub previous_render: (usize, usize),
     /// True if the previously rendered buffer had no data in it, False otherwise
     was_empty: bool,
     /// True if we just swapped input types, False otherwise
@@ -208,6 +212,8 @@ impl MainWindow {
                 use_history: history,
                 height: 0,
                 width: 0,
+                center_row: 0,
+                last_row: 0,
                 loop_time: Instant::now(),
                 previous_render: (0, 0),
                 stderr_messages: vec![],
@@ -218,6 +224,7 @@ impl MainWindow {
                 regex_pattern: None,
                 matched_rows: vec![],
                 last_index_regexed: 0,
+                current_matched_row: 0,
                 color_replace_regex: Regex::new(
                     crate::constants::cli::patterns::ANSI_COLOR_PATTERN,
                 )
@@ -228,7 +235,6 @@ impl MainWindow {
                 num_to_aggregate: 5,
                 last_index_processed: 0,
                 highlight_match: false,
-                last_row: 0,
                 scroll_state: ScrollState::Bottom,
                 current_end: 0,
                 streams: vec![],
@@ -344,6 +350,14 @@ impl MainWindow {
                     }
                 }
             }
+            ScrollState::Centered => {
+                let center = usize::from(self.config.center_row);
+                let index_to_render = self.config.matched_rows[self.config.current_matched_row];
+                end = min(
+                    index_to_render.saturating_add(center),
+                    message_pointer_length,
+                );
+            }
             ScrollState::Bottom => {
                 end = message_pointer_length;
             }
@@ -443,7 +457,6 @@ impl MainWindow {
 
         // Determine the start and end position of the render
         let (start, end) = self.determine_render_position();
-        self.write_to_command_line(&format!("rendering at {start}:{end}"))?;
 
         // If there are no messages in the buffer, tell the user
         // This will only ever hit once, because this method is only called if there are new
@@ -680,6 +693,7 @@ impl MainWindow {
         self.config.height = h;
         self.config.width = w;
         self.config.last_row = self.config.height.checked_sub(3).unwrap_or(h);
+        self.config.center_row = (self.config.height / 2).saturating_sub(1);
         build(self)?;
         Ok(())
     }

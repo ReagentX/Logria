@@ -173,7 +173,7 @@ mod tests {
 
     use crate::{
         communication::{
-            handlers::{handler::Handler, processor::ProcessorMethods},
+            handlers::{handler::Handler, processor::ProcessorMethods, regex::RegexHandler},
             input::InputType,
             reader::MainWindow,
         },
@@ -183,7 +183,7 @@ mod tests {
     #[test]
     fn test_can_filter() {
         let mut logria = MainWindow::_new_dummy();
-        let mut handler = super::RegexHandler::new();
+        let mut handler = RegexHandler::new();
 
         // Set state to regex mode
         logria.input_type = InputType::Regex;
@@ -201,7 +201,7 @@ mod tests {
     #[test]
     fn test_can_filter_no_matches() {
         let mut logria = MainWindow::_new_dummy();
-        let mut handler = super::RegexHandler::new();
+        let mut handler = RegexHandler::new();
 
         // Set state to regex mode
         logria.input_type = InputType::Regex;
@@ -217,7 +217,7 @@ mod tests {
     #[test]
     fn test_can_return_normal() {
         let mut logria = MainWindow::_new_dummy();
-        let mut handler = super::RegexHandler::new();
+        let mut handler = RegexHandler::new();
 
         // Set state to regex mode
         logria.input_type = InputType::Regex;
@@ -237,7 +237,7 @@ mod tests {
     #[test]
     fn test_can_process() {
         let mut logria = MainWindow::_new_dummy();
-        let mut handler = super::RegexHandler::new();
+        let mut handler = RegexHandler::new();
 
         // Set state to regex mode
         logria.input_type = InputType::Regex;
@@ -252,7 +252,7 @@ mod tests {
     #[test]
     fn test_can_process_no_pattern() {
         let mut logria = MainWindow::_new_dummy();
-        let mut handler = super::RegexHandler::new();
+        let mut handler = RegexHandler::new();
 
         // Set state to regex mode
         logria.input_type = InputType::Regex;
@@ -265,7 +265,7 @@ mod tests {
     #[should_panic]
     fn test_test_no_pattern() {
         let mut logria = MainWindow::_new_dummy();
-        let handler = super::RegexHandler::new();
+        let handler = RegexHandler::new();
 
         // Set state to regex mode
         logria.input_type = InputType::Regex;
@@ -275,7 +275,7 @@ mod tests {
     #[test]
     fn test_can_enter_command_mode() {
         let mut logria = MainWindow::_new_dummy();
-        let mut handler = super::RegexHandler::new();
+        let mut handler = RegexHandler::new();
 
         // Set state to regex mode
         logria.input_type = InputType::Regex;

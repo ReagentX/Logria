@@ -11,6 +11,7 @@ use crate::{
         input::{InputType::Normal, StreamType},
         reader::MainWindow,
     },
+    constants::cli::cli_chars::{COMMAND_CHAR, PARSER_CHAR},
     extensions::{
         extension::ExtensionMethods,
         parser::{Parser, PatternType},
@@ -280,7 +281,7 @@ impl Handler for ParserHandler {
 
     fn receive_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
         // Enable command mode for parsers
-        if key == KeyCode::Char(':') {
+        if key == KeyCode::Char(COMMAND_CHAR) {
             window.set_command_mode(Some(Parser::del))?;
             // Early escape to not send a `:` char to the rest of this method
             return Ok(());
@@ -383,7 +384,7 @@ impl Handler for ParserHandler {
                     KeyCode::PageDown => scroll::pg_down(window),
 
                     // Build new parser
-                    KeyCode::Char('p') => {
+                    KeyCode::Char(PARSER_CHAR) => {
                         // TODO: This does not work
                         self.reset(window);
                     }

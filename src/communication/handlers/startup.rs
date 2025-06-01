@@ -10,7 +10,7 @@ use crate::{
         },
         reader::MainWindow,
     },
-    constants::cli::messages::START_MESSAGE,
+    constants::cli::{cli_chars::COMMAND_CHAR, messages::START_MESSAGE},
     extensions::{extension::ExtensionMethods, session::Session},
     ui::scroll,
 };
@@ -115,7 +115,7 @@ impl Handler for StartupHandler {
             KeyCode::PageDown => scroll::pg_down(window),
 
             // Mode change for remove or config commands
-            KeyCode::Char(':') => window.set_command_mode(Some(Session::del))?,
+            KeyCode::Char(COMMAND_CHAR) => window.set_command_mode(Some(Session::del))?,
 
             // Handle user input selection
             KeyCode::Enter => {

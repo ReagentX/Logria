@@ -8,6 +8,7 @@ use crate::{
         input::{InputType, StreamType},
         reader::MainWindow,
     },
+    constants::cli::cli_chars::{COMMAND_CHAR, HIGHLIGHT_CHAR, PARSER_CHAR, REGEX_CHAR},
     ui::scroll,
 };
 
@@ -28,6 +29,18 @@ impl NormalHandler {
     fn set_regex_mode(&self, window: &mut MainWindow) -> Result<()> {
         window.go_to_cli()?;
         window.update_input_type(InputType::Regex)?;
+        window.config.highlight_match = true;
+        window.reset_command_line()?;
+        window.set_cli_cursor(None)?;
+        queue!(stdout(), cursor::Show)?;
+        // Send 2 new refresh ticks from the main app loop when this method returns
+        window.config.did_switch = true;
+        Ok(())
+    }
+
+    fn set_highlight_mode(&self, window: &mut MainWindow) -> Result<()> {
+        window.go_to_cli()?;
+        window.update_input_type(InputType::Highlight)?;
         window.config.highlight_match = true;
         window.reset_command_line()?;
         window.set_cli_cursor(None)?;
@@ -72,9 +85,10 @@ impl Handler for NormalHandler {
             KeyCode::PageDown => scroll::pg_down(window),
 
             // Modes
-            KeyCode::Char(':') => window.set_command_mode(None)?,
-            KeyCode::Char('/') => self.set_regex_mode(window)?,
-            KeyCode::Char('p') => self.set_parser_mode(window)?,
+            KeyCode::Char(COMMAND_CHAR) => window.set_command_mode(None)?,
+            KeyCode::Char(REGEX_CHAR) => self.set_regex_mode(window)?,
+            KeyCode::Char(HIGHLIGHT_CHAR) => self.set_highlight_mode(window)?,
+            KeyCode::Char(PARSER_CHAR) => self.set_parser_mode(window)?,
             KeyCode::Char('s') => self.swap_streams(window)?,
             _ => {}
         }

@@ -45,8 +45,7 @@ impl MultipleChoiceHandler {
                 }
             }
             Err(why) => {
-                window
-                    .write_to_command_line(&format!("Invalid selection: {choice} ({why:?})"))?;
+                window.write_to_command_line(&format!("Invalid selection: {choice} ({why:?})"))?;
             }
         }
         Ok(())

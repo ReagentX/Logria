@@ -24,10 +24,18 @@ pub mod excludes {
 }
 
 pub mod cli_chars {
-    pub const NORMAL_CHAR: &str = "│";
-    pub const COMMAND_CHAR: &str = ":";
-    pub const REGEX_CHAR: &str = "/";
-    pub const PARSER_CHAR: &str = "+";
+    // For the command line interface
+    pub const NORMAL_STR: &str = "│";
+    pub const COMMAND_STR: &str = ":";
+    pub const REGEX_STR: &str = "r";
+    pub const HIGHLIGHT_STR: &str = "/";
+    pub const PARSER_STR: &str = "+";
+
+    // For matching on keycodes
+    pub const COMMAND_CHAR: char = ':';
+    pub const REGEX_CHAR: char = 'r';
+    pub const HIGHLIGHT_CHAR: char = '/';
+    pub const PARSER_CHAR: char = 'p';
 }
 
 #[allow(dead_code)]
@@ -85,35 +93,36 @@ pub mod messages {
     pub const PATHS_HELP: &str = "Prints current configuration paths";
     pub const DOCS: &str = concat!(
         "CONTROLS:\n",
-        "    +------+--------------------------------------------------+\n",
-        "    | Key  | Command                                          |\n",
-        "    +======+==================================================+\n",
-        "    |  :   | command mode                                     |\n",
-        "    |  /   | regex search                                     |\n",
-        "    |  h   | if regex active, toggle highlighting of matches  |\n",
-        "    |  s   | swap reading `stderr` and `stdout`               |\n",
-        "    |  p   | activate parser                                  |\n",
-        "    |  a   | toggle aggregation mode when parser is active    |\n",
-        "    |  z   | deactivate parser                                |\n",
-        "    |  ↑   | scroll buffer up one line                        |\n",
-        "    |  ↓   | scroll buffer down one line                      |\n",
-        "    |  →   | skip and stick to end of buffer                  |\n",
-        "    |  ←   | skip and stick to beginning of buffer            |\n",
-        "    +------+--------------------------------------------------+\n\n",
+        "    +------+---------------------------------------------------+\n",
+        "    | Key  | Command                                           |\n",
+        "    +======+===================================================+\n",
+        "    |  :   | command mode                                      |\n",
+        "    |  /   | highlight search                                  |\n",
+        "    |  r   | regex filter                                      |\n",
+        "    |  h   | toggle highlighting of search/regex matches       |\n",
+        "    |  s   | swap reading `stderr` and `stdout`                |\n",
+        "    |  p   | activate parser                                   |\n",
+        "    |  a   | toggle aggregation mode when parser is active     |\n",
+        "    |  z   | deactivate parser                                 |\n",
+        "    |  ↑   | scroll buffer up one line                         |\n",
+        "    |  ↓   | scroll buffer down one line                       |\n",
+        "    |  →   | skip and stick to end of buffer                   |\n",
+        "    |  ←   | skip and stick to beginning of buffer             |\n",
+        "    +------+---------------------------------------------------+\n\n",
         "COMMANDS:\n",
-        "    +-----------------+---------------------------------------+\n",
-        "    | Key             | Command                               |\n",
-        "    +=================+=======================================+\n",
-        "    | :q              | exit Logria                           |\n",
-        "    | :poll #         | update poll rate to #, where # is an  |\n",
-        "    |                 | integer (in milliseconds)             |\n",
-        "    | :r #            | when launching logria or viewing      |\n",
-        "    |                 | sessions, this will delete item #     |\n",
-        "    | :agg #          | set the limit for aggregation counters|\n",
-        "    |                 | be top #, i.e. top 5 or top 1         |\n",
-        "    | :history on     | enable command history disk cache     |\n",
-        "    | :history off    | disable command history disk cache    |\n",
-        "    +-----------------+---------------------------------------|\n"
+        "    +-----------------+----------------------------------------+\n",
+        "    | Key             | Command                                |\n",
+        "    +=================+========================================+\n",
+        "    | :q              | exit Logria                            |\n",
+        "    | :poll #         | update poll rate to #, where # is an   |\n",
+        "    |                 | integer (in milliseconds)              |\n",
+        "    | :r #            | when launching logria or viewing       |\n",
+        "    |                 | sessions, this will delete item #      |\n",
+        "    | :agg #          | set the limit for aggregation counters |\n",
+        "    |                 | be top #, i.e. top 5 or top 1          |\n",
+        "    | :history on     | enable command history disk cache      |\n",
+        "    | :history off    | disable command history disk cache     |\n",
+        "    +-----------------+----------------------------------------|\n"
     );
     pub const PIPE_INPUT_ERROR: &str = concat!(
         "Piping to Logria is not supported as it cannot\n",

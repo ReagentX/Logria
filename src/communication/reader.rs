@@ -1,5 +1,6 @@
 use std::{
-    cmp::max,
+    borrow::Cow,
+    cmp::{max, min},
     io::{Result, Write, stdout},
     panic,
     time::{Duration, Instant},
@@ -18,6 +19,7 @@ use crate::{
         handlers::{
             command::CommandHandler,
             handler::Handler,
+            highlight::HighlightHandler,
             normal::NormalHandler,
             parser::{ParserHandler, ParserState},
             processor::ProcessorMethods,
@@ -49,6 +51,8 @@ pub struct LogriaConfig {
     pub height: u16,
     /// The last row we can render, aka number of lines visible in the tty
     pub last_row: u16,
+    /// The center row of the screen
+    pub center_row: u16,
     /// Current last row we have rendered
     pub current_end: usize,
 
@@ -71,6 +75,8 @@ pub struct LogriaConfig {
     pub matched_rows: Vec<usize>,
     /// The last index the filtering function saw
     pub last_index_regexed: usize,
+    /// The currently selected row as we scroll between matches; represents an index in the [`LogriaConfig::matched_rows`] vector
+    pub current_matched_row: usize,
     /// A regex to remove ANSI color codes
     color_replace_regex: Regex,
     /// Determines whether we highlight the matched text to the user
@@ -106,7 +112,7 @@ pub struct LogriaConfig {
     /// Can be a vector of `FileInputs`, `CommandInputs`, etc
     pub streams: Vec<InputStream>,
     /// Tuple of previous render boundaries, i.e. the (start, end) range of buffer that is rendered
-    previous_render: (usize, usize),
+    pub previous_render: (usize, usize),
     /// True if the previously rendered buffer had no data in it, False otherwise
     was_empty: bool,
     /// True if we just swapped input types, False otherwise
@@ -128,6 +134,7 @@ pub struct MainWindow {
 
 impl MainWindow {
     /// Construct sample window for testing simple actions
+    #[cfg(test)]
     pub fn _new_dummy() -> MainWindow {
         let mut app = MainWindow::new(true, true);
 
@@ -147,6 +154,7 @@ impl MainWindow {
     }
 
     /// Construct sample window for testing parsers
+    #[cfg(test)]
     pub fn _new_dummy_parse() -> MainWindow {
         let mut app = MainWindow::new(true, true);
 
@@ -168,6 +176,7 @@ impl MainWindow {
     }
 
     /// Construct sample window for testing date parsers
+    #[cfg(test)]
     pub fn _new_dummy_parse_date() -> MainWindow {
         let mut app = MainWindow::new(true, true);
 
@@ -203,6 +212,8 @@ impl MainWindow {
                 use_history: history,
                 height: 0,
                 width: 0,
+                center_row: 0,
+                last_row: 0,
                 loop_time: Instant::now(),
                 previous_render: (0, 0),
                 stderr_messages: vec![],
@@ -213,6 +224,7 @@ impl MainWindow {
                 regex_pattern: None,
                 matched_rows: vec![],
                 last_index_regexed: 0,
+                current_matched_row: 0,
                 color_replace_regex: Regex::new(
                     crate::constants::cli::patterns::ANSI_COLOR_PATTERN,
                 )
@@ -223,7 +235,6 @@ impl MainWindow {
                 num_to_aggregate: 5,
                 last_index_processed: 0,
                 highlight_match: false,
-                last_row: 0,
                 scroll_state: ScrollState::Bottom,
                 current_end: 0,
                 streams: vec![],
@@ -239,12 +250,10 @@ impl MainWindow {
 
     /// Get the number of messages in the current message buffer
     pub fn number_of_messages(&self) -> usize {
-        // if there is a regex active, use that, otherwise handle normally
-        if self.config.regex_pattern.is_some() {
-            return self.config.matched_rows.len();
-        }
         match self.input_type {
-            InputType::Normal | InputType::Command | InputType::Startup => self.messages().len(),
+            InputType::Normal | InputType::Command | InputType::Startup | InputType::Highlight => {
+                self.messages().len()
+            }
             InputType::Regex => {
                 if self.config.regex_pattern.is_none() {
                     self.messages().len()
@@ -284,9 +293,10 @@ impl MainWindow {
                 let mut current_index: usize = 0;
                 loop {
                     let message: &str = match self.input_type {
-                        InputType::Normal | InputType::Command | InputType::Startup => {
-                            &self.messages()[current_index]
-                        }
+                        InputType::Normal
+                        | InputType::Command
+                        | InputType::Startup
+                        | InputType::Highlight => &self.messages()[current_index],
                         InputType::Regex => {
                             // If we have not activated regex or parser yet, render normal messages
                             if self.config.regex_pattern.is_none() {
@@ -331,7 +341,7 @@ impl MainWindow {
                     // use all of the available rows
                     end = self.config.current_end;
                 } else {
-                    // If we have overscrolled, go back
+                    // If we have over-scrolled, go back
                     if self.config.current_end > message_pointer_length {
                         self.config.current_end = message_pointer_length;
                     } else {
@@ -339,6 +349,14 @@ impl MainWindow {
                         end = message_pointer_length;
                     }
                 }
+            }
+            ScrollState::Centered => {
+                let center = usize::from(self.config.center_row);
+                let index_to_render = self.config.matched_rows[self.config.current_matched_row];
+                end = min(
+                    index_to_render.saturating_add(center),
+                    message_pointer_length,
+                );
             }
             ScrollState::Bottom => {
                 end = message_pointer_length;
@@ -355,11 +373,10 @@ impl MainWindow {
     /// Get the message at a specific index in the current buffer
     fn get_message_at_index(&self, index: usize) -> &str {
         // if there is a regex active, use that, otherwise handle normally
-        if self.config.regex_pattern.is_some() {
-            return &self.messages()[self.config.matched_rows[index]];
-        }
         match self.input_type {
-            InputType::Normal | InputType::Command | InputType::Startup => &self.messages()[index],
+            InputType::Normal | InputType::Command | InputType::Startup | InputType::Highlight => {
+                &self.messages()[index]
+            }
             InputType::Regex => {
                 if self.config.regex_pattern.is_none() {
                     &self.messages()[index]
@@ -403,6 +420,23 @@ impl MainWindow {
         }
         // Add on any extra chars and update the message String
         new_msg.extend(clean_message[last_end..].to_vec());
+        String::from_utf8(new_msg).unwrap()
+    }
+
+    /// Highlight the entire row with an ASCII escape code
+    fn highlight_row(&self, message: &str) -> String {
+        // Regex out any existing color codes
+        // We use a bytes regex because we cannot compile the pattern using normal regex
+        let clean_message = self
+            .config
+            .color_replace_regex
+            .replace_all(message.as_bytes(), "".as_bytes());
+
+        // Store some vectors of char bytes so we don't have to cast to a string every loop
+        let mut new_msg: Vec<u8> = vec![];
+        new_msg.extend(colors::HIGHLIGHT_COLOR.as_bytes().to_vec());
+        new_msg.extend(clean_message.to_vec());
+        new_msg.extend(colors::RESET_COLOR.as_bytes().to_vec());
         String::from_utf8(new_msg).unwrap()
     }
 
@@ -454,7 +488,7 @@ impl MainWindow {
         if self.config.was_empty {
             self.config.was_empty = false;
             match self.input_type {
-                InputType::Parser | InputType::Regex => {}
+                InputType::Parser | InputType::Regex | InputType::Highlight => {}
                 _ => {
                     self.reset_command_line()?;
                 }
@@ -492,23 +526,25 @@ impl MainWindow {
             let message_padding_size = (width * message_rows) - message_length;
             let padding = " ".repeat(message_padding_size);
 
-            if self.config.highlight_match && self.config.regex_pattern.is_some() {
-                // Render message with highlight (additional allocation)
-                queue!(
-                    stdout,
-                    cursor::MoveTo(0, current_row),
-                    style::Print(self.highlight_match(message)),
-                    style::Print(padding)
-                )?;
-            } else {
-                // Render message normally
-                queue!(
-                    stdout,
-                    cursor::MoveTo(0, current_row),
-                    style::Print(message),
-                    style::Print(padding)
-                )?;
-            }
+            let msg: Cow<str> =
+                if self.config.highlight_match && self.config.regex_pattern.is_some() {
+                    match self.input_type {
+                        InputType::Regex => Cow::Owned(self.highlight_match(message)),
+                        InputType::Highlight if self.config.matched_rows.contains(&index) => {
+                            Cow::Owned(self.highlight_row(message))
+                        }
+                        _ => Cow::Borrowed(message),
+                    }
+                } else {
+                    Cow::Borrowed(message)
+                };
+
+            queue!(
+                stdout,
+                cursor::MoveTo(0, current_row),
+                style::Print(&msg),
+                style::Print(padding)
+            )?;
         }
 
         // Overwrite any new blank lines
@@ -535,7 +571,7 @@ impl MainWindow {
     }
 
     /// Get the previous message pointer
-    pub fn previous_messages(&self) -> &Vec<String> {
+    pub fn previous_messages(&self) -> &[String] {
         match self.config.previous_stream_type {
             StreamType::StdErr => &self.config.stderr_messages,
             StreamType::StdOut => &self.config.stdout_messages,
@@ -544,7 +580,7 @@ impl MainWindow {
     }
 
     /// Get the current message pointer
-    pub fn messages(&self) -> &Vec<String> {
+    pub fn messages(&self) -> &[String] {
         match self.config.stream_type {
             StreamType::StdErr => &self.config.stderr_messages,
             StreamType::StdOut => &self.config.stdout_messages,
@@ -622,10 +658,11 @@ impl MainWindow {
     pub fn set_cli_cursor(&mut self, content: Option<&'static str>) -> Result<()> {
         self.go_to_cli()?;
         let first_char = match self.input_type {
-            InputType::Normal | InputType::Startup => content.unwrap_or(cli_chars::NORMAL_CHAR),
-            InputType::Command => content.unwrap_or(cli_chars::COMMAND_CHAR),
-            InputType::Regex => content.unwrap_or(cli_chars::REGEX_CHAR),
-            InputType::Parser => content.unwrap_or(cli_chars::PARSER_CHAR),
+            InputType::Normal | InputType::Startup => content.unwrap_or(cli_chars::NORMAL_STR),
+            InputType::Command => content.unwrap_or(cli_chars::COMMAND_STR),
+            InputType::Regex => content.unwrap_or(cli_chars::REGEX_STR),
+            InputType::Parser => content.unwrap_or(cli_chars::PARSER_STR),
+            InputType::Highlight => content.unwrap_or(cli_chars::HIGHLIGHT_STR),
         };
 
         // Write the CLI cursor in the command line bounding box
@@ -656,6 +693,7 @@ impl MainWindow {
         self.config.height = h;
         self.config.width = w;
         self.config.last_row = self.config.height.checked_sub(3).unwrap_or(h);
+        self.config.center_row = (self.config.height / 2).saturating_sub(1);
         build(self)?;
         Ok(())
     }
@@ -786,6 +824,7 @@ impl MainWindow {
         let mut normal_handler = NormalHandler::new();
         let mut command_handler = CommandHandler::new();
         let mut regex_handler = RegexHandler::new();
+        let mut highlight_handler = HighlightHandler::new();
         let mut parser_handler = ParserHandler::new();
         let mut startup_handler = StartupHandler::new();
 
@@ -832,6 +871,9 @@ impl MainWindow {
                             InputType::Startup => {
                                 startup_handler.receive_input(self, input.code)?;
                             }
+                            InputType::Highlight => {
+                                highlight_handler.receive_input(self, input.code)?;
+                            }
                         }
                     }
                     Event::Mouse(_) => {} // Probably remove
@@ -852,6 +894,13 @@ impl MainWindow {
                     InputType::Regex => {
                         if self.config.regex_pattern.is_some() {
                             regex_handler.process_matches(self)?;
+                        } else if self.config.did_switch {
+                            self.config.did_switch = false;
+                        }
+                    }
+                    InputType::Highlight => {
+                        if self.config.regex_pattern.is_some() {
+                            highlight_handler.process_matches(self)?;
                         } else if self.config.did_switch {
                             self.config.did_switch = false;
                         }

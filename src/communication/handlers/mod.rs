@@ -1,5 +1,6 @@
 pub mod command;
 pub mod handler;
+pub mod highlight;
 pub mod multiple_choice;
 pub mod normal;
 pub mod parser;

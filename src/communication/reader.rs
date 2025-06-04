@@ -1,6 +1,6 @@
 use std::{
     borrow::Cow,
-    cmp::{max, min},
+    cmp::max,
     io::{Result, Write, stdout},
     panic,
     time::{Duration, Instant},
@@ -39,7 +39,7 @@ use crate::{
     },
     util::{
         poll::{RollingMean, ms_per_message},
-        sanitizers::length::LengthFinder,
+        sanitizers::LengthFinder,
         types::Del,
     },
 };
@@ -52,7 +52,7 @@ pub struct LogriaConfig {
     /// The last row we can render, aka number of lines visible in the tty
     pub last_row: u16,
     /// The center row of the screen
-    pub center_row: u16,
+    pub center_row: usize,
     /// Current last row we have rendered
     pub current_end: usize,
 
@@ -309,12 +309,10 @@ impl MainWindow {
                     };
 
                     // Determine if we can fit the next message
-                    let message_length = self.length_finder.get_real_length(message);
-                    rows += max(
-                        1,
-                        (message_length + (self.config.width as usize - 2))
-                            / self.config.width as usize,
-                    );
+                    let (count_rows, _) = self
+                        .length_finder
+                        .get_rows_and_length(message, self.config.width as usize);
+                    rows += count_rows;
 
                     // If we can fit, increment the last row number
                     if rows <= self.config.last_row as usize
@@ -351,12 +349,65 @@ impl MainWindow {
                 }
             }
             ScrollState::Centered => {
-                let center = usize::from(self.config.center_row);
+                // Use a center‐expanding greedy window algorithm to handle multi-length lines for Centered mode
+
+                // Get the current message we want to render in the center of the screen
                 let index_to_render = self.config.matched_rows[self.config.current_matched_row];
-                end = min(
-                    index_to_render.saturating_add(center),
-                    message_pointer_length,
+
+                // Compute rows for the selected message
+                let (sel_rows, _) = self.length_finder.get_rows_and_length(
+                    self.get_message_at_index(index_to_render),
+                    self.config.width as usize,
                 );
+
+                // Allocate rows above until center
+                let mut start_idx = index_to_render;
+                // The number of rows we will render above the selected message
+                let mut rows_above = 0;
+                loop {
+                    // Get the previous message and compute its rows
+                    let prev: usize = start_idx.saturating_sub(1);
+
+                    // Allow blank line scroll back beyond the first message
+                    // Rows is the number of rows the previous message takes up
+                    let rows = if start_idx == 0 {
+                        1
+                    } else {
+                        let (rows, _) = self.length_finder.get_rows_and_length(
+                            self.get_message_at_index(prev),
+                            self.config.width as usize,
+                        );
+                        rows
+                    };
+
+                    // If we are now above the top of the screen, stop
+                    if rows_above + rows > self.config.center_row {
+                        break;
+                    }
+
+                    rows_above += rows;
+                    start_idx = prev;
+                }
+
+                // Allocate rows below until last_row limit
+                let mut end_idx = index_to_render + 1;
+                let mut rows_used = rows_above + sel_rows;
+                while end_idx < message_pointer_length {
+                    let (rows, _) = self.length_finder.get_rows_and_length(
+                        self.get_message_at_index(end_idx),
+                        self.config.width as usize,
+                    );
+
+                    // If we are now below the bottom of the screen, stop
+                    if rows_used + rows > self.config.last_row as usize {
+                        break;
+                    }
+
+                    rows_used += rows;
+                    end_idx += 1;
+                }
+                self.config.current_end = end_idx;
+                return (start_idx, end_idx);
             }
             ScrollState::Bottom => {
                 end = message_pointer_length;
@@ -513,8 +564,8 @@ impl MainWindow {
             message = message.trim_end();
 
             // Get some metadata we need to render the message
-            let message_length = self.length_finder.get_real_length(message);
-            let message_rows = max(1, (message_length).div_ceil(width));
+            let (message_rows, message_length) =
+                self.length_finder.get_rows_and_length(message, width);
 
             // Update the current row, stop writing if there is no more space
             current_row = match current_row.checked_sub(max(1, message_rows as u16)) {
@@ -693,7 +744,7 @@ impl MainWindow {
         self.config.height = h;
         self.config.width = w;
         self.config.last_row = self.config.height.checked_sub(3).unwrap_or(h);
-        self.config.center_row = (self.config.height / 2).saturating_sub(1);
+        self.config.center_row = usize::from((self.config.height / 2).saturating_sub(1));
         build(self)?;
         Ok(())
     }

@@ -116,6 +116,7 @@ impl ProcessorMethods for HighlightHandler {
         window.config.matched_rows.clear();
         window.config.last_index_regexed = 0;
         window.config.highlight_match = false;
+        window.config.scroll_state = ScrollState::Free;
         window.reset_command_line()?;
         Ok(())
     }

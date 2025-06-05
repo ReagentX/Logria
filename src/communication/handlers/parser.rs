@@ -11,7 +11,7 @@ use crate::{
         input::{InputType::Normal, StreamType},
         reader::MainWindow,
     },
-    constants::cli::cli_chars::{COMMAND_CHAR, PARSER_CHAR},
+    constants::cli::cli_chars::{AGGREGATION_CHAR, COMMAND_CHAR, PARSER_CHAR},
     extensions::{
         extension::ExtensionMethods,
         parser::{Parser, PatternType},
@@ -249,7 +249,7 @@ impl ProcessorMethods for ParserHandler {
                             Err(why) => {
                                 // If the message failed parsing, it might just be a different format, so we ignore it
                                 // If the parser is in an invalid state, alert the user
-                                if let LogriaError::CannotParseMessage(error) = why {
+                                if let LogriaError::InvalidParserState(error) = why {
                                     window.write_to_command_line(&error)?;
                                 }
                             }
@@ -314,7 +314,7 @@ impl Handler for ParserHandler {
                             // Move the cursor back to the start of the line
                             window.go_to_cli()?;
 
-                            // Update the auxillary messages for the second setup step
+                            // Update the auxiliary messages for the second setup step
                             self.select_index(window)?;
                         }
                         Err(why) => {
@@ -349,7 +349,7 @@ impl Handler for ParserHandler {
                         window.config.parser_index = item;
                         window.config.parser_state = ParserState::Full;
 
-                        // Clear auxillary messages for next use
+                        // Clear auxiliary messages for next use
                         window.config.auxiliary_messages.clear();
 
                         // Process messages
@@ -390,7 +390,7 @@ impl Handler for ParserHandler {
                     }
 
                     // Swap to and from analytics mode
-                    KeyCode::Char('a') => {
+                    KeyCode::Char(AGGREGATION_CHAR) => {
                         if window.config.aggregation_enabled {
                             window.config.current_status = Some(self.status.clone());
                             window.config.aggregation_enabled = false;

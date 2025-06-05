@@ -323,6 +323,21 @@ mod tests {
     fn test_update_current_match_index_free_empty() {
         let mut window = MainWindow::_new_dummy();
         window.config.matched_rows.clear();
+        window.config.current_matched_row = 0;
+        window.config.previous_render = (0, 50);
+        window.config.scroll_state = ScrollState::Free;
+
+        scroll::update_current_match_index(&mut window, true);
+
+        assert_eq!(window.config.current_matched_row, 3);
+        assert!(matches!(window.config.scroll_state, ScrollState::Free));
+    }
+
+    #[test]
+    fn test_update_current_match_index_free() {
+        let mut window = MainWindow::_new_dummy();
+        window.config.matched_rows.clear();
+        window.config.matched_rows = vec![0, 1, 2, 3];
         window.config.current_matched_row = 3;
         window.config.previous_render = (0, 50);
         window.config.scroll_state = ScrollState::Free;

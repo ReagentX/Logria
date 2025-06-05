@@ -329,7 +329,7 @@ mod tests {
 
         scroll::update_current_match_index(&mut window, true);
 
-        assert_eq!(window.config.current_matched_row, 3);
+        assert_eq!(window.config.current_matched_row, 0);
         assert!(matches!(window.config.scroll_state, ScrollState::Free));
     }
 

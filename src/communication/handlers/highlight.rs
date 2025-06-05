@@ -9,10 +9,10 @@ use crate::{
         handlers::user_input::UserInputHandler, input::InputType::Normal, reader::MainWindow,
     },
     constants::cli::{
-        cli_chars::{COMMAND_CHAR, HIGHLIGHT_CHAR, NORMAL_STR},
+        cli_chars::{COMMAND_CHAR, HIGHLIGHT_CHAR, NORMAL_STR, TOGGLE_HIGHLIGHT_CHAR},
         patterns::ANSI_COLOR_PATTERN,
     },
-    ui::scroll::{self, ScrollState, update_current_match_index},
+    ui::scroll::{self, update_current_match_index, ScrollState},
 };
 
 pub struct HighlightHandler {
@@ -152,7 +152,7 @@ impl Handler for HighlightHandler {
                 }
 
                 // Toggle match highlight
-                KeyCode::Char('h') => {
+                KeyCode::Char(TOGGLE_HIGHLIGHT_CHAR) => {
                     window.config.highlight_match = !window.config.highlight_match;
                     window.redraw()?;
                 }

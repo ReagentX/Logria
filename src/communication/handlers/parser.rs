@@ -406,6 +406,9 @@ impl Handler for ParserHandler {
                         window.config.last_index_processed = 0;
                         window.write_status()?;
                         window.config.auxiliary_messages.clear();
+
+                        // Force redraw even if there are no new messages
+                        self.process_matches(window)?;
                     }
 
                     // Return to normal

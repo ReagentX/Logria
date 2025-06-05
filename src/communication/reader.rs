@@ -641,7 +641,7 @@ impl MainWindow {
 
     /// Move the cursor to the CLI window
     pub fn go_to_cli(&mut self) -> Result<()> {
-        let cli_position = self.config.height - 2;
+        let cli_position = self.config.height.saturating_sub(2);
         queue!(stdout(), cursor::MoveTo(1, cli_position))?;
         Ok(())
     }
@@ -684,7 +684,7 @@ impl MainWindow {
     pub fn reset_command_line(&mut self) -> Result<()> {
         // Leave padding for surrounding rectangle, we cannot use deleteln because it destroys the rectangle
         // TODO: Store this string as a class attribute, re-calculate on resize
-        let clear = " ".repeat((self.config.width - 2) as usize);
+        let clear = " ".repeat((self.config.width.saturating_sub(2)) as usize);
         self.go_to_cli()?;
 
         // If the cursor was visible, hide it

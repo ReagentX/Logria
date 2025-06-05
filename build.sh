@@ -20,10 +20,17 @@ if [ -n "$VERSION" ]; then
     # Build for Apple Silicon
     cargo build --target aarch64-apple-darwin --release
     cp target/aarch64-apple-darwin/release/logria output/logria-aarch64-apple-darwin
+    tar -czf output/logria-aarch64-apple-darwin.tar.gz output/logria-aarch64-apple-darwin
 
     # Build for 64-bit Intel macOS
     cargo build --target x86_64-apple-darwin --release
     cp target/x86_64-apple-darwin/release/logria output/logria-x86_64-apple-darwin
+    tar -czf output/logria-x86_64-apple-darwin.tar.gz output/logria-x86_64-apple-darwin
+
+    # Build for 64-bit Intel Windows (requires `brew install mingw-w64`)
+    cargo build --target x86_64-pc-windows-gnu --release
+    cp target/x86_64-pc-windows-gnu/release/logria.exe output/logria-x86_64-pc-windows-gnu.exe
+    tar -czf output/logria-x86_64-pc-windows-gnu.tar.gz output/logria-x86_64-pc-windows-gnu.exe
 
     # Put the version number back
     sed -i '' "s/version = \"$VERSION\"/version = \"0.0.0\"/g" Cargo.toml
@@ -31,4 +38,3 @@ if [ -n "$VERSION" ]; then
 else
     echo 'No version tag set!'
 fi
-

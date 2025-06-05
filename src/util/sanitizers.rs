@@ -14,7 +14,8 @@ impl LengthFinder {
         }
     }
 
-    /// Returns the length of the string without ANSI color codes, i.e. the real length of a string when rendered in a terminal.
+    /// Returns the length of the string without ANSI color codes, i.e. the
+    /// number of visible characters in a string when rendered in a terminal.
     fn get_real_length(&self, content: &str) -> usize {
         self.color_pattern
             .split(content.as_bytes())
@@ -23,7 +24,8 @@ impl LengthFinder {
             .sum()
     }
 
-    /// Given a string's real length and the terminal width, return the number of rows it would take to display the string.
+    /// Given a string to render and the terminal width, return a tuple of the number of rows it
+    /// would take to display the string and the real length of the string.
     pub fn get_rows_and_length(&self, content: &str, terminal_width: usize) -> (usize, usize) {
         let length = self.get_real_length(content);
         (max(1, (length).div_ceil(terminal_width)), length)

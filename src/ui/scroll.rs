@@ -53,17 +53,26 @@ pub fn update_current_match_index(window: &mut MainWindow, scroll_up: bool) {
             window.config.current_matched_row =
                 closest_index(&window.config.matched_rows, render_midpoint)
                     .unwrap_or(window.config.current_matched_row);
-            window.config.scroll_state = ScrollState::Centered;
+            // Only change the scroll state if there is a match to render
+            if !window.config.matched_rows.is_empty() {
+                window.config.scroll_state = ScrollState::Centered;
+            }
         }
         ScrollState::Top => {
             // If we are at the top, we can just return to the first match
             window.config.current_matched_row = 0;
-            window.config.scroll_state = ScrollState::Centered;
+            // Only change the scroll state if there is a match to render
+            if !window.config.matched_rows.is_empty() {
+                window.config.scroll_state = ScrollState::Centered;
+            }
         }
         ScrollState::Bottom => {
             // If we are at the bottom, we can just return to the last match
             window.config.current_matched_row = window.config.matched_rows.len().saturating_sub(1);
-            window.config.scroll_state = ScrollState::Centered;
+            // Only change the scroll state if there is a match to render
+            if !window.config.matched_rows.is_empty() {
+                window.config.scroll_state = ScrollState::Centered;
+            }
         }
         ScrollState::Centered => {
             if scroll_up {

@@ -8,7 +8,7 @@ use crate::{
         input::{InputType, StreamType},
         reader::MainWindow,
     },
-    constants::cli::cli_chars::{COMMAND_CHAR, HIGHLIGHT_CHAR, PARSER_CHAR, REGEX_CHAR},
+    constants::cli::cli_chars::{COMMAND_CHAR, HIGHLIGHT_CHAR, PARSER_CHAR, REGEX_CHAR, SWAP_CHAR},
     ui::scroll,
 };
 
@@ -89,7 +89,7 @@ impl Handler for NormalHandler {
             KeyCode::Char(REGEX_CHAR) => self.set_regex_mode(window)?,
             KeyCode::Char(HIGHLIGHT_CHAR) => self.set_highlight_mode(window)?,
             KeyCode::Char(PARSER_CHAR) => self.set_parser_mode(window)?,
-            KeyCode::Char('s') => self.swap_streams(window)?,
+            KeyCode::Char(SWAP_CHAR) => self.swap_streams(window)?,
             _ => {}
         }
         window.redraw()?;

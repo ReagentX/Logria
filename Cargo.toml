@@ -21,3 +21,11 @@ regex = "=1.11.1"
 serde = { version = "=1.0.219", features = ["derive"] }
 serde_json = "=1.0.140"
 time = { version = "=0.3.41", features = ["formatting", "parsing"] }
+
+[profile.release]
+# Perform Link Time Optimization
+lto = true
+# Use a single codegen unit for the entire crate
+codegen-units = 1
+# Do not unwind stack on crash
+panic = "abort"

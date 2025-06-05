@@ -36,6 +36,9 @@ pub mod cli_chars {
     pub const REGEX_CHAR: char = 'r';
     pub const HIGHLIGHT_CHAR: char = '/';
     pub const PARSER_CHAR: char = 'p';
+    pub const AGGREGATION_CHAR: char = 'a';
+    pub const SWAP_CHAR: char = 's';
+    pub const TOGGLE_HIGHLIGHT_CHAR: char = 'h';
 }
 
 #[allow(dead_code)]

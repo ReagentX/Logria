@@ -9,7 +9,7 @@ use crate::{
         handlers::user_input::UserInputHandler, input::InputType::Normal, reader::MainWindow,
     },
     constants::cli::{
-        cli_chars::{COMMAND_CHAR, HIGHLIGHT_CHAR, NORMAL_STR},
+        cli_chars::{COMMAND_CHAR, NORMAL_STR, REGEX_CHAR, TOGGLE_HIGHLIGHT_CHAR},
         patterns::ANSI_COLOR_PATTERN,
     },
     ui::scroll,
@@ -129,14 +129,14 @@ impl Handler for RegexHandler {
                 KeyCode::PageDown => scroll::pg_down(window),
 
                 // Build new regex
-                KeyCode::Char(HIGHLIGHT_CHAR) => {
+                KeyCode::Char(REGEX_CHAR) => {
                     self.clear_matches(window)?;
                     window.redraw()?;
                     window.set_cli_cursor(None)?;
                 }
 
                 // Toggle match highlight
-                KeyCode::Char('h') => {
+                KeyCode::Char(TOGGLE_HIGHLIGHT_CHAR) => {
                     window.config.highlight_match = !window.config.highlight_match;
                     window.redraw()?;
                 }

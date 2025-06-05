@@ -90,7 +90,7 @@ This is a Rust implementation of my [Python](https://github.com/ReagentX/Logria-
 
 ### When to use Logria
 
-Logria is best leveraged to watch live logs from multiple processes and filter them for events you want to see. My most common use case is watching logs from multiple Linode/EC2 instances via `ssh` or multiple CloudWatch streams using [`aws logs`](https://docs.aws.amazon.com/ja_jp/cli/latest/reference/logs/index.html).
+Logria is best leveraged to watch live logs from multiple processes and filter them for events you want to see. My most common use case is watching logs from multiple Linode/EC2 instances via `ssh` or multiple CloudWatch streams using [`aws logs`](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/logs/index.html).
 
 I also use it to analyze the logs from my Apache web servers that print logs in the common log format.
 

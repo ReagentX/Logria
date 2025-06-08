@@ -1,91 +1,32 @@
-use std::{borrow::Cow, cmp::max, str::from_utf8};
+use std::{cmp::max, collections::HashSet, str::from_utf8, sync::LazyLock};
 
 use regex::bytes::Regex;
 
 use crate::constants::cli::patterns::ANSI_COLOR_PATTERN;
 
-/// Sanitize a filename by replacing or removing characters that are not allowed in filenames
-/// across different operating systems (Windows, macOS, Linux)
-/// 
-/// Uses `Cow` to avoid unnecessary allocations when the filename is already valid.
-pub fn sanitize_filename(filename: &str) -> Cow<str> {
-    // Characters that are not allowed in filenames on Windows, macOS, or Linux
-    // Windows: < > : " | ? * \ /
-    // Also includes control characters (0-31) and DEL (127)
-    // Reserved names on Windows: CON, PRN, AUX, NUL, COM1-9, LPT1-9
+/// Characters disallowed in a filename
+static FILENAME_DISALLOWED_CHARS: LazyLock<HashSet<char>> =
+    LazyLock::new(|| HashSet::from(['*', '"', '/', '\\', '<', '>', ':', '|', '?', '.']));
+/// The character to replace disallowed chars with
+const FILENAME_REPLACEMENT_CHAR: char = '_';
 
-    // Check if we need to trim leading/trailing whitespace and dots
-    let trimmed = filename.trim_matches(|c: char| c.is_whitespace() || c == '.');
-    let needs_trimming = trimmed.len() != filename.len();
-
-    // Check if any characters need to be replaced
-    let has_invalid_chars = trimmed.chars().any(|c| match c {
-        '<' | '>' | ':' | '"' | '|' | '?' | '*' | '\\' | '/' => true,
-        c if c.is_control() => true,
-        _ => false,
-    });
-
-    // Check if it's a Windows reserved name
-    let upper_name = trimmed.to_uppercase();
-    let reserved_names = [
-        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
-        "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
-    ];
-    let is_reserved = reserved_names.contains(&upper_name.as_str());
-
-    // Check if it's empty after trimming
-    let is_empty = trimmed.is_empty();
-
-    // Check if it's too long
-    let is_too_long = trimmed.len() > 255;
-
-    // If no changes are needed, return the original string (no allocation)
-    if !needs_trimming && !has_invalid_chars && !is_reserved && !is_empty && !is_too_long {
-        return Cow::Borrowed(filename);
-    }
-
-    // Use Cow to minimize allocations during the sanitization process
-    let mut result: Cow<str> = if needs_trimming {
-        Cow::Owned(trimmed.to_string())
-    } else {
-        Cow::Borrowed(filename)
-    };
-
-    // Replace invalid characters if needed
-    if has_invalid_chars {
-        result = Cow::Owned(
-            result
-                .chars()
-                .map(|c| match c {
-                    // Windows/general forbidden characters
-                    '<' | '>' | ':' | '"' | '|' | '?' | '*' | '\\' | '/' => '_',
-                    // Control characters and DEL
-                    c if c.is_control() => '_',
-                    // Keep valid characters
-                    c => c,
-                })
-                .collect::<String>(),
-        );
-    }
-
-    // Handle Windows reserved names by appending underscore
-    if is_reserved {
-        result = Cow::Owned(format!("{}_", result));
-    }
-
-    // Handle empty filename
-    if is_empty {
-        result = Cow::Borrowed("unnamed_session");
-    }
-
-    // Limit length to 255 characters (common filesystem limit)
-    if result.len() > 255 {
-        let mut truncated = result.into_owned();
-        truncated.truncate(255);
-        result = Cow::Owned(truncated);
-    }
-
-    result
+/// Remove unsafe chars in [this list](FILENAME_DISALLOWED_CHARS).
+///
+/// Does not need to use a `Cow` for optimization because the source is always generated based on chat data
+/// so there is no opportunity for the original input to be passed in from another borrow.
+pub fn sanitize_filename(filename: &str) -> String {
+    filename
+        .trim()
+        .chars()
+        .map(|letter| {
+            if letter.is_control() || FILENAME_DISALLOWED_CHARS.contains(&letter) {
+                FILENAME_REPLACEMENT_CHAR
+            } else {
+                letter
+            }
+        })
+        .take(255)
+        .collect()
 }
 
 pub struct LengthFinder {
@@ -119,7 +60,6 @@ impl LengthFinder {
 
 #[cfg(test)]
 mod tests {
-    use std::borrow::Cow;
     use crate::util::sanitizers::{LengthFinder, sanitize_filename};
 
     #[test]
@@ -171,7 +111,7 @@ mod tests {
     #[test]
     fn test_sanitize_filename_clean() {
         assert_eq!(sanitize_filename("normal_filename"), "normal_filename");
-        assert_eq!(sanitize_filename("file.txt"), "file.txt");
+        assert_eq!(sanitize_filename("file.txt"), "file_txt");
         assert_eq!(sanitize_filename("file_123"), "file_123");
     }
 
@@ -197,24 +137,8 @@ mod tests {
     #[test]
     fn test_sanitize_filename_trim() {
         assert_eq!(sanitize_filename("  filename  "), "filename");
-        assert_eq!(sanitize_filename("..filename.."), "filename");
+        assert_eq!(sanitize_filename("..filename.."), "__filename__");
         assert_eq!(sanitize_filename("\tfilename\t"), "filename");
-    }
-
-    #[test]
-    fn test_sanitize_filename_reserved_names() {
-        assert_eq!(sanitize_filename("CON"), "CON_");
-        assert_eq!(sanitize_filename("con"), "con_");
-        assert_eq!(sanitize_filename("PRN"), "PRN_");
-        assert_eq!(sanitize_filename("COM1"), "COM1_");
-        assert_eq!(sanitize_filename("LPT1"), "LPT1_");
-    }
-
-    #[test]
-    fn test_sanitize_filename_empty() {
-        assert_eq!(sanitize_filename(""), "unnamed_session");
-        assert_eq!(sanitize_filename("   "), "unnamed_session");
-        assert_eq!(sanitize_filename("..."), "unnamed_session");
     }
 
     #[test]
@@ -222,55 +146,5 @@ mod tests {
         let long_name = "a".repeat(300);
         let sanitized = sanitize_filename(&long_name);
         assert_eq!(sanitized.len(), 255);
-    }
-
-    #[test]
-    fn test_sanitize_filename_no_allocation_needed() {
-        // These should not require any modifications, demonstrating Cow optimization
-        let clean_names = vec![
-            "normal_filename",
-            "file.txt", 
-            "file_123",
-            "valid-name.log",
-            "test_file_2024.json"
-        ];
-        
-        for name in clean_names {
-            let result = sanitize_filename(name);
-            assert_eq!(result, name);
-            // The function should return efficiently without unnecessary string operations
-        }
-    }
-
-    #[test]
-    fn test_sanitize_filename_cow_borrowed_optimization() {
-        // Test that clean filenames return Cow::Borrowed (no allocation)
-        let clean_name = "clean_filename.txt";
-        let result = sanitize_filename(clean_name);
-        
-        // Verify the result is correct
-        assert_eq!(result, clean_name);
-        
-        // Verify it's a borrowed reference (no allocation)
-        match result {
-            Cow::Borrowed(_) => {}, // This is what we want
-            Cow::Owned(_) => panic!("Expected Cow::Borrowed for clean filename, got Cow::Owned"),
-        }
-    }
-
-    #[test]
-    fn test_sanitize_filename_cow_owned_when_modified() {
-        // Test that modified filenames return Cow::Owned (allocation only when needed)
-        let dirty_name = "dirty<>filename.txt";
-        let result = sanitize_filename(dirty_name);
-        
-        // Verify the result is sanitized
-        assert_eq!(result, "dirty__filename.txt");
-        
-        // Verify it's an owned string (allocation was necessary)
-        match result {
-            Cow::Owned(_) => {}, // This is what we want when modifications are needed
-            Cow::Borrowed(_) => panic!("Expected Cow::Owned for modified filename, got Cow::Borrowed"),
-        }
     }
 }

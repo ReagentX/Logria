@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     constants::{cli::excludes::SESSION_FILE_EXCLUDES, directories::sessions},
     extensions::extension::ExtensionMethods,
-    util::error::LogriaError,
+    util::{error::LogriaError, sanitizers::sanitize_filename},
 };
 
 #[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Debug)]
@@ -39,7 +39,8 @@ impl ExtensionMethods for Session {
     /// Create session file from a Session struct
     fn save(self, file_name: &str) -> Result<(), LogriaError> {
         let session_json = serde_json::to_string_pretty(&self).unwrap();
-        let path = format!("{}/{}", sessions(), file_name);
+        let sanitized_filename = sanitize_filename(file_name);
+        let path = format!("{}/{}", sessions(), sanitized_filename);
         match write(&path, session_json) {
             Ok(()) => Ok(()),
             Err(why) => Err(LogriaError::CannotWrite(path, <dyn Error>::to_string(&why))),

@@ -22,6 +22,7 @@ use crate::{
             sum::Sum,
         },
         error::LogriaError,
+        sanitizers::sanitize_filename,
     },
 };
 
@@ -54,9 +55,10 @@ impl ExtensionMethods for Parser {
     /// Create parser file from a Parser struct
     fn save(self, file_name: &str) -> Result<(), LogriaError> {
         let parser_json = serde_json::to_string_pretty(&self).unwrap();
-        let path = format!("{}/{}", patterns(), file_name);
+        let sanitized_filename = sanitize_filename(file_name);
+        let path = format!("{}/{}", patterns(), sanitized_filename);
 
-        match write(format!("{}/{}", patterns(), file_name), parser_json) {
+        match write(&path, parser_json) {
             Ok(()) => Ok(()),
             Err(why) => Err(LogriaError::CannotWrite(path, <dyn Error>::to_string(&why))),
         }

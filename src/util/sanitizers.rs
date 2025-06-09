@@ -1,7 +1,33 @@
+use std::{cmp::max, collections::HashSet, str::from_utf8, sync::LazyLock};
+
 use regex::bytes::Regex;
-use std::{cmp::max, str::from_utf8};
 
 use crate::constants::cli::patterns::ANSI_COLOR_PATTERN;
+
+/// Characters disallowed in a filename
+static FILENAME_DISALLOWED_CHARS: LazyLock<HashSet<char>> =
+    LazyLock::new(|| HashSet::from(['*', '"', '/', '\\', '<', '>', ':', '|', '?', '.']));
+/// The character to replace disallowed chars with
+const FILENAME_REPLACEMENT_CHAR: char = '_';
+
+/// Remove unsafe chars in [this list](FILENAME_DISALLOWED_CHARS).
+///
+/// Does not need to use a `Cow` for optimization because the source is always generated based on chat data
+/// so there is no opportunity for the original input to be passed in from another borrow.
+pub fn sanitize_filename(filename: &str) -> String {
+    filename
+        .trim()
+        .chars()
+        .map(|letter| {
+            if letter.is_control() || FILENAME_DISALLOWED_CHARS.contains(&letter) {
+                FILENAME_REPLACEMENT_CHAR
+            } else {
+                letter
+            }
+        })
+        .take(255)
+        .collect()
+}
 
 pub struct LengthFinder {
     color_pattern: Regex,
@@ -34,7 +60,7 @@ impl LengthFinder {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::sanitizers::LengthFinder;
+    use crate::util::sanitizers::{LengthFinder, sanitize_filename};
 
     #[test]
     fn test_length_clean() {
@@ -80,5 +106,45 @@ mod tests {
         let (rows, length) = l.get_rows_and_length(content, 10);
         assert_eq!(rows, 1);
         assert_eq!(length, 6);
+    }
+
+    #[test]
+    fn test_sanitize_filename_clean() {
+        assert_eq!(sanitize_filename("normal_filename"), "normal_filename");
+        assert_eq!(sanitize_filename("file.txt"), "file_txt");
+        assert_eq!(sanitize_filename("file_123"), "file_123");
+    }
+
+    #[test]
+    fn test_sanitize_filename_invalid_chars() {
+        assert_eq!(sanitize_filename("file<>name"), "file__name");
+        assert_eq!(sanitize_filename("file:name"), "file_name");
+        assert_eq!(sanitize_filename("file\"name"), "file_name");
+        assert_eq!(sanitize_filename("file|name"), "file_name");
+        assert_eq!(sanitize_filename("file?name"), "file_name");
+        assert_eq!(sanitize_filename("file*name"), "file_name");
+        assert_eq!(sanitize_filename("file\\name"), "file_name");
+        assert_eq!(sanitize_filename("file/name"), "file_name");
+    }
+
+    #[test]
+    fn test_sanitize_filename_control_chars() {
+        assert_eq!(sanitize_filename("file\x00name"), "file_name");
+        assert_eq!(sanitize_filename("file\x1fname"), "file_name");
+        assert_eq!(sanitize_filename("file\x7fname"), "file_name");
+    }
+
+    #[test]
+    fn test_sanitize_filename_trim() {
+        assert_eq!(sanitize_filename("  filename  "), "filename");
+        assert_eq!(sanitize_filename("..filename.."), "__filename__");
+        assert_eq!(sanitize_filename("\tfilename\t"), "filename");
+    }
+
+    #[test]
+    fn test_sanitize_filename_long() {
+        let long_name = "a".repeat(300);
+        let sanitized = sanitize_filename(&long_name);
+        assert_eq!(sanitized.len(), 255);
     }
 }

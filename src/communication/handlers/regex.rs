@@ -64,21 +64,36 @@ impl RegexHandler {
 impl ProcessorMethods for RegexHandler {
     /// Process matches, loading the buffer of indexes to matched messages in the main buffer
     fn process_matches(&mut self, window: &mut MainWindow) -> Result<()> {
-        // TODO: Possibly async? Possibly loading indicator for large jobs?
         if self.current_pattern.is_some() {
             // Start from where we left off to the most recent message
-            let buf_range = (window.config.last_index_regexed, window.messages().len());
+            // Start from where we left off to the most recent message
+            let start = window.config.last_index_regexed;
+            let end = window.messages().len();
 
-            // Iterate "forever", skipping to the start and taking up till end-start
-            // TODO: Something to indicate progress
-            for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
+            for index in start..end {
                 if self.test(&window.messages()[index]) {
                     window.config.matched_rows.push(index);
+                }
+
+                // Update the user interface with the current state
+                if end - start > 10_000 && (index % 99 == 0 || index == end - 1) {
+                    let word = if index == end - 1 {
+                        "Processed"
+                    } else {
+                        "Processing"
+                    };
+                    window.write_to_command_line(&format!(
+                        "{word} messages: {}/{} ({}%)",
+                        (index + 1) - start,
+                        end - start,
+                        ((index + 1 - start) * 100) / (end - start)
+                    ))?;
                 }
 
                 // Update the last spot so we know where to start next time
                 window.config.last_index_regexed = index + 1;
             }
+            window.write_status()?;
         }
         Ok(())
     }

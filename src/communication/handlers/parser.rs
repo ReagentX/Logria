@@ -222,18 +222,11 @@ impl ProcessorMethods for ParserHandler {
             // TODO: Possibly async? Possibly loading indicator for large jobs?
             if self.parser.is_some() {
                 // Start from where we left off to the most recent message
-                let buf_range = (
-                    window.config.last_index_processed,
-                    window.previous_messages().len(),
-                );
+                let start = window.config.last_index_processed;
+                let end = window.previous_messages().len();
 
-                // Iterate "forever", skipping to the start and taking up till end-start
-                // TODO: Something to indicate progress
-                let last = buf_range.1.checked_sub(1).unwrap_or(buf_range.0);
-                for index in (0..)
-                    .skip(buf_range.0)
-                    .take(buf_range.1.checked_sub(buf_range.0).unwrap_or(buf_range.0))
-                {
+                let last = end.checked_sub(1).unwrap_or(end);
+                for index in start..end {
                     if window.config.aggregation_enabled {
                         match self.aggregate_handle(
                             &window.previous_messages()[index],
@@ -260,9 +253,25 @@ impl ProcessorMethods for ParserHandler {
                     ) {
                         window.config.auxiliary_messages.push(message);
                     }
+
+                    // Update the user interface with the current state
+                    if end - start > 10_000 && (index % 99 == 0 || index == end - 1) {
+                        let word = if index == end - 1 {
+                            "Processed"
+                        } else {
+                            "Processing"
+                        };
+                        window.write_to_command_line(&format!(
+                            "{word} messages: {}/{} ({}%)",
+                            (index + 1) - start,
+                            end - start,
+                            ((index + 1 - start) * 100) / (end - start)
+                        ))?;
+                    }
                     // Update the last spot so we know where to start next time
                     window.config.last_index_processed = index + 1;
                 }
+                window.write_status()?;
             }
         }
         Ok(())
@@ -394,6 +403,11 @@ impl Handler for ParserHandler {
                         if window.config.aggregation_enabled {
                             window.config.current_status = Some(self.status.clone());
                             window.config.aggregation_enabled = false;
+                            if let Some(parser) = &mut self.parser {
+                                parser.aggregator_map.values_mut().for_each(|agg| {
+                                    agg.reset();
+                                });
+                            }
                         } else {
                             let new_status = self.status.clone();
                             window.config.current_status = Some(new_status.replace(

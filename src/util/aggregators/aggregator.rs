@@ -39,6 +39,8 @@ pub trait Aggregator {
     fn update(&mut self, message: &str) -> Result<(), LogriaError>;
     /// Expensive function that generates messages to render
     fn messages(&self, n: &usize) -> Vec<String>;
+    /// Reset the aggregator, clearing all internal data
+    fn reset(&mut self);
 }
 
 #[derive(Eq, PartialEq, Serialize, Deserialize, Debug)]

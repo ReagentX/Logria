@@ -92,23 +92,28 @@ impl Aggregator for Date {
     /// Resets the aggregator to its initial state, preserving `format` and `parser_type`.
     fn reset(&mut self) {
         self.count = 0;
-        self.earliest = match self.parser_type {
-            DateParserType::Date => DateTime::new(Dt::MAX, Tm::MIDNIGHT),
-            DateParserType::Time => DateTime::new(Dt::MIN, Tm::from_hms(23, 59, 59).unwrap()),
-            DateParserType::DateTime => DateTime::new(Dt::MAX, Tm::MIDNIGHT),
-        };
-        self.latest = match self.parser_type {
-            DateParserType::Date => DateTime::new(Dt::MIN, Tm::MIDNIGHT),
-            DateParserType::Time => DateTime::new(Dt::MIN, Tm::MIDNIGHT),
-            DateParserType::DateTime => DateTime::new(Dt::MIN, Tm::MIDNIGHT),
-        };
+        let (earliest, latest) = Self::default_datetimes(&self.parser_type);
+        self.earliest = earliest;
+        self.latest = latest;
     }
 }
 
 impl Date {
     /// Constructs a new `Date` aggregator with the given `format` and `parser_type`.
     pub fn new(format: &str, parser_type: DateParserType) -> Self {
-        let (earliest, latest) = match parser_type {
+        let (earliest, latest) = Self::default_datetimes(&parser_type);
+
+        Self {
+            format: parse_owned::<2>(format).ok(),
+            earliest,
+            latest,
+            count: 0,
+            parser_type,
+        }
+    }
+
+    fn default_datetimes(parser_type: &DateParserType) -> (DateTime, DateTime) {
+        match parser_type {
             DateParserType::Date => (
                 DateTime::new(Dt::MAX, Tm::MIDNIGHT),
                 DateTime::new(Dt::MIN, Tm::MIDNIGHT),
@@ -121,14 +126,6 @@ impl Date {
                 DateTime::new(Dt::MAX, Tm::MIDNIGHT),
                 DateTime::new(Dt::MIN, Tm::MIDNIGHT),
             ),
-        };
-
-        Self {
-            format: parse_owned::<2>(format).ok(),
-            earliest,
-            latest,
-            count: 0,
-            parser_type,
         }
     }
 

@@ -1,10 +1,13 @@
 use std::cmp::{max, min};
 
-use crate::util::{aggregators::aggregator::Aggregator, error::LogriaError};
-use format_num::format_num;
 use time::{
     Date as Dt, PrimitiveDateTime as DateTime, Time as Tm,
     format_description::{OwnedFormatItem, parse_owned},
+};
+
+use crate::util::{
+    aggregators::aggregator::{Aggregator, format_int},
+    error::LogriaError,
 };
 
 #[derive(Clone, Debug)]
@@ -66,8 +69,8 @@ impl Aggregator for Date {
     fn messages(&self, _: &usize) -> Vec<String> {
         let (rate, unit) = self.determine_rate();
         let mut out_v = vec![
-            format!("    Rate: {} {}", format_num!(",.0f", rate as u32), unit),
-            format!("    Count: {}", format_num!(",d", self.count as u32)),
+            format!("    Rate: {} {}", format_int(rate as usize), unit),
+            format!("    Count: {}", format_int(self.count as usize)),
         ];
         match self.parser_type {
             DateParserType::Date => {

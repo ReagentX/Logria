@@ -1,10 +1,11 @@
 use std::{cmp::Reverse, collections::HashMap};
 
-use format_num::format_num;
-
 use crate::{
     constants::cli::colors::RESET_COLOR,
-    util::{aggregators::aggregator::Aggregator, error::LogriaError},
+    util::{
+        aggregators::aggregator::{Aggregator, format_int},
+        error::LogriaError,
+    },
 };
 
 /// A counter for tracking occurrences of messages, similar to Python's `Counter`.
@@ -123,7 +124,7 @@ impl Counter {
                     "    {}{}: {} ({:.0}%)",
                     item.trim(),
                     RESET_COLOR,
-                    format_num!(",d", count as f64),
+                    format_int(count as usize),
                     pct
                 )
             })

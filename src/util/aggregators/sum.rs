@@ -1,8 +1,7 @@
 use crate::util::{
-    aggregators::aggregator::{Aggregator, extract_number},
+    aggregators::aggregator::{Aggregator, extract_number, format_float},
     error::LogriaError,
 };
-use format_num::format_num;
 
 /// Aggregator that accumulates numeric values from messages into a running total.
 pub struct Sum {
@@ -24,7 +23,7 @@ impl Aggregator for Sum {
 
     /// Returns the current total formatted as a string message.
     fn messages(&self, _: &usize) -> Vec<String> {
-        vec![format!("    Total: {}", format_num!(",d", self.total))]
+        vec![format!("    Total: {}", format_float(self.total))]
     }
 
     /// Resets the running total back to zero.

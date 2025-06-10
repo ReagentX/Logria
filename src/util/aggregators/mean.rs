@@ -1,8 +1,7 @@
 use crate::util::{
-    aggregators::aggregator::{Aggregator, extract_number},
+    aggregators::aggregator::{Aggregator, extract_number, format_float},
     error::LogriaError,
 };
-use format_num::format_num;
 
 /// Aggregator that computes the running mean of numeric messages.
 pub struct Mean {
@@ -43,8 +42,8 @@ impl Aggregator for Mean {
     fn messages(&self, _: &usize) -> Vec<String> {
         vec![
             format!("    Mean: {:.2}", self.mean()),
-            format!("    Count: {}", format_num!(",d", self.count)),
-            format!("    Total: {}", format_num!(",d", self.total)),
+            format!("    Count: {}", format_float(self.count)),
+            format!("    Total: {}", format_float(self.total)),
         ]
     }
 

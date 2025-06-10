@@ -12,6 +12,7 @@ use crate::{
         cli_chars::{COMMAND_CHAR, HIGHLIGHT_CHAR, NORMAL_STR, TOGGLE_HIGHLIGHT_CHAR},
         patterns::ANSI_COLOR_PATTERN,
     },
+    extensions::parser::{STEP, THRESHOLD},
     ui::scroll::{self, ScrollState, update_current_match_index},
 };
 
@@ -84,7 +85,7 @@ impl ProcessorMethods for HighlightHandler {
                 }
 
                 // Update the user interface with the current state
-                if end - start > 10_000 && (index % 99 == 0 || index == end - 1) {
+                if end - start > THRESHOLD && (index % STEP == 0 || index == end - 1) {
                     let word = if index == end - 1 {
                         "Processed"
                     } else {

@@ -14,7 +14,7 @@ use crate::{
     constants::cli::cli_chars::{AGGREGATION_CHAR, COMMAND_CHAR, PARSER_CHAR},
     extensions::{
         extension::ExtensionMethods,
-        parser::{Parser, PatternType},
+        parser::{Parser, PatternType, STEP, THRESHOLD},
     },
     ui::scroll,
     util::error::LogriaError,
@@ -219,7 +219,6 @@ impl ProcessorMethods for ParserHandler {
     fn process_matches(&mut self, window: &mut MainWindow) -> Result<()> {
         // Only process if the parser is set up properly
         if let ParserState::Full = window.config.parser_state {
-            // TODO: Possibly async? Possibly loading indicator for large jobs?
             if self.parser.is_some() {
                 // Start from where we left off to the most recent message
                 let start = window.config.last_index_processed;
@@ -255,7 +254,7 @@ impl ProcessorMethods for ParserHandler {
                     }
 
                     // Update the user interface with the current state
-                    if end - start > 10_000 && (index % 99 == 0 || index == end - 1) {
+                    if end - start > THRESHOLD && (index % STEP == 0 || index == end - 1) {
                         let word = if index == end - 1 {
                             "Processed"
                         } else {

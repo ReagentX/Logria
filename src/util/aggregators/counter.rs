@@ -1,4 +1,7 @@
-use std::{cmp::Reverse, collections::HashMap};
+use std::{
+    cmp::Reverse,
+    collections::{BinaryHeap, HashMap},
+};
 
 use crate::{
     constants::cli::colors::RESET_COLOR,
@@ -98,7 +101,7 @@ impl Counter {
     fn compute_top_messages(&self, n: usize) -> Vec<String> {
         // A min-heap that only ever holds the top n entries.
         let total = self.total_count as f64;
-        let mut heap = std::collections::BinaryHeap::with_capacity(n + 1);
+        let mut heap = BinaryHeap::with_capacity(n + 1);
 
         for (item, &count) in &self.counts {
             // Reverse so that smallest count is at the top—and will get popped when > n

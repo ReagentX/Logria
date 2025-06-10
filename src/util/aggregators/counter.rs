@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::{cmp::Reverse, collections::HashMap};
 
 use format_num::format_num;
 
@@ -95,47 +95,39 @@ impl Counter {
 
     /// Computes the top `n` messages sorted by count (descending) and message text.
     fn compute_top_messages(&self, n: usize) -> Vec<String> {
-        // Use BTreeMap to maintain sorted order by count (descending)
-        let mut sorted_counts: BTreeMap<std::cmp::Reverse<u64>, Vec<&str>> = BTreeMap::new();
+        // A min-heap that only ever holds the top n entries.
+        let total = self.total_count as f64;
+        let mut heap = std::collections::BinaryHeap::with_capacity(n + 1);
 
         for (item, &count) in &self.counts {
-            sorted_counts
-                .entry(std::cmp::Reverse(count))
-                .or_default()
-                .push(item.as_str());
+            // Reverse so that smallest count is at the top—and will get popped when > n
+            heap.push(Reverse((count, item.as_str())));
+            if heap.len() > n {
+                heap.pop();
+            }
         }
 
-        // Sort items within each count group for consistent ordering
-        for items in sorted_counts.values_mut() {
-            items.sort_unstable();
-        }
+        // Drain heap into a Vec, sort descending by count then key
+        let mut top: Vec<(u64, &str)> = heap
+            .into_iter()
+            .map(|Reverse((count, item))| (count, item))
+            .collect();
 
-        let mut result = Vec::with_capacity(n);
-        let total_f64 = self.total_count as f64;
-        let mut added = 0;
+        top.sort_unstable_by(|(ca, a), (cb, b)| cb.cmp(ca).then_with(|| a.cmp(b)));
 
-        for (std::cmp::Reverse(count), items) in sorted_counts {
-            for item in items {
-                if added >= n {
-                    break;
-                }
-
-                let percentage = (count as f64 / total_f64) * 100.0;
-                result.push(format!(
+        // Format output
+        top.into_iter()
+            .map(|(count, item)| {
+                let pct = (count as f64 / total) * 100.0;
+                format!(
                     "    {}{}: {} ({:.0}%)",
                     item.trim(),
                     RESET_COLOR,
                     format_num!(",d", count as f64),
-                    percentage
-                ));
-                added += 1;
-            }
-            if added >= n {
-                break;
-            }
-        }
-
-        result
+                    pct
+                )
+            })
+            .collect()
     }
 }
 
@@ -288,6 +280,7 @@ mod message_tests {
         c.increment(A);
         c.increment(A);
         c.increment(A);
+        c.increment(A);
         c.increment(B);
         c.increment(B);
         c.increment(B);
@@ -295,7 +288,7 @@ mod message_tests {
         c.increment(C);
         c.increment(D);
 
-        let expected = vec![String::from("    a\u{1b}[0m: 3 (33%)")];
+        let expected = vec![String::from("    a\u{1b}[0m: 4 (40%)")];
 
         assert_eq!(c.messages(&1), expected);
     }

@@ -26,6 +26,11 @@ use crate::{
     },
 };
 
+/// The step size for progress indicator updates.
+pub const STEP: usize = 999;
+/// Threshold for when to print progress updates in the aggregator.
+pub const THRESHOLD: usize = 25_000;
+
 #[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Debug)]
 pub enum PatternType {
     Split,
@@ -163,7 +168,7 @@ impl Parser {
                     }
                     AggregationMethod::Mode => {
                         self.aggregator_map
-                            .insert(method_name.to_string(), Box::new(Counter::new(Some(1))));
+                            .insert(method_name.to_string(), Box::new(Counter::mean()));
                     }
                     AggregationMethod::Sum => {
                         self.aggregator_map
@@ -171,7 +176,7 @@ impl Parser {
                     }
                     AggregationMethod::Count => {
                         self.aggregator_map
-                            .insert(method_name.to_string(), Box::new(Counter::new(None)));
+                            .insert(method_name.to_string(), Box::new(Counter::new()));
                     }
                     AggregationMethod::Date(format) => {
                         self.aggregator_map.insert(

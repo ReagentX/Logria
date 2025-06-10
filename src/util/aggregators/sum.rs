@@ -4,11 +4,15 @@ use crate::util::{
 };
 use format_num::format_num;
 
+/// Aggregator that accumulates numeric values from messages into a running total.
 pub struct Sum {
+    /// Running total of numeric messages.
     total: f64,
 }
 
 impl Aggregator for Sum {
+    /// Parses `message`, extracts a number if present, and adds it to the total.
+    /// Saturates at `f64::MAX` on overflow.
     fn update(&mut self, message: &str) -> Result<(), LogriaError> {
         if self.total >= f64::MAX {
             self.total = f64::MAX;
@@ -18,16 +22,24 @@ impl Aggregator for Sum {
         Ok(())
     }
 
+    /// Returns the current total formatted as a string message.
     fn messages(&self, _: &usize) -> Vec<String> {
         vec![format!("    Total: {}", format_num!(",d", self.total))]
+    }
+
+    /// Resets the running total back to zero.
+    fn reset(&mut self) {
+        self.total = 0.;
     }
 }
 
 impl Sum {
+    /// Creates a new `Sum` aggregator with an initial total of zero.
     pub fn new() -> Self {
         Sum { total: 0. }
     }
 
+    /// Attempts to parse a numeric value from `message`, returning `None` if parsing fails.
     fn parse(&self, message: &str) -> Option<f64> {
         extract_number(message)
     }

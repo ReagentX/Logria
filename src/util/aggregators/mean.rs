@@ -4,13 +4,18 @@ use crate::util::{
 };
 use format_num::format_num;
 
+/// Aggregator that computes the running mean of numeric messages.
 pub struct Mean {
+    /// Number of numeric messages processed.
     count: f64,
+    /// Sum of parsed numeric message values.
     total: f64,
 }
 
 /// Float implementation of Mean
 impl Aggregator for Mean {
+    /// Parses `message`, updates the running count, and accumulates the total.
+    /// Saturates `count` and `total` at `f64::MAX` to prevent overflow.
     fn update(&mut self, message: &str) -> Result<(), LogriaError> {
         if self.count >= f64::MAX {
             self.count = f64::MAX;
@@ -34,6 +39,7 @@ impl Aggregator for Mean {
         Ok(())
     }
 
+    /// Returns formatted output: current mean (two decimals), count, and total.
     fn messages(&self, _: &usize) -> Vec<String> {
         vec![
             format!("    Mean: {:.2}", self.mean()),
@@ -41,9 +47,16 @@ impl Aggregator for Mean {
             format!("    Total: {}", format_num!(",d", self.total)),
         ]
     }
+
+    /// Resets both `count` and `total` back to zero.
+    fn reset(&mut self) {
+        self.count = 0.;
+        self.total = 0.;
+    }
 }
 
 impl Mean {
+    /// Creates a new `Mean` aggregator with zero count and total.
     pub fn new() -> Mean {
         Mean {
             count: 0.,
@@ -51,10 +64,13 @@ impl Mean {
         }
     }
 
+    /// Attempts to parse a floating-point number from `message`.
+    /// Returns `None` if parsing fails.
     fn parse(&self, message: &str) -> Option<f64> {
         extract_number(message)
     }
 
+    /// Computes the current average; returns `total` if no values have been aggregated.
     fn mean(&self) -> f64 {
         if self.count == 0. {
             self.total

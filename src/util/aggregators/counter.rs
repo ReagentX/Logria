@@ -1,160 +1,156 @@
-use std::collections::{BTreeSet, HashMap};
+use std::{
+    cmp::Reverse,
+    collections::{BinaryHeap, HashMap},
+};
 
 use crate::{
     constants::cli::colors::RESET_COLOR,
-    util::{aggregators::aggregator::Aggregator, error::LogriaError},
+    util::{
+        aggregators::aggregator::{Aggregator, format_int},
+        error::LogriaError,
+    },
 };
-use format_num::format_num;
 
-/// Counter struct inspired by Python's stdlib Counter class
+/// A counter for tracking occurrences of messages, similar to Python's `Counter`.
 pub struct Counter {
-    state: HashMap<String, u64>,
-    order: HashMap<u64, BTreeSet<String>>,
-    num_to_get: Option<usize>,
+    /// Map of message strings to their occurrence counts.
+    counts: HashMap<String, u64>,
+    /// Total number of messages processed.
+    total_count: u64,
+    /// Optional limit on the number of top messages to display.
+    frozen_n: Option<usize>,
 }
 
 impl Aggregator for Counter {
+    /// Implements [`Aggregator::update`]: increments the count for the given message.
     fn update(&mut self, message: &str) -> Result<(), LogriaError> {
         self.increment(message);
         Ok(())
     }
 
+    /// Implements [`Aggregator::messages`]: returns the top `n` messages.
     fn messages(&self, n: &usize) -> Vec<String> {
-        // Place to store the result
-        let num = &self.num_to_get.unwrap_or(*n);
-        let mut result = Vec::with_capacity(*num);
-        if *num == 0_usize {
-            return result;
-        }
+        self.get_top_messages(*n)
+    }
 
-        // Keep track of how many items we have added
-        let mut total_added = 0;
-
-        // Get the keys sorted from highest to lowest
-        let mut counts: Vec<u64> = self
-            .order
-            .keys()
-            .map(std::borrow::ToOwned::to_owned)
-            .collect();
-        counts.sort_unstable();
-
-        // Get the value under each key
-        for count in counts.iter().rev() {
-            let items = self.order.get(count).unwrap();
-            for item in items {
-                let total = self.total() as f64;
-                result.push(format!(
-                    "    {}{}: {} ({:.0}%)",
-                    item.trim(),
-                    RESET_COLOR,
-                    format_num!(",d", *count as f64),
-                    (*count as f64 / total) * 100_f64
-                ));
-                total_added += 1;
-                if total_added == *num {
-                    return result;
-                }
-            }
-        }
-        result
+    /// Implements [`Aggregator::reset`]: clears all message counts.
+    fn reset(&mut self) {
+        self.counts.clear();
+        self.total_count = 0;
     }
 }
 
 impl Counter {
-    pub fn new(num_to_get: Option<usize>) -> Counter {
+    /// Creates a new `Counter` with no messages counted and no limits.
+    pub fn new() -> Counter {
         Counter {
-            state: HashMap::new(),
-            order: HashMap::new(),
-            num_to_get,
+            counts: HashMap::new(),
+            total_count: 0,
+            frozen_n: None,
         }
     }
 
-    /// Determine the total number of items in the Counter
-    fn total(&self) -> u64 {
-        self.state.values().sum()
+    /// Creates a new `Counter` configured to return only the top message.
+    pub fn mean() -> Counter {
+        Counter {
+            counts: HashMap::new(),
+            total_count: 0,
+            frozen_n: Some(1),
+        }
     }
 
-    /// Remove an item from the internal order
-    fn purge_from_order(&mut self, item: &str, count: &u64) {
-        if let Some(order) = self.order.get_mut(count) {
-            // If there was data there, remove the existing item
-            if !order.is_empty() {
-                order.remove(item);
-                if order.is_empty() {
-                    self.order.remove(count);
-                }
+    /// Increments the count for `item`, adding it if not already present.
+    pub fn increment(&mut self, item: &str) {
+        let count = self.counts.entry(item.to_string()).or_insert(0);
+        *count += 1;
+        self.total_count += 1;
+    }
+
+    /// Decrements the count for `item`, removing it if its count reaches zero.
+    pub fn decrement(&mut self, item: &str) {
+        if let Some(count) = self.counts.get_mut(item) {
+            if *count > 1 {
+                *count -= 1;
+                self.total_count -= 1;
+            } else {
+                self.counts.remove(item);
+                self.total_count -= 1;
             }
         }
     }
 
-    /// Remove an item from the internal state
-    fn purge_from_state(&mut self, item: &str) {
-        self.state.remove(item);
-    }
-
-    /// Update the internal item order `HashMap`
-    fn update_order(&mut self, item: &str, old_count: &u64, new_count: &u64) {
-        self.purge_from_order(item, old_count);
-        if let Some(v) = self.order.get_mut(new_count) {
-            v.insert(item.to_owned());
-        } else {
-            let mut set = BTreeSet::new();
-            set.insert(item.to_owned());
-            self.order.insert(*new_count, set);
+    /// Removes `item` entirely from the counter, subtracting its count from the total.
+    pub fn delete(&mut self, item: &str) {
+        if let Some(count) = self.counts.remove(item) {
+            self.total_count -= count;
         }
     }
 
-    /// Increment an item into the counter, creating if it does not exist
-    fn increment(&mut self, item: &str) {
-        let old_count = self.state.get(item).unwrap_or(&0).to_owned();
-        let new_count = old_count.checked_add(1).unwrap_or(old_count);
-        self.state.insert(item.to_owned(), new_count);
-        self.update_order(item, &old_count, &new_count);
+    /// Retrieves the top `n` messages, respecting `frozen_n` if set.
+    fn get_top_messages(&self, n: usize) -> Vec<String> {
+        let actual_num = self.frozen_n.unwrap_or(n).min(self.counts.len());
+
+        if actual_num == 0 || self.total_count == 0 {
+            return Vec::new();
+        }
+
+        self.compute_top_messages(actual_num)
     }
 
-    /// Reduce an item from the counter, removing if it becomes 0
-    fn decrement(&mut self, item: &str) {
-        let old_count = self.state.get(item).unwrap_or(&0).to_owned();
-        let new_count = old_count.checked_sub(1);
-        match new_count {
-            Some(count) => {
-                if count > 0 {
-                    self.state.insert(item.to_owned(), count);
-                    self.update_order(item, &old_count, &count);
-                } else {
-                    self.delete(item);
-                }
-            }
-            None => {
-                self.delete(item);
+    /// Computes the top `n` messages sorted by count (descending) and message text.
+    fn compute_top_messages(&self, n: usize) -> Vec<String> {
+        // A min-heap that only ever holds the top n entries.
+        let total = self.total_count as f64;
+        let mut heap = BinaryHeap::with_capacity(n + 1);
+
+        for (item, &count) in &self.counts {
+            // Reverse so that smallest count is at the top—and will get popped when > n
+            heap.push(Reverse((count, item.as_str())));
+            if heap.len() > n {
+                heap.pop();
             }
         }
-    }
 
-    /// Remove an item from the counter completely
-    fn delete(&mut self, item: &str) {
-        let count = self.state.get(item).unwrap().to_owned();
-        self.purge_from_order(item, &count);
-        self.purge_from_state(item);
+        // Drain heap into a Vec, sort descending by count then key
+        let mut top: Vec<(u64, &str)> = heap
+            .into_iter()
+            .map(|Reverse((count, item))| (count, item))
+            .collect();
+
+        top.sort_unstable_by(|(ca, a), (cb, b)| cb.cmp(ca).then_with(|| a.cmp(b)));
+
+        // Format output
+        top.into_iter()
+            .map(|(count, item)| {
+                let pct = (count as f64 / total) * 100.0;
+                format!(
+                    "    {}{}: {} ({:.0}%)",
+                    item.trim(),
+                    RESET_COLOR,
+                    format_int(count as usize),
+                    pct
+                )
+            })
+            .collect()
     }
 }
 
 #[cfg(test)]
 mod behavior_tests {
     use crate::util::aggregators::{aggregator::Aggregator, counter::Counter};
-    use std::collections::{BTreeSet, HashMap};
+    use std::collections::HashMap;
 
     static A: &str = "a";
     static B: &str = "b";
 
     #[test]
     fn can_construct_counter() {
-        Counter::new(None);
+        Counter::new();
     }
 
     #[test]
     fn can_count_int() {
-        let mut c: Counter = Counter::new(None);
+        let mut c: Counter = Counter::new();
         c.increment("1");
         c.increment("1");
         c.increment("1");
@@ -165,21 +161,14 @@ mod behavior_tests {
         expected_count.insert("1".to_string(), 3);
         expected_count.insert("2".to_string(), 2);
 
-        let mut expected_order: HashMap<u64, BTreeSet<String>> = HashMap::new();
-        let mut a = BTreeSet::new();
-        let mut b = BTreeSet::new();
-        a.insert("1".to_string());
-        b.insert("2".to_string());
-        expected_order.insert(3, a);
-        expected_order.insert(2, b);
-
-        assert_eq!(c.state, expected_count);
-        assert_eq!(c.order, expected_order);
+        assert_eq!(c.counts.get("1"), Some(&3));
+        assert_eq!(c.counts.get("2"), Some(&2));
+        assert_eq!(c.total_count, 5);
     }
 
     #[test]
     fn can_count() {
-        let mut c: Counter = Counter::new(Some(5));
+        let mut c: Counter = Counter::new();
         c.increment(A);
         c.increment(A);
         c.increment(A);
@@ -190,21 +179,14 @@ mod behavior_tests {
         expected_count.insert(A.to_owned(), 3);
         expected_count.insert(B.to_owned(), 2);
 
-        let mut expected_order: HashMap<u64, BTreeSet<String>> = HashMap::new();
-        let mut a = BTreeSet::new();
-        let mut b = BTreeSet::new();
-        a.insert(A.to_owned());
-        b.insert(B.to_owned());
-        expected_order.insert(3, a);
-        expected_order.insert(2, b);
-
-        assert_eq!(c.state, expected_count);
-        assert_eq!(c.order, expected_order);
+        assert_eq!(c.counts.get(A), Some(&3));
+        assert_eq!(c.counts.get(B), Some(&2));
+        assert_eq!(c.total_count, 5);
     }
 
     #[test]
     fn can_sum() {
-        let mut c: Counter = Counter::new(None);
+        let mut c: Counter = Counter::new();
         c.update(A).unwrap();
         c.update(A).unwrap();
         c.update(A).unwrap();
@@ -215,12 +197,12 @@ mod behavior_tests {
         expected.insert(A.to_owned(), 3);
         expected.insert(B.to_owned(), 2);
 
-        assert_eq!(c.total(), 5);
+        assert_eq!(c.total_count, 5);
     }
 
     #[test]
     fn can_decrement() {
-        let mut c: Counter = Counter::new(Some(5));
+        let mut c: Counter = Counter::new();
         c.increment(A);
         c.increment(A);
         c.increment(A);
@@ -232,19 +214,14 @@ mod behavior_tests {
         expected_count.insert(A.to_owned(), 2);
         expected_count.insert(B.to_owned(), 2);
 
-        let mut expected_order: HashMap<u64, BTreeSet<String>> = HashMap::new();
-        let mut a = BTreeSet::new();
-        a.insert(A.to_owned());
-        a.insert(B.to_owned());
-        expected_order.insert(2, a);
-
-        assert_eq!(c.state, expected_count);
-        assert_eq!(c.order, expected_order);
+        assert_eq!(c.counts.get(A), Some(&2));
+        assert_eq!(c.counts.get(B), Some(&2));
+        assert_eq!(c.total_count, 4);
     }
 
     #[test]
     fn can_decrement_auto_remove() {
-        let mut c: Counter = Counter::new(Some(5));
+        let mut c: Counter = Counter::new();
         c.increment(A);
         c.increment(B);
         c.increment(B);
@@ -253,18 +230,14 @@ mod behavior_tests {
         let mut expected_count = HashMap::new();
         expected_count.insert(B.to_owned(), 2);
 
-        let mut expected_order: HashMap<u64, BTreeSet<String>> = HashMap::new();
-        let mut b = BTreeSet::new();
-        b.insert(B.to_owned());
-        expected_order.insert(2, b);
-
-        assert_eq!(c.state, expected_count);
-        assert_eq!(c.order, expected_order);
+        assert_eq!(c.counts.get(B), Some(&2));
+        assert_eq!(c.counts.get(A), None);
+        assert_eq!(c.total_count, 2);
     }
 
     #[test]
     fn can_delete() {
-        let mut c: Counter = Counter::new(Some(5));
+        let mut c: Counter = Counter::new();
         c.increment(A);
         c.increment(A);
         c.increment(A);
@@ -272,16 +245,9 @@ mod behavior_tests {
         c.increment(B);
         c.delete(A);
 
-        let mut expected_count = HashMap::new();
-        expected_count.insert(B.to_owned(), 2);
-
-        let mut expected_order: HashMap<u64, BTreeSet<String>> = HashMap::new();
-        let mut b = BTreeSet::new();
-        b.insert(B.to_owned());
-        expected_order.insert(2, b);
-
-        assert_eq!(c.state, expected_count);
-        assert_eq!(c.order, expected_order);
+        assert_eq!(c.counts.get(B), Some(&2));
+        assert_eq!(c.counts.get(A), None);
+        assert_eq!(c.total_count, 2);
     }
 }
 
@@ -296,7 +262,7 @@ mod message_tests {
 
     #[test]
     fn can_get_top_0() {
-        let mut c: Counter = Counter::new(None);
+        let mut c: Counter = Counter::new();
         c.increment(A);
         c.increment(A);
         c.increment(A);
@@ -314,7 +280,8 @@ mod message_tests {
 
     #[test]
     fn can_get_top_1() {
-        let mut c: Counter = Counter::new(None);
+        let mut c: Counter = Counter::new();
+        c.increment(A);
         c.increment(A);
         c.increment(A);
         c.increment(A);
@@ -325,14 +292,14 @@ mod message_tests {
         c.increment(C);
         c.increment(D);
 
-        let expected = vec![String::from("    a\u{1b}[0m: 3 (33%)")];
+        let expected = vec![String::from("    a\u{1b}[0m: 4 (40%)")];
 
         assert_eq!(c.messages(&1), expected);
     }
 
     #[test]
     fn can_get_top_2() {
-        let mut c: Counter = Counter::new(None);
+        let mut c: Counter = Counter::new();
         c.increment(A);
         c.increment(A);
         c.increment(A);
@@ -353,7 +320,7 @@ mod message_tests {
 
     #[test]
     fn can_get_top_3() {
-        let mut c: Counter = Counter::new(None);
+        let mut c: Counter = Counter::new();
         c.increment(A);
         c.increment(A);
         c.increment(A);
@@ -375,7 +342,7 @@ mod message_tests {
 
     #[test]
     fn can_get_top_4() {
-        let mut c: Counter = Counter::new(Some(5));
+        let mut c: Counter = Counter::new();
         c.increment(A);
         c.increment(A);
         c.increment(A);

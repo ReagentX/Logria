@@ -10,6 +10,8 @@ impl Aggregator for NoneAg {
     fn messages(&self, _: &usize) -> Vec<String> {
         vec!["    Disabled".to_owned()]
     }
+
+    fn reset(&mut self) {}
 }
 
 impl NoneAg {

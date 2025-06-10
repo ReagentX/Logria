@@ -6,13 +6,15 @@ use regex::bytes::Regex;
 use super::{handler::Handler, processor::ProcessorMethods};
 use crate::{
     communication::{
-        handlers::user_input::UserInputHandler, input::InputType::Normal, reader::MainWindow,
+        handlers::{processor::update_progress, user_input::UserInputHandler},
+        input::InputType::Normal,
+        reader::MainWindow,
     },
     constants::cli::{
         cli_chars::{COMMAND_CHAR, HIGHLIGHT_CHAR, NORMAL_STR, TOGGLE_HIGHLIGHT_CHAR},
         patterns::ANSI_COLOR_PATTERN,
     },
-    ui::scroll::{self, update_current_match_index, ScrollState},
+    ui::scroll::{self, ScrollState, update_current_match_index},
 };
 
 pub struct HighlightHandler {
@@ -73,20 +75,25 @@ impl HighlightHandler {
 impl ProcessorMethods for HighlightHandler {
     /// Process matches, loading the buffer of indexes to matched messages in the main buffer
     fn process_matches(&mut self, window: &mut MainWindow) -> Result<()> {
-        // TODO: Possibly async? Possibly loading indicator for large jobs?
+        let mut wrote_progress = false;
         if self.current_pattern.is_some() {
             // Start from where we left off to the most recent message
-            let buf_range = (window.config.last_index_regexed, window.messages().len());
+            let start = window.config.last_index_regexed;
+            let end = window.messages().len();
 
-            // Iterate "forever", skipping to the start and taking up till end-start
-            // TODO: Something to indicate progress
-            for index in (0..).skip(buf_range.0).take(buf_range.1 - buf_range.0) {
+            for index in start..end {
                 if self.test(&window.messages()[index]) {
                     window.config.matched_rows.push(index);
                 }
 
+                // Update the user interface with the current state
+                wrote_progress = update_progress(window, start, end, index)?;
+
                 // Update the last spot so we know where to start next time
                 window.config.last_index_regexed = index + 1;
+            }
+            if wrote_progress {
+                window.write_status()?;
             }
         }
         Ok(())
@@ -95,12 +102,7 @@ impl ProcessorMethods for HighlightHandler {
     /// Return the app to a normal input state
     fn return_to_normal(&mut self, window: &mut MainWindow) -> Result<()> {
         self.clear_matches(window)?;
-        // Handle reset of scroll state
         window.config.current_matched_row = 0;
-        if matches!(window.config.scroll_state, ScrollState::Centered) {
-            window.config.scroll_state = ScrollState::Free;
-        }
-
         window.config.current_status = None;
         window.update_input_type(Normal)?;
         window.set_cli_cursor(None)?;
@@ -116,7 +118,9 @@ impl ProcessorMethods for HighlightHandler {
         window.config.matched_rows.clear();
         window.config.last_index_regexed = 0;
         window.config.highlight_match = false;
-        window.config.scroll_state = ScrollState::Free;
+        if matches!(window.config.scroll_state, ScrollState::Centered) {
+            window.config.scroll_state = ScrollState::Free;
+        }
         window.reset_command_line()?;
         Ok(())
     }

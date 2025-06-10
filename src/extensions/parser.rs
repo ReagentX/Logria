@@ -26,11 +26,6 @@ use crate::{
     },
 };
 
-/// The step size for progress indicator updates.
-pub const STEP: usize = 999;
-/// Threshold for when to print progress updates in the aggregator.
-pub const THRESHOLD: usize = 25_000;
-
 #[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Debug)]
 pub enum PatternType {
     Split,

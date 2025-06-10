@@ -34,6 +34,47 @@ pub fn extract_number(message: &str) -> Option<f64> {
     result.parse::<f64>().ok()
 }
 
+/// Formats a float as a string with commas separating thousands
+pub fn format_float(n: f64) -> String {
+    let int_part = n.trunc() as i64;
+    let abs_str = int_part.abs().to_string();
+    let mut result = String::new();
+
+    let chars: Vec<char> = abs_str.chars().collect();
+    let len = chars.len();
+
+    for (i, c) in chars.iter().enumerate() {
+        if i != 0 && (len - i) % 3 == 0 {
+            result.push(',');
+        }
+        result.push(*c);
+    }
+
+    if int_part < 0 {
+        format!("-{}", result)
+    } else {
+        result
+    }
+}
+
+/// Formats a float as a string with commas separating thousands
+pub fn format_int(n: usize) -> String {
+    let digits = n.to_string();
+    let mut result = String::new();
+
+    let chars: Vec<char> = digits.chars().collect();
+    let len = chars.len();
+
+    for (i, c) in chars.iter().enumerate() {
+        if i != 0 && (len - i) % 3 == 0 {
+            result.push(',');
+        }
+        result.push(*c);
+    }
+
+    result
+}
+
 pub trait Aggregator {
     /// Insert an item into the aggregator, updating it's internal tracking data
     fn update(&mut self, message: &str) -> Result<(), LogriaError>;
@@ -154,5 +195,61 @@ mod extract_tests {
     fn two_numbers_middle() {
         let result = extract_number("this 1337 is 5543 a test");
         assert!(result.unwrap() - 1337. == 0.);
+    }
+}
+
+#[cfg(test)]
+mod format_float_tests {
+    use crate::util::aggregators::aggregator::format_float;
+
+    #[test]
+    fn test_basic_positive() {
+        assert_eq!(format_float(1234.56), "1,234");
+        assert_eq!(format_float(1000000.0), "1,000,000");
+        assert_eq!(format_float(0.0), "0");
+    }
+
+    #[test]
+    fn test_basic_negative() {
+        assert_eq!(format_float(-1234.56), "-1,234");
+        assert_eq!(format_float(-1000000.99), "-1,000,000");
+    }
+
+    #[test]
+    fn test_truncation() {
+        assert_eq!(format_float(999.999), "999");
+        assert_eq!(format_float(-999.999), "-999");
+    }
+
+    #[test]
+    fn test_small_numbers() {
+        assert_eq!(format_float(9.99), "9");
+        assert_eq!(format_float(-9.99), "-9");
+        assert_eq!(format_float(0.99), "0");
+    }
+
+    #[test]
+    fn test_large_number() {
+        assert_eq!(format_float(1234567890.123), "1,234,567,890");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::util::aggregators::aggregator::format_int;
+
+    #[test]
+    fn test_format_usize_basic() {
+        assert_eq!(format_int(0), "0");
+        assert_eq!(format_int(12), "12");
+        assert_eq!(format_int(123), "123");
+    }
+
+    #[test]
+    fn test_format_usize_commas() {
+        assert_eq!(format_int(1234), "1,234");
+        assert_eq!(format_int(12345), "12,345");
+        assert_eq!(format_int(1234567), "1,234,567");
+        assert_eq!(format_int(1234567890), "1,234,567,890");
     }
 }

@@ -2,43 +2,53 @@ use std::cmp::{max, min};
 
 use crate::util::{aggregators::aggregator::Aggregator, error::LogriaError};
 use format_num::format_num;
-use time::{Date as Dt, PrimitiveDateTime as DateTime, Time as Tm, format_description::parse};
+use time::{
+    Date as Dt, PrimitiveDateTime as DateTime, Time as Tm,
+    format_description::{OwnedFormatItem, parse_owned},
+};
 
+#[derive(Clone, Debug)]
 pub enum DateParserType {
     Date,
     Time,
     DateTime,
 }
 
+/// Aggregator for tracking temporal data: records earliest and latest timestamps,
+/// counts entries, and computes rate over a chosen unit (day, hour, etc.).
 pub struct Date {
-    format: String,
+    /// Parsed format items for the date/time format.
+    format: Option<OwnedFormatItem>,
+    /// The minimum timestamp observed.
     earliest: DateTime,
+    /// The maximum timestamp observed.
     latest: DateTime,
+    /// Number of parsed timestamps.
     count: i64,
-    rate: i64,
-    unit: String,
+    /// Specifies whether to parse as Date, Time, or DateTime.
     parser_type: DateParserType,
 }
 
 impl Aggregator for Date {
+    /// Parses and ingests a new timestamp from `message`, updating internal state.
     fn update(&mut self, message: &str) -> Result<(), LogriaError> {
-        match parse(&self.format) {
-            Ok(parser) => match self.parser_type {
-                DateParserType::Date => match Dt::parse(message, &parser) {
+        match &self.format {
+            Some(format) => match self.parser_type {
+                DateParserType::Date => match Dt::parse(message, format) {
                     Ok(date) => {
                         self.upsert(DateTime::new(date, Tm::MIDNIGHT));
                         Ok(())
                     }
                     Err(why) => Err(LogriaError::CannotParseDate(why.to_string())),
                 },
-                DateParserType::Time => match Tm::parse(message, &parser) {
+                DateParserType::Time => match Tm::parse(message, format) {
                     Ok(time) => {
                         self.upsert(DateTime::new(Dt::MIN, time));
                         Ok(())
                     }
                     Err(why) => Err(LogriaError::CannotParseDate(why.to_string())),
                 },
-                DateParserType::DateTime => match DateTime::parse(message, &parser) {
+                DateParserType::DateTime => match DateTime::parse(message, format) {
                     Ok(date) => {
                         self.upsert(date);
                         Ok(())
@@ -46,17 +56,17 @@ impl Aggregator for Date {
                     Err(why) => Err(LogriaError::CannotParseDate(why.to_string())),
                 },
             },
-            Err(why) => Err(LogriaError::CannotParseDate(why.to_string())),
+            None => Err(LogriaError::CannotParseDate(
+                "No date format string specified!".to_string(),
+            )),
         }
     }
 
+    /// Returns vector of formatted output lines: rate, count, earliest, and latest.
     fn messages(&self, _: &usize) -> Vec<String> {
+        let (rate, unit) = self.determine_rate();
         let mut out_v = vec![
-            format!(
-                "    Rate: {} {}",
-                format_num!(",.0f", self.rate as u32),
-                self.unit
-            ),
+            format!("    Rate: {} {}", format_num!(",.0f", rate as u32), unit),
             format!("    Count: {}", format_num!(",d", self.count as u32)),
         ];
         match self.parser_type {
@@ -75,53 +85,58 @@ impl Aggregator for Date {
         }
         out_v
     }
+
+    /// Resets the aggregator to its initial state, preserving `format` and `parser_type`.
+    fn reset(&mut self) {
+        self.count = 0;
+        self.earliest = match self.parser_type {
+            DateParserType::Date => DateTime::new(Dt::MAX, Tm::MIDNIGHT),
+            DateParserType::Time => DateTime::new(Dt::MIN, Tm::from_hms(23, 59, 59).unwrap()),
+            DateParserType::DateTime => DateTime::new(Dt::MAX, Tm::MIDNIGHT),
+        };
+        self.latest = match self.parser_type {
+            DateParserType::Date => DateTime::new(Dt::MIN, Tm::MIDNIGHT),
+            DateParserType::Time => DateTime::new(Dt::MIN, Tm::MIDNIGHT),
+            DateParserType::DateTime => DateTime::new(Dt::MIN, Tm::MIDNIGHT),
+        };
+    }
 }
 
 impl Date {
-    pub fn new(format: &str, format_type: DateParserType) -> Self {
-        match format_type {
-            // If we only care about the date, set the time to midnight
-            DateParserType::Date => Date {
-                format: format.to_owned(),
-                earliest: DateTime::new(Dt::MAX, Tm::MIDNIGHT),
-                latest: DateTime::new(Dt::MIN, Tm::MIDNIGHT),
-                count: 0,
-                rate: 0,
-                unit: String::new(),
-                parser_type: DateParserType::Date,
-            },
-            // If we only care about the time, use the same date and the latest/earliest possible times
-            DateParserType::Time => Date {
-                format: format.to_owned(),
-                earliest: DateTime::new(Dt::MIN, Tm::from_hms(23, 59, 59).unwrap()),
-                latest: DateTime::new(Dt::MIN, Tm::MIDNIGHT),
-                count: 0,
-                rate: 0,
-                unit: String::new(),
-                parser_type: DateParserType::Time,
-            },
-            DateParserType::DateTime => Date {
-                format: format.to_owned(),
-                earliest: DateTime::new(Dt::MAX, Tm::MIDNIGHT),
-                latest: DateTime::new(Dt::MIN, Tm::MIDNIGHT),
-                count: 0,
-                rate: 0,
-                unit: String::new(),
-                parser_type: DateParserType::DateTime,
-            },
+    /// Constructs a new `Date` aggregator with the given `format` and `parser_type`.
+    pub fn new(format: &str, parser_type: DateParserType) -> Self {
+        let (earliest, latest) = match parser_type {
+            DateParserType::Date => (
+                DateTime::new(Dt::MAX, Tm::MIDNIGHT),
+                DateTime::new(Dt::MIN, Tm::MIDNIGHT),
+            ),
+            DateParserType::Time => (
+                DateTime::new(Dt::MIN, Tm::from_hms(23, 59, 59).unwrap()),
+                DateTime::new(Dt::MIN, Tm::MIDNIGHT),
+            ),
+            DateParserType::DateTime => (
+                DateTime::new(Dt::MAX, Tm::MIDNIGHT),
+                DateTime::new(Dt::MIN, Tm::MIDNIGHT),
+            ),
+        };
+
+        Self {
+            format: parse_owned::<2>(format).ok(),
+            earliest,
+            latest,
+            count: 0,
+            parser_type,
         }
     }
 
+    /// Inserts `new_date` into the aggregator, adjusting earliest/latest and recalculating rate.
     fn upsert(&mut self, new_date: DateTime) {
         self.earliest = min(new_date, self.earliest);
         self.latest = max(new_date, self.latest);
         self.count += 1;
-        let rate_data = self.determine_rate();
-        self.rate = rate_data.0;
-        self.unit = rate_data.1;
     }
 
-    /// Determine the rate at which messages are received
+    /// Calculates the entry rate based on the span between earliest and latest timestamps.
     fn determine_rate(&self) -> (i64, String) {
         let difference = self.latest - self.earliest;
         let mut denominator = difference.whole_weeks();
@@ -157,7 +172,9 @@ mod use_tests {
         aggregator::Aggregator,
         date::{Date, DateParserType},
     };
-    use time::{Date as Dt, PrimitiveDateTime as DateTime, Time as Tm};
+    use time::{
+        Date as Dt, PrimitiveDateTime as DateTime, Time as Tm, format_description::parse_owned,
+    };
 
     #[test]
     fn can_construct() {
@@ -178,21 +195,20 @@ mod use_tests {
         d.update("01/04/2021").unwrap();
 
         let expected = Date {
-            format: "[month]/[day]/[year]".to_string(),
             earliest: DateTime::new(Dt::from_ordinal_date(2021, 1).unwrap(), Tm::MIDNIGHT),
             latest: DateTime::new(Dt::from_ordinal_date(2021, 4).unwrap(), Tm::MIDNIGHT),
             count: 4,
-            rate: 1,
-            unit: String::from("per day"),
             parser_type: DateParserType::Date,
+            format: parse_owned::<2>("[month]/[day]/[year]").ok(),
         };
 
         assert_eq!(d.format, expected.format);
         assert_eq!(d.earliest, expected.earliest);
         assert_eq!(d.latest, expected.latest);
         assert_eq!(d.count, expected.count);
-        assert_eq!(d.unit, expected.unit);
-        assert_eq!(d.rate, expected.rate);
+        let (rate, unit) = d.determine_rate();
+        assert_eq!(unit, "per day");
+        assert_eq!(rate, 1);
     }
 
     #[test]
@@ -204,21 +220,21 @@ mod use_tests {
         d.update("04:01:00").unwrap();
 
         let expected = Date {
-            format: "[hour]:[minute]:[second]".to_string(),
             earliest: DateTime::new(Dt::MIN, Tm::from_hms(1, 1, 0).unwrap()),
             latest: DateTime::new(Dt::MIN, Tm::from_hms(4, 1, 0).unwrap()),
             count: 4,
-            rate: 1,
-            unit: String::from("per hour"),
             parser_type: DateParserType::Time,
+            format: parse_owned::<2>("[hour]:[minute]:[second]").ok(),
         };
 
         assert_eq!(d.format, expected.format);
         assert_eq!(d.earliest, expected.earliest);
         assert_eq!(d.latest, expected.latest);
         assert_eq!(d.count, expected.count);
-        assert_eq!(d.unit, expected.unit);
-        assert_eq!(d.rate, expected.rate);
+
+        let (rate, unit) = d.determine_rate();
+        assert_eq!(unit, "per hour");
+        assert_eq!(rate, 1);
     }
 
     #[test]
@@ -234,7 +250,6 @@ mod use_tests {
         d.update("01/04/2021 04:01:00").unwrap();
 
         let expected = Date {
-            format: "[month]/[day]/[year] [hour]:[minute]:[second]".to_string(),
             earliest: DateTime::new(
                 Dt::from_ordinal_date(2021, 1).unwrap(),
                 Tm::from_hms(1, 1, 0).unwrap(),
@@ -244,17 +259,18 @@ mod use_tests {
                 Tm::from_hms(4, 1, 0).unwrap(),
             ),
             count: 4,
-            rate: 1,
-            unit: String::from("per day"),
             parser_type: DateParserType::DateTime,
+            format: parse_owned::<2>("[month]/[day]/[year] [hour]:[minute]:[second]").ok(),
         };
 
         assert_eq!(d.format, expected.format);
         assert_eq!(d.earliest, expected.earliest);
         assert_eq!(d.latest, expected.latest);
         assert_eq!(d.count, expected.count);
-        assert_eq!(d.unit, expected.unit);
-        assert_eq!(d.rate, expected.rate);
+
+        let (rate, unit) = d.determine_rate();
+        assert_eq!(unit, "per day");
+        assert_eq!(rate, 1);
     }
 }
 
@@ -334,13 +350,11 @@ mod rate_tests {
     #[test]
     fn weekly() {
         let d = Date {
-            format: String::new(),
             earliest: DateTime::new(Dt::from_ordinal_date(2021, 1).unwrap(), Tm::MIDNIGHT),
             latest: DateTime::new(Dt::from_ordinal_date(2021, 15).unwrap(), Tm::MIDNIGHT),
             count: 10,
-            rate: 0,
-            unit: String::new(),
             parser_type: DateParserType::Date,
+            format: None,
         };
         assert_eq!(d.determine_rate(), (5, "per week".to_string()));
     }
@@ -348,13 +362,11 @@ mod rate_tests {
     #[test]
     fn daily() {
         let d = Date {
-            format: String::new(),
             earliest: DateTime::new(Dt::from_ordinal_date(2021, 1).unwrap(), Tm::MIDNIGHT),
             latest: DateTime::new(Dt::from_ordinal_date(2021, 15).unwrap(), Tm::MIDNIGHT),
             count: 15,
-            rate: 0,
-            unit: String::new(),
             parser_type: DateParserType::Date,
+            format: None,
         };
         assert_eq!(d.determine_rate(), (1, "per day".to_string()));
     }
@@ -362,13 +374,11 @@ mod rate_tests {
     #[test]
     fn hourly() {
         let d = Date {
-            format: String::new(),
             earliest: DateTime::new(Dt::from_ordinal_date(2021, 1).unwrap(), Tm::MIDNIGHT),
             latest: DateTime::new(Dt::from_ordinal_date(2021, 3).unwrap(), Tm::MIDNIGHT),
             count: 150,
-            rate: 0,
-            unit: String::new(),
             parser_type: DateParserType::Date,
+            format: None,
         };
         assert_eq!(d.determine_rate(), (3, "per hour".to_string()));
     }
@@ -376,13 +386,11 @@ mod rate_tests {
     #[test]
     fn minutely() {
         let d = Date {
-            format: String::new(),
             earliest: DateTime::new(Dt::from_ordinal_date(2021, 1).unwrap(), Tm::MIDNIGHT),
             latest: DateTime::new(Dt::from_ordinal_date(2021, 2).unwrap(), Tm::MIDNIGHT),
             count: 1500,
-            rate: 0,
-            unit: String::new(),
             parser_type: DateParserType::Date,
+            format: None,
         };
         assert_eq!(d.determine_rate(), (1, "per minute".to_string()));
     }
@@ -390,13 +398,11 @@ mod rate_tests {
     #[test]
     fn secondly() {
         let d = Date {
-            format: String::new(),
             earliest: DateTime::new(Dt::from_ordinal_date(2021, 1).unwrap(), Tm::MIDNIGHT),
             latest: DateTime::new(Dt::from_ordinal_date(2021, 2).unwrap(), Tm::MIDNIGHT),
             count: 100000,
-            rate: 0,
-            unit: String::new(),
             parser_type: DateParserType::Date,
+            format: None,
         };
         assert_eq!(d.determine_rate(), (1, "per second".to_string()));
     }

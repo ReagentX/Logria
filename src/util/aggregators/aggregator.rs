@@ -57,7 +57,7 @@ pub fn format_float(n: f64) -> String {
     }
 }
 
-/// Formats a float as a string with commas separating thousands
+/// Formats an integer as a string with commas separating thousands
 pub fn format_int(n: usize) -> String {
     let digits = n.to_string();
     let mut result = String::new();

@@ -6,7 +6,9 @@ use regex::Regex;
 use crate::{
     communication::{
         handlers::{
-            handler::Handler, multiple_choice::MultipleChoiceHandler, processor::ProcessorMethods,
+            handler::Handler,
+            multiple_choice::MultipleChoiceHandler,
+            processor::{ProcessorMethods, update_progress},
         },
         input::{InputType::Normal, StreamType},
         reader::MainWindow,
@@ -14,7 +16,7 @@ use crate::{
     constants::cli::cli_chars::{AGGREGATION_CHAR, COMMAND_CHAR, PARSER_CHAR},
     extensions::{
         extension::ExtensionMethods,
-        parser::{Parser, PatternType, STEP, THRESHOLD},
+        parser::{Parser, PatternType},
     },
     ui::scroll,
     util::error::LogriaError,
@@ -220,6 +222,7 @@ impl ProcessorMethods for ParserHandler {
         // Only process if the parser is set up properly
         if let ParserState::Full = window.config.parser_state {
             if self.parser.is_some() {
+                let mut wrote_progress = false;
                 // Start from where we left off to the most recent message
                 let start = window.config.last_index_processed;
                 let end = window.previous_messages().len();
@@ -254,23 +257,14 @@ impl ProcessorMethods for ParserHandler {
                     }
 
                     // Update the user interface with the current state
-                    if end - start > THRESHOLD && (index % STEP == 0 || index == end - 1) {
-                        let word = if index == end - 1 {
-                            "Processed"
-                        } else {
-                            "Processing"
-                        };
-                        window.write_to_command_line(&format!(
-                            "{word} messages: {}/{} ({}%)",
-                            (index + 1) - start,
-                            end - start,
-                            ((index + 1 - start) * 100) / (end - start)
-                        ))?;
-                    }
+                    wrote_progress = update_progress(window, start, end, index)?;
+
                     // Update the last spot so we know where to start next time
                     window.config.last_index_processed = index + 1;
                 }
-                window.write_status()?;
+                if wrote_progress {
+                    window.write_status()?;
+                }
             }
         }
         Ok(())

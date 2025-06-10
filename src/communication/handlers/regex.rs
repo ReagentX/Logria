@@ -6,13 +6,14 @@ use regex::bytes::Regex;
 use super::{handler::Handler, processor::ProcessorMethods};
 use crate::{
     communication::{
-        handlers::user_input::UserInputHandler, input::InputType::Normal, reader::MainWindow,
+        handlers::{processor::update_progress, user_input::UserInputHandler},
+        input::InputType::Normal,
+        reader::MainWindow,
     },
     constants::cli::{
         cli_chars::{COMMAND_CHAR, NORMAL_STR, REGEX_CHAR, TOGGLE_HIGHLIGHT_CHAR},
         patterns::ANSI_COLOR_PATTERN,
     },
-    extensions::parser::{STEP, THRESHOLD},
     ui::scroll,
 };
 
@@ -65,6 +66,7 @@ impl RegexHandler {
 impl ProcessorMethods for RegexHandler {
     /// Process matches, loading the buffer of indexes to matched messages in the main buffer
     fn process_matches(&mut self, window: &mut MainWindow) -> Result<()> {
+        let mut wrote_progress = false;
         if self.current_pattern.is_some() {
             // Start from where we left off to the most recent message
             // Start from where we left off to the most recent message
@@ -77,24 +79,14 @@ impl ProcessorMethods for RegexHandler {
                 }
 
                 // Update the user interface with the current state
-                if end - start > THRESHOLD && (index % STEP == 0 || index == end - 1) {
-                    let word = if index == end - 1 {
-                        "Processed"
-                    } else {
-                        "Processing"
-                    };
-                    window.write_to_command_line(&format!(
-                        "{word} messages: {}/{} ({}%)",
-                        (index + 1) - start,
-                        end - start,
-                        ((index + 1 - start) * 100) / (end - start)
-                    ))?;
-                }
+                wrote_progress = update_progress(window, start, end, index)?;
 
                 // Update the last spot so we know where to start next time
                 window.config.last_index_regexed = index + 1;
             }
-            window.write_status()?;
+            if wrote_progress {
+                window.write_status()?;
+            }
         }
         Ok(())
     }

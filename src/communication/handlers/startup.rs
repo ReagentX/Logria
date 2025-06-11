@@ -82,7 +82,13 @@ impl StartupHandler {
                 Ok(streams) => streams,
                 Err(why) => {
                     window.write_to_command_line(&why.to_string())?;
-                    build_streams_from_input(&[command.to_owned()], false).unwrap()
+                    match build_streams_from_input(&[command.to_owned()], false) {
+                        Ok(streams) => streams,
+                        Err(why) => {
+                            window.write_to_command_line(&why.to_string())?;
+                            return Ok(());
+                        }
+                    }
                 }
             };
             window.config.stream_type = StdErr;
@@ -204,7 +210,7 @@ mod startup_tests {
     }
 
     #[test]
-    fn doesnt_crash_alpha() {
+    fn doesnt_crash_invalid_command_startup() {
         // Setup dummy window
         let mut window = MainWindow::_new_dummy();
         window.config.stream_type = StreamType::Auxiliary;
@@ -219,8 +225,8 @@ mod startup_tests {
                 .process_command(&mut window, "zzzfake_file_name")
                 .is_ok()
         );
-        assert!(matches!(window.input_type, InputType::Normal));
-        assert!(matches!(window.config.stream_type, StreamType::StdErr));
+        assert!(matches!(window.input_type, InputType::Startup));
+        assert!(matches!(window.config.stream_type, StreamType::Auxiliary));
         Session::del(&[Session::list_full().len() - 1]).unwrap();
     }
 }

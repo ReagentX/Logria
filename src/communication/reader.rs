@@ -3,6 +3,7 @@ use std::{
     cmp::max,
     io::{Result, Write, stdout},
     panic,
+    sync::atomic::Ordering,
     time::{Duration, Instant},
 };
 
@@ -123,6 +124,8 @@ pub struct LogriaConfig {
     pub current_status: Option<String>,
     /// Function that can generate messages for display
     pub generate_auxiliary_messages: Option<fn() -> Vec<String>>,
+    /// False if the app should continue running, True if it should stop
+    pub should_exit: bool,
 }
 
 pub struct MainWindow {
@@ -244,6 +247,7 @@ impl MainWindow {
                 generate_auxiliary_messages: None,
                 current_status: None,
                 message_speed_tracker: RollingMean::new(5),
+                should_exit: false,
             },
         }
     }
@@ -805,7 +809,7 @@ impl MainWindow {
                 Ok(streams) => self.config.streams = streams,
                 Err(why) => {
                     self.write_to_command_line(&why.to_string())?;
-                    build_streams_from_input(&c, false).unwrap();
+                    self.config.streams = build_streams_from_input(&c, false).unwrap();
                 }
             }
 
@@ -837,9 +841,22 @@ impl MainWindow {
         execute!(stdout(), cursor::Show, Clear(ClearType::All))?;
         disable_raw_mode()?;
         for stream in &self.config.streams {
-            *stream.should_die.lock().unwrap() = true;
+            stream.should_die.store(true, Ordering::Relaxed);
         }
-        std::process::exit(0);
+
+        for mut stream in self.config.streams.drain(..) {
+            if let Some(mut child) = stream.child.take() {
+                // Exit the child process's blocking read
+                let _ = child.kill();
+            }
+            if let Some(handle) = stream.handle.take() {
+                // Wait for the thread to finish
+                let _ = handle.join();
+            }
+        }
+
+        self.config.should_exit = true;
+        Ok(())
     }
 
     /// Update stderr and stdout buffers from every stream's queue
@@ -903,12 +920,17 @@ impl MainWindow {
             let num_new_messages = self.receive_streams();
             self.handle_smart_poll_rate(self.config.loop_time.elapsed(), num_new_messages);
 
+            if self.config.should_exit {
+                break Ok(());
+            }
+
             if poll(Duration::from_millis(self.config.poll_rate))? {
                 match read()? {
                     Event::Key(input) => {
                         // Die on Ctrl-C
                         if input == exit_key {
                             self.quit()?;
+                            return Ok(());
                         }
 
                         // Otherwise, match input to action

@@ -41,7 +41,7 @@ impl Display for LogriaError {
                 write!(fmt, "Invalid format description: {msg}")
             }
             LogriaError::InvalidCommand(msg) => {
-                write!(fmt, "Invalid poll command: {msg}")
+                write!(fmt, "Invalid command: {msg}")
             }
             LogriaError::CannotParseMessage(msg) => {
                 write!(fmt, "Unable to parse message: {msg}")

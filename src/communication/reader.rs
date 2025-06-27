@@ -927,25 +927,35 @@ impl MainWindow {
             if poll(Duration::from_millis(self.config.poll_rate))? {
                 match read()? {
                     Event::Key(input) => {
-                        // Die on Ctrl-C
-                        if input == exit_key {
-                            self.quit()?;
-                            return Ok(());
-                        }
+                        // Only trigger on key presses, per https://github.com/ReagentX/Logria/issues/134
+                        // See also https://github.com/crossterm-rs/crossterm/issues/752
+                        if input.is_press() {
+                            // Die on Ctrl-C
+                            if input == exit_key {
+                                self.quit()?;
+                                return Ok(());
+                            }
 
-                        // Otherwise, match input to action
-                        match self.input_type {
-                            InputType::Normal => normal_handler.receive_input(self, input.code)?,
-                            InputType::Command => {
-                                command_handler.receive_input(self, input.code)?;
-                            }
-                            InputType::Regex => regex_handler.receive_input(self, input.code)?,
-                            InputType::Parser => parser_handler.receive_input(self, input.code)?,
-                            InputType::Startup => {
-                                startup_handler.receive_input(self, input.code)?;
-                            }
-                            InputType::Highlight => {
-                                highlight_handler.receive_input(self, input.code)?;
+                            // Otherwise, match input to action
+                            match self.input_type {
+                                InputType::Normal => {
+                                    normal_handler.receive_input(self, input.code)?
+                                }
+                                InputType::Command => {
+                                    command_handler.receive_input(self, input.code)?;
+                                }
+                                InputType::Regex => {
+                                    regex_handler.receive_input(self, input.code)?
+                                }
+                                InputType::Parser => {
+                                    parser_handler.receive_input(self, input.code)?
+                                }
+                                InputType::Startup => {
+                                    startup_handler.receive_input(self, input.code)?;
+                                }
+                                InputType::Highlight => {
+                                    highlight_handler.receive_input(self, input.code)?;
+                                }
                             }
                         }
                     }

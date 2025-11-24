@@ -1,0 +1,37 @@
+Name:           logria
+Version:        @VERSION@
+Release:        @RELEASE@%{?dist}
+Summary:        A powerful CLI tool that puts log aggregation at your fingertips
+
+License:        GPL-3.0
+URL:            https://github.com/ReagentX/Logria
+Source0:        %{name}-%{version}.tar.gz
+Source1:	%{name}-%{version}-vendor.tar.gz
+
+BuildRequires:  rust >= 1.88.0
+BuildRequires:	cargo
+
+%description
+Logria is best leveraged to watch live logs from multiple processes and filter them for events you want to see. My most common use case is watching logs from multiple Linode/EC2 instances via ssh or multiple CloudWatch streams using aws logs.
+
+
+%prep
+%autosetup
+
+%build
+cargo build --release
+
+%install
+mkdir -p %{buildroot}%{_bindir}
+install -D -m 0755 target/release/%{name} %{buildroot}%{_bindir}
+
+
+%files
+%{_bindir}/%{name}
+%license LICENSE
+%doc README.md
+
+
+%changelog
+* Mon Nov 24 2025 Alexander Lushin <alexander.lushin@mail.ru> - 0.4.2-1
+- Initial build

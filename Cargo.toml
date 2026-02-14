@@ -12,14 +12,14 @@ repository = "https://github.com/ReagentX/Logria"
 version = "0.0.0"
 
 [dependencies]
-clap = { version = "=4.5.40", features = ["cargo"] }
+clap = { version = "=4.5.58", features = ["cargo"] }
 crossterm = "=0.29.0"
 dirs = "=6.0.0"
-is_executable = "=1.0.4"
-regex = "=1.11.1"
-serde = { version = "=1.0.219", features = ["derive"] }
-serde_json = "=1.0.140"
-time = { version = "=0.3.41", features = ["formatting", "parsing"] }
+is_executable = "=1.0.5"
+regex = "=1.12.3"
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = "=1.0.149"
+time = { version = "=0.3.47", features = ["formatting", "parsing"] }
 
 [profile.release]
 # Perform Link Time Optimization

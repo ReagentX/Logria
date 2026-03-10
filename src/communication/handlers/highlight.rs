@@ -1,66 +1,19 @@
 use std::io::Result;
 
 use crossterm::event::KeyCode;
-use regex::bytes::Regex;
 
-use super::{handler::Handler, processor::ProcessorMethods};
+use super::{handler::Handler, processor::ProcessorMethods, search::SearchState};
 use crate::{
-    communication::{
-        handlers::{processor::update_progress, user_input::UserInputHandler},
-        input::InputType::Normal,
-        reader::MainWindow,
-    },
-    constants::cli::{
-        cli_chars::{COMMAND_CHAR, HIGHLIGHT_CHAR, NORMAL_STR, TOGGLE_HIGHLIGHT_CHAR},
-        patterns::ANSI_COLOR_PATTERN,
-    },
+    communication::reader::MainWindow,
+    constants::cli::cli_chars::{COMMAND_CHAR, HIGHLIGHT_CHAR, TOGGLE_HIGHLIGHT_CHAR},
     ui::scroll::{self, ScrollState, update_current_match_index},
 };
 
 pub struct HighlightHandler {
-    color_pattern: Regex,
-    current_pattern: Option<Regex>,
-    input_handler: UserInputHandler,
+    search: SearchState,
 }
 
 impl HighlightHandler {
-    /// Test a message to see if it matches the pattern while also escaping the color code
-    fn test(&self, message: &str) -> bool {
-        let clean_message = self
-            .color_pattern
-            .replace_all(message.as_bytes(), "".as_bytes());
-        match &self.current_pattern {
-            Some(pattern) => pattern.is_match(&clean_message),
-            None => panic!("Match called with no pattern!"),
-        }
-    }
-
-    /// Save the user input pattern to the main window config
-    fn set_pattern(&mut self, window: &mut MainWindow) -> Result<()> {
-        let pattern = match self.input_handler.gather(window) {
-            Ok(pattern) => pattern,
-            Err(why) => panic!("Unable to gather text: {why:?}"),
-        };
-
-        self.current_pattern = match Regex::new(&pattern) {
-            Ok(regex) => {
-                window.config.current_status = Some(format!("Highlight with pattern /{pattern}/"));
-                window.write_status()?;
-
-                // Update the main window's regex
-                window.config.regex_pattern = Some(regex.clone());
-                Some(regex)
-            }
-            Err(e) => {
-                window.write_to_command_line(&format!("Invalid regex: /{pattern}/ ({e})"))?;
-                None
-            }
-        };
-        window.set_cli_cursor(Some(NORMAL_STR))?;
-        window.config.highlight_match = true;
-        Ok(())
-    }
-
     /// Internal implementation of pg_up to skip to the previous match
     fn pg_up(&self, window: &mut MainWindow) {
         update_current_match_index(window, true);
@@ -73,55 +26,21 @@ impl HighlightHandler {
 }
 
 impl ProcessorMethods for HighlightHandler {
-    /// Process matches, loading the buffer of indexes to matched messages in the main buffer
     fn process_matches(&mut self, window: &mut MainWindow) -> Result<()> {
-        let mut wrote_progress = false;
-        if self.current_pattern.is_some() {
-            // Start from where we left off to the most recent message
-            let start = window.config.last_index_regexed;
-            let end = window.messages().len();
-
-            for index in start..end {
-                if self.test(&window.messages()[index]) {
-                    window.config.matched_rows.push(index);
-                }
-
-                // Update the user interface with the current state
-                wrote_progress = update_progress(window, start, end, index)?;
-
-                // Update the last spot so we know where to start next time
-                window.config.last_index_regexed = index + 1;
-            }
-            if wrote_progress {
-                window.write_status()?;
-            }
-        }
-        Ok(())
+        self.search.process_matches(window)
     }
 
-    /// Return the app to a normal input state
     fn return_to_normal(&mut self, window: &mut MainWindow) -> Result<()> {
         self.clear_matches(window)?;
         window.config.current_matched_row = 0;
-        window.config.current_status = None;
-        window.update_input_type(Normal)?;
-        window.set_cli_cursor(None)?;
-        self.input_handler.gather(window)?;
-        window.redraw()?;
-        Ok(())
+        self.search.finish_return_to_normal(window)
     }
 
-    /// Clear the matched messages from the message buffer
     fn clear_matches(&mut self, window: &mut MainWindow) -> Result<()> {
-        self.current_pattern = None;
-        window.config.regex_pattern = None;
-        window.config.matched_rows.clear();
-        window.config.last_index_regexed = 0;
-        window.config.highlight_match = false;
+        self.search.clear_matches(window)?;
         if matches!(window.config.scroll_state, ScrollState::Centered) {
             window.config.scroll_state = ScrollState::Free;
         }
-        window.reset_command_line()?;
         Ok(())
     }
 }
@@ -129,14 +48,12 @@ impl ProcessorMethods for HighlightHandler {
 impl Handler for HighlightHandler {
     fn new() -> HighlightHandler {
         HighlightHandler {
-            color_pattern: Regex::new(ANSI_COLOR_PATTERN).unwrap(),
-            current_pattern: None,
-            input_handler: UserInputHandler::new(),
+            search: SearchState::new(),
         }
     }
 
     fn receive_input(&mut self, window: &mut MainWindow, key: KeyCode) -> Result<()> {
-        match &self.current_pattern {
+        match &self.search.current_pattern {
             Some(_) => match key {
                 // Scroll
                 KeyCode::Down => scroll::down(window),
@@ -170,15 +87,15 @@ impl Handler for HighlightHandler {
             },
             None => match key {
                 KeyCode::Enter => {
-                    self.set_pattern(window)?;
-                    if self.current_pattern.is_some() {
+                    self.search.set_pattern(window, "Highlight")?;
+                    if self.search.current_pattern.is_some() {
                         window.reset_output()?;
                         self.process_matches(window)?;
                     }
                     window.redraw()?;
                 }
                 KeyCode::Esc => self.return_to_normal(window)?,
-                key => self.input_handler.receive_input(window, key)?,
+                key => self.search.input_handler.receive_input(window, key)?,
             },
         }
         window.redraw()?;
@@ -213,7 +130,7 @@ mod tests {
 
         // Set regex pattern
         let pattern = "0";
-        handler.current_pattern = Some(Regex::new(pattern).unwrap());
+        handler.search.current_pattern = Some(Regex::new(pattern).unwrap());
         handler.process_matches(&mut logria).unwrap();
         assert_eq!(
             vec![0, 10, 20, 30, 40, 50, 60, 70, 80, 90],
@@ -231,7 +148,7 @@ mod tests {
 
         // Set regex pattern
         let pattern = "a";
-        handler.current_pattern = Some(Regex::new(pattern).unwrap());
+        handler.search.current_pattern = Some(Regex::new(pattern).unwrap());
         logria.config.regex_pattern = Some(Regex::new(pattern).unwrap());
         handler.process_matches(&mut logria).unwrap();
         assert_eq!(0, logria.config.matched_rows.len());
@@ -247,11 +164,11 @@ mod tests {
 
         // Set regex pattern
         let pattern = "0";
-        handler.current_pattern = Some(Regex::new(pattern).unwrap());
+        handler.search.current_pattern = Some(Regex::new(pattern).unwrap());
         handler.process_matches(&mut logria).unwrap();
         handler.return_to_normal(&mut logria).unwrap();
 
-        assert!(handler.current_pattern.is_none());
+        assert!(handler.search.current_pattern.is_none());
         assert!(logria.config.regex_pattern.is_none());
         assert_eq!(logria.config.matched_rows.len(), 0);
         assert_eq!(logria.config.last_index_regexed, 0);
@@ -267,7 +184,7 @@ mod tests {
 
         // Set regex pattern
         let pattern = "0";
-        handler.current_pattern = Some(Regex::new(pattern).unwrap());
+        handler.search.current_pattern = Some(Regex::new(pattern).unwrap());
         handler.process_matches(&mut logria).unwrap();
         assert_eq!(100, logria.config.last_index_regexed);
     }
@@ -292,7 +209,7 @@ mod tests {
 
         // Set state to highlight mode
         logria.input_type = InputType::Highlight;
-        handler.test("test");
+        handler.search.test("test");
     }
 
     #[test]
@@ -305,7 +222,7 @@ mod tests {
 
         // Set regex pattern
         let pattern = "0";
-        handler.current_pattern = Some(Regex::new(pattern).unwrap());
+        handler.search.current_pattern = Some(Regex::new(pattern).unwrap());
 
         // Normally this is set by `set_pattern()` but that requires user input
         logria.config.regex_pattern = Some(Regex::new(pattern).unwrap());
@@ -334,7 +251,7 @@ mod tests {
 
         // Set regex pattern
         let pattern = "0"; // Matches every 10th message
-        handler.current_pattern = Some(Regex::new(pattern).unwrap());
+        handler.search.current_pattern = Some(Regex::new(pattern).unwrap());
         handler.process_matches(&mut logria).unwrap();
 
         // Simulate keystroke for page up
@@ -375,7 +292,7 @@ mod tests {
 
         // Set regex pattern
         let pattern = "0"; // Matches every 10th message
-        handler.current_pattern = Some(Regex::new(pattern).unwrap());
+        handler.search.current_pattern = Some(Regex::new(pattern).unwrap());
         handler.process_matches(&mut logria).unwrap();
 
         // Simulate keystroke for page up
@@ -405,7 +322,7 @@ mod tests {
 
         // Set regex pattern
         let pattern = "0"; // Matches every 10th message
-        handler.current_pattern = Some(Regex::new(pattern).unwrap());
+        handler.search.current_pattern = Some(Regex::new(pattern).unwrap());
         handler.process_matches(&mut logria).unwrap();
 
         // Simulate keystroke for scroll up to change to free scrolling, then page up
@@ -449,7 +366,7 @@ mod tests {
 
         // Set regex pattern
         let pattern = "0"; // Matches every 10th message
-        handler.current_pattern = Some(Regex::new(pattern).unwrap());
+        handler.search.current_pattern = Some(Regex::new(pattern).unwrap());
         handler.process_matches(&mut logria).unwrap();
 
         // Simulate keystroke for scroll up, then page up
@@ -491,7 +408,7 @@ mod tests {
 
         // Set regex pattern
         let pattern = "0"; // Matches every 10th message
-        handler.current_pattern = Some(Regex::new(pattern).unwrap());
+        handler.search.current_pattern = Some(Regex::new(pattern).unwrap());
         handler.process_matches(&mut logria).unwrap();
 
         // Simulate keystroke for page down
@@ -536,7 +453,7 @@ mod tests {
 
         // Set regex pattern
         let pattern = "0"; // Matches every 10th message
-        handler.current_pattern = Some(Regex::new(pattern).unwrap());
+        handler.search.current_pattern = Some(Regex::new(pattern).unwrap());
         handler.process_matches(&mut logria).unwrap();
 
         // Simulate keystroke for page down
@@ -583,7 +500,7 @@ mod tests {
 
         // Set regex pattern
         let pattern = "0"; // Matches every 10th message
-        handler.current_pattern = Some(Regex::new(pattern).unwrap());
+        handler.search.current_pattern = Some(Regex::new(pattern).unwrap());
         handler.process_matches(&mut logria).unwrap();
 
         // Simulate keystroke for scroll up to change to free scrolling, then page down
@@ -631,7 +548,7 @@ mod tests {
 
         // Set regex pattern
         let pattern = "0"; // Matches every 10th message
-        handler.current_pattern = Some(Regex::new(pattern).unwrap());
+        handler.search.current_pattern = Some(Regex::new(pattern).unwrap());
         handler.process_matches(&mut logria).unwrap();
 
         // Simulate keystroke for scroll up, then page up
@@ -679,7 +596,7 @@ mod tests {
 
         // Set regex pattern
         let pattern = "0"; // Matches every 10th message
-        handler.current_pattern = Some(Regex::new(pattern).unwrap());
+        handler.search.current_pattern = Some(Regex::new(pattern).unwrap());
         handler.process_matches(&mut logria).unwrap();
 
         // Simulate keystroke for scroll up, then page up

@@ -337,7 +337,7 @@ impl MainWindow {
                     // If have fewer messages than lines, just render it all
                     end = message_pointer_length - 1;
                 } else if (self.config.current_end < self.config.last_row as usize)
-                    | (self.config.current_end < message_pointer_length)
+                    || (self.config.current_end < message_pointer_length)
                 {
                     // If the last row we rendered comes before the last row we can render,
                     // use all of the available rows

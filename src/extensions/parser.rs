@@ -1,4 +1,5 @@
 use std::{
+    cell::OnceCell,
     collections::HashMap,
     error::Error,
     fs::{create_dir_all, read_dir, read_to_string, remove_file, write},
@@ -41,6 +42,8 @@ pub struct Parser {
     pub aggregation_methods: HashMap<String, AggregationMethod>,
     #[serde(skip_serializing, skip_deserializing)]
     pub aggregator_map: HashMap<String, Box<dyn Aggregator>>,
+    #[serde(skip_serializing, skip_deserializing)]
+    cached_regex: OnceCell<Regex>,
 }
 
 impl ExtensionMethods for Parser {
@@ -136,6 +139,7 @@ impl Parser {
             order,
             aggregation_methods,
             aggregator_map: HashMap::new(),
+            cached_regex: OnceCell::new(),
         }
     }
 
@@ -200,14 +204,19 @@ impl Parser {
         }
     }
 
-    pub fn get_regex(&self) -> Result<Regex, LogriaError> {
-        if self.pattern_type == PatternType::Regex {
-            match Regex::new(&self.pattern) {
-                Ok(pattern) => Ok(pattern),
-                Err(why) => Err(LogriaError::InvalidRegex(why, self.pattern.clone())),
+    pub fn get_regex(&self) -> Result<&Regex, LogriaError> {
+        if self.pattern_type != PatternType::Regex {
+            return Err(LogriaError::WrongParserType);
+        }
+        if let Some(regex) = self.cached_regex.get() {
+            return Ok(regex);
+        }
+        match Regex::new(&self.pattern) {
+            Ok(pattern) => {
+                let _ = self.cached_regex.set(pattern);
+                Ok(self.cached_regex.get().unwrap())
             }
-        } else {
-            Err(LogriaError::WrongParserType)
+            Err(why) => Err(LogriaError::InvalidRegex(why, self.pattern.clone())),
         }
     }
 
@@ -466,8 +475,8 @@ mod parse_tests {
         parser.save("Common Log Format Test 2").unwrap();
 
         let file_name = format!("{}/{}", patterns(), "Common Log Format Test 2");
-        let read_parser = Parser::load(&file_name);
-        let regex = read_parser.unwrap().get_regex();
+        let read_parser = Parser::load(&file_name).unwrap();
+        let regex = read_parser.get_regex();
         assert!(regex.is_ok());
     }
 
@@ -496,8 +505,8 @@ mod parse_tests {
         parser.save("Hyphen Separated Test 1").unwrap();
 
         let file_name = format!("{}/{}", patterns(), "Hyphen Separated Test 1");
-        let parser = Parser::load(&file_name);
-        let regex = parser.unwrap().get_regex();
+        let parser = Parser::load(&file_name).unwrap();
+        let regex = parser.get_regex();
         assert!(regex.is_err());
     }
 

@@ -95,7 +95,7 @@ impl ParserHandler {
     }
 
     /// Parse a message with regex logic
-    fn regex_handle(&self, message: &str, index: usize, pattern: Regex) -> Option<String> {
+    fn regex_handle(&self, message: &str, index: usize, pattern: &Regex) -> Option<String> {
         // We add 1 here because the zeroth index of a Capture is the original message
         match pattern.captures(message) {
             Some(caps) => caps

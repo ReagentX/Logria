@@ -167,7 +167,7 @@ impl Parser {
                     }
                     AggregationMethod::Mode => {
                         self.aggregator_map
-                            .insert(method_name.to_string(), Box::new(Counter::mean()));
+                            .insert(method_name.to_string(), Box::new(Counter::mode()));
                     }
                     AggregationMethod::Sum => {
                         self.aggregator_map

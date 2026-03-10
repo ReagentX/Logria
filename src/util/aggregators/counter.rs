@@ -51,7 +51,7 @@ impl Counter {
     }
 
     /// Creates a new `Counter` configured to return only the top message.
-    pub fn mean() -> Counter {
+    pub fn mode() -> Counter {
         Counter {
             counts: HashMap::new(),
             total_count: 0,

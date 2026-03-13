@@ -456,17 +456,17 @@ impl MainWindow {
             .unwrap()
             .find_iter(&clean_message)
         {
-            new_msg.extend(clean_message[last_end..capture.start()].to_vec());
+            new_msg.extend_from_slice(&clean_message[last_end..capture.start()]);
             // Add start color string
-            new_msg.extend(colors::HIGHLIGHT_COLOR.as_bytes().to_vec());
-            new_msg.extend(clean_message[capture.start()..capture.end()].to_vec());
+            new_msg.extend_from_slice(colors::HIGHLIGHT_COLOR.as_bytes());
+            new_msg.extend_from_slice(&clean_message[capture.start()..capture.end()]);
             // Add end color string
-            new_msg.extend(colors::RESET_COLOR.as_bytes().to_vec());
+            new_msg.extend_from_slice(colors::RESET_COLOR.as_bytes());
             // Store the ending in case we have multiple matches so we can add the end later
             last_end = capture.end();
         }
         // Add on any extra chars and update the message String
-        new_msg.extend(clean_message[last_end..].to_vec());
+        new_msg.extend_from_slice(&clean_message[last_end..]);
         String::from_utf8(new_msg).unwrap()
     }
 
@@ -478,9 +478,9 @@ impl MainWindow {
 
         // Store some vectors of char bytes so we don't have to cast to a string every loop
         let mut new_msg: Vec<u8> = vec![];
-        new_msg.extend(colors::HIGHLIGHT_COLOR.as_bytes().to_vec());
-        new_msg.extend(clean_message.to_vec());
-        new_msg.extend(colors::RESET_COLOR.as_bytes().to_vec());
+        new_msg.extend_from_slice(colors::HIGHLIGHT_COLOR.as_bytes());
+        new_msg.extend_from_slice(&clean_message);
+        new_msg.extend_from_slice(colors::RESET_COLOR.as_bytes());
         String::from_utf8(new_msg).unwrap()
     }
 

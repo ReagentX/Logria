@@ -187,8 +187,15 @@ mod startup_tests {
         let mut handler = StartupHandler::new();
         handler.initialize();
 
+        // Find the correct index for the "ls -la" session
+        let sessions = Session::list_full();
+        let idx = sessions
+            .iter()
+            .position(|s| s.ends_with("/ls -la"))
+            .expect("ls -la session not found");
+
         // Tests
-        assert!(handler.process_command(&mut window, "0").is_ok());
+        assert!(handler.process_command(&mut window, &idx.to_string()).is_ok());
         assert!(matches!(window.input_type, InputType::Normal));
         assert!(matches!(window.config.stream_type, StreamType::StdErr));
     }
@@ -227,6 +234,5 @@ mod startup_tests {
         );
         assert!(matches!(window.input_type, InputType::Startup));
         assert!(matches!(window.config.stream_type, StreamType::Auxiliary));
-        Session::del(&[Session::list_full().len() - 1]).unwrap();
     }
 }

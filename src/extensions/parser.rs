@@ -421,9 +421,9 @@ mod parse_tests {
             ],
             map2,
         );
-        parser.save("Hyphen Separated Test 2").unwrap();
+        parser.save("Hyphen Separated DateTime Test").unwrap();
 
-        let file_name = format!("{}/{}", patterns(), "Hyphen Separated Test 2");
+        let file_name = format!("{}/{}", patterns(), "Hyphen Separated DateTime Test");
         let read_parser = Parser::load(&file_name).unwrap();
         let expected_parser = Parser::new(
             String::from(" - "),

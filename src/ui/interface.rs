@@ -12,12 +12,12 @@ fn rect(stdout: &mut Stdout, start: u16, height: u16, width: u16) -> Result<()> 
             } else if x == 0 || x == width - 1 {
                 queue!(stdout, cursor::MoveTo(x, y), style::Print("│"))?; // right side
             }
-            queue!(stdout, cursor::MoveTo(width - 1, start), style::Print("┐"))?; // top right
-            queue!(stdout, cursor::MoveTo(0, start), style::Print("┌"))?; // top left
-            queue!(stdout, cursor::MoveTo(width - 1, height), style::Print("┘"))?; // bottom right
-            queue!(stdout, cursor::MoveTo(0, height), style::Print("└"))?; // bottom left
         }
     }
+    queue!(stdout, cursor::MoveTo(width - 1, start), style::Print("┐"))?; // top right
+    queue!(stdout, cursor::MoveTo(0, start), style::Print("┌"))?; // top left
+    queue!(stdout, cursor::MoveTo(width - 1, height), style::Print("┘"))?; // bottom right
+    queue!(stdout, cursor::MoveTo(0, height), style::Print("└"))?; // bottom left
     Ok(())
 }
 

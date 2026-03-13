@@ -1,8 +1,6 @@
 use std::{cmp::max, collections::HashSet, str::from_utf8, sync::LazyLock};
 
-use regex::bytes::Regex;
-
-use crate::constants::cli::patterns::ANSI_COLOR_PATTERN;
+use crate::constants::cli::patterns::ANSI_COLOR_REGEX;
 
 /// Characters disallowed in a filename
 static FILENAME_DISALLOWED_CHARS: LazyLock<HashSet<char>> =
@@ -29,21 +27,17 @@ pub fn sanitize_filename(filename: &str) -> String {
         .collect()
 }
 
-pub struct LengthFinder {
-    color_pattern: Regex,
-}
+pub struct LengthFinder {}
 
 impl LengthFinder {
     pub fn new() -> LengthFinder {
-        LengthFinder {
-            color_pattern: Regex::new(ANSI_COLOR_PATTERN).unwrap(),
-        }
+        LengthFinder {}
     }
 
     /// Returns the length of the string without ANSI color codes, i.e. the
     /// number of visible characters in a string when rendered in a terminal.
     fn get_real_length(&self, content: &str) -> usize {
-        self.color_pattern
+        ANSI_COLOR_REGEX
             .split(content.as_bytes())
             .filter_map(|s| from_utf8(s).ok())
             .map(|s| s.chars().count())

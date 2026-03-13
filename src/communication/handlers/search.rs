@@ -5,7 +5,7 @@ use regex::bytes::Regex;
 use super::{handler::Handler, processor::update_progress, user_input::UserInputHandler};
 use crate::{
     communication::{input::InputType::Normal, reader::MainWindow},
-    constants::cli::{cli_chars::NORMAL_STR, patterns::ANSI_COLOR_PATTERN},
+    constants::cli::{cli_chars::NORMAL_STR, patterns::ANSI_COLOR_REGEX},
 };
 
 /// Shared state and logic for regex filtering and highlight searching.
@@ -14,7 +14,6 @@ use crate::{
 /// to avoid duplicating pattern matching, match processing, and
 /// cleanup logic.
 pub struct SearchState {
-    color_pattern: Regex,
     pub current_pattern: Option<Regex>,
     pub input_handler: UserInputHandler,
 }
@@ -22,7 +21,6 @@ pub struct SearchState {
 impl SearchState {
     pub fn new() -> Self {
         SearchState {
-            color_pattern: Regex::new(ANSI_COLOR_PATTERN).unwrap(),
             current_pattern: None,
             input_handler: UserInputHandler::new(),
         }
@@ -30,10 +28,7 @@ impl SearchState {
 
     /// Test a message to see if it matches the pattern while also escaping the color code
     pub fn test(&self, message: &str) -> bool {
-        // TODO: Possibly without the extra allocation here?
-        let clean_message = self
-            .color_pattern
-            .replace_all(message.as_bytes(), "".as_bytes());
+        let clean_message = ANSI_COLOR_REGEX.replace_all(message.as_bytes(), "".as_bytes());
         match &self.current_pattern {
             Some(pattern) => pattern.is_match(&clean_message),
             None => panic!("Match called with no pattern!"),

@@ -87,7 +87,8 @@ impl UserInputHandler {
     /// Remove char 1 to the left of the cursor
     fn backspace(&mut self, window: &mut MainWindow) -> Result<()> {
         if self.last_write >= 1 && !self.content.is_empty() {
-            self.content.remove(self.position_as_index() - 1);
+            self.content
+                .remove(self.position_as_index().saturating_sub(1));
             self.move_left()?;
             self.write(window)?;
         }

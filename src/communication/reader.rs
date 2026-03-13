@@ -32,6 +32,7 @@ use crate::{
     constants::cli::{
         cli_chars, colors,
         messages::{NO_MESSAGE_IN_BUFFER_NORMAL, NO_MESSAGE_IN_BUFFER_PARSER, PIPE_INPUT_ERROR},
+        patterns::ANSI_COLOR_REGEX,
         poll_rate::DEFAULT,
     },
     ui::{
@@ -78,8 +79,6 @@ pub struct LogriaConfig {
     pub last_index_regexed: usize,
     /// The currently selected row as we scroll between matches; represents an index in the [`LogriaConfig::matched_rows`] vector
     pub current_matched_row: usize,
-    /// A regex to remove ANSI color codes
-    color_replace_regex: Regex,
     /// Determines whether we highlight the matched text to the user
     pub highlight_match: bool,
 
@@ -228,10 +227,6 @@ impl MainWindow {
                 matched_rows: vec![],
                 last_index_regexed: 0,
                 current_matched_row: 0,
-                color_replace_regex: Regex::new(
-                    crate::constants::cli::patterns::ANSI_COLOR_PATTERN,
-                )
-                .unwrap(),
                 parser_index: 0,
                 parser_state: ParserState::Disabled,
                 aggregation_enabled: false,
@@ -447,10 +442,7 @@ impl MainWindow {
     fn highlight_match(&self, message: &str) -> String {
         // Regex out any existing color codes
         // We use a bytes regex because we cannot compile the pattern using normal regex
-        let clean_message = self
-            .config
-            .color_replace_regex
-            .replace_all(message.as_bytes(), "".as_bytes());
+        let clean_message = ANSI_COLOR_REGEX.replace_all(message.as_bytes(), "".as_bytes());
 
         // Store some vectors of char bytes so we don't have to cast to a string every loop
         let mut new_msg: Vec<u8> = vec![];
@@ -464,17 +456,17 @@ impl MainWindow {
             .unwrap()
             .find_iter(&clean_message)
         {
-            new_msg.extend(clean_message[last_end..capture.start()].to_vec());
+            new_msg.extend_from_slice(&clean_message[last_end..capture.start()]);
             // Add start color string
-            new_msg.extend(colors::HIGHLIGHT_COLOR.as_bytes().to_vec());
-            new_msg.extend(clean_message[capture.start()..capture.end()].to_vec());
+            new_msg.extend_from_slice(colors::HIGHLIGHT_COLOR.as_bytes());
+            new_msg.extend_from_slice(&clean_message[capture.start()..capture.end()]);
             // Add end color string
-            new_msg.extend(colors::RESET_COLOR.as_bytes().to_vec());
+            new_msg.extend_from_slice(colors::RESET_COLOR.as_bytes());
             // Store the ending in case we have multiple matches so we can add the end later
             last_end = capture.end();
         }
         // Add on any extra chars and update the message String
-        new_msg.extend(clean_message[last_end..].to_vec());
+        new_msg.extend_from_slice(&clean_message[last_end..]);
         String::from_utf8(new_msg).unwrap()
     }
 
@@ -482,16 +474,13 @@ impl MainWindow {
     fn highlight_row(&self, message: &str) -> String {
         // Regex out any existing color codes
         // We use a bytes regex because we cannot compile the pattern using normal regex
-        let clean_message = self
-            .config
-            .color_replace_regex
-            .replace_all(message.as_bytes(), "".as_bytes());
+        let clean_message = ANSI_COLOR_REGEX.replace_all(message.as_bytes(), "".as_bytes());
 
         // Store some vectors of char bytes so we don't have to cast to a string every loop
         let mut new_msg: Vec<u8> = vec![];
-        new_msg.extend(colors::HIGHLIGHT_COLOR.as_bytes().to_vec());
-        new_msg.extend(clean_message.to_vec());
-        new_msg.extend(colors::RESET_COLOR.as_bytes().to_vec());
+        new_msg.extend_from_slice(colors::HIGHLIGHT_COLOR.as_bytes());
+        new_msg.extend_from_slice(&clean_message);
+        new_msg.extend_from_slice(colors::RESET_COLOR.as_bytes());
         String::from_utf8(new_msg).unwrap()
     }
 
@@ -585,7 +574,9 @@ impl MainWindow {
                 if self.config.highlight_match && self.config.regex_pattern.is_some() {
                     match self.input_type {
                         InputType::Regex => Cow::Owned(self.highlight_match(message)),
-                        InputType::Highlight if self.config.matched_rows.contains(&index) => {
+                        InputType::Highlight
+                            if self.config.matched_rows.binary_search(&index).is_ok() =>
+                        {
                             Cow::Owned(self.highlight_row(message))
                         }
                         _ => Cow::Borrowed(message),

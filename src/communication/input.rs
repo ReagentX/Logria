@@ -21,7 +21,7 @@ use std::{
     process::{Child, Command, Stdio},
     result::Result,
     sync::{
-        Arc, Mutex,
+        Arc,
         atomic::{AtomicBool, Ordering},
         mpsc::{Receiver, channel},
     },
@@ -139,10 +139,6 @@ impl Input for CommandInput {
         let should_die = Arc::new(AtomicBool::new(false));
         let should_die_clone = Arc::clone(&should_die);
 
-        // Handle poll rate for each stream
-        let poll_rate_stdout = Arc::new(Mutex::new(RollingMean::new(5)));
-        let poll_rate_stderr = Arc::new(Mutex::new(RollingMean::new(5)));
-
         // Start reading from the queues
         let handle = thread::Builder::new()
             .name(format!("CommandInput: {name}"))
@@ -153,13 +149,9 @@ impl Input for CommandInput {
 
                 // Create threads to read stdout and stderr independently
                 let die_clone = Arc::clone(&should_die_clone);
-                let poll_stdout = poll_rate_stdout.clone();
                 let stdout_handle = thread::spawn(move || {
+                    let mut poll_rate = RollingMean::new(5);
                     loop {
-                        thread::sleep(time::Duration::from_millis(
-                            poll_stdout.lock().unwrap().mean(),
-                        ));
-
                         // Exit if the process is requested to die
                         if die_clone.load(Ordering::Relaxed) {
                             break;
@@ -170,10 +162,9 @@ impl Input for CommandInput {
                         stdout_reader.read_line(&mut buf_stdout).unwrap();
 
                         if buf_stdout.is_empty() {
-                            poll_stdout
-                                .lock()
-                                .unwrap()
-                                .update(ms_per_message(timestamp.elapsed(), 0));
+                            poll_rate.update(ms_per_message(timestamp.elapsed(), 0));
+                            // Back off when no data is available (EOF/empty read)
+                            thread::sleep(time::Duration::from_millis(poll_rate.mean()));
                             continue;
                         }
 
@@ -181,21 +172,14 @@ impl Input for CommandInput {
                             break;
                         }
 
-                        poll_stdout
-                            .lock()
-                            .unwrap()
-                            .update(ms_per_message(timestamp.elapsed(), 1));
+                        poll_rate.update(ms_per_message(timestamp.elapsed(), 1));
                     }
                 });
 
                 let die_clone = Arc::clone(&should_die_clone);
-                let poll_stderr = poll_rate_stderr.clone();
                 let stderr_handle = thread::spawn(move || {
+                    let mut poll_rate = RollingMean::new(5);
                     loop {
-                        thread::sleep(time::Duration::from_millis(
-                            poll_stderr.lock().unwrap().mean(),
-                        ));
-
                         // Exit if the process is requested to die
                         if die_clone.load(Ordering::Relaxed) {
                             break;
@@ -206,10 +190,9 @@ impl Input for CommandInput {
                         stderr_reader.read_line(&mut buf_stderr).unwrap();
 
                         if buf_stderr.is_empty() {
-                            poll_stderr
-                                .lock()
-                                .unwrap()
-                                .update(ms_per_message(timestamp.elapsed(), 0));
+                            poll_rate.update(ms_per_message(timestamp.elapsed(), 0));
+                            // Back off when no data is available (EOF/empty read)
+                            thread::sleep(time::Duration::from_millis(poll_rate.mean()));
                             continue;
                         }
 
@@ -217,10 +200,7 @@ impl Input for CommandInput {
                             break;
                         }
 
-                        poll_stderr
-                            .lock()
-                            .unwrap()
-                            .update(ms_per_message(timestamp.elapsed(), 1));
+                        poll_rate.update(ms_per_message(timestamp.elapsed(), 1));
                     }
                 });
 

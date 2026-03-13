@@ -154,6 +154,8 @@ mod tests {
 
     #[test]
     fn test_list_full() {
+        let session = Session::new(&[String::from("ls -la")], SessionType::Command);
+        session.save("ls -la").unwrap();
         let list = Session::list_full();
         assert!(
             list.iter()
@@ -163,6 +165,8 @@ mod tests {
 
     #[test]
     fn test_list_clean() {
+        let session = Session::new(&[String::from("ls -la")], SessionType::Command);
+        session.save("ls -la").unwrap();
         let list = Session::list_clean();
         assert!(list.iter().any(|i| i == "ls -la"));
     }
@@ -195,6 +199,11 @@ mod tests {
     fn delete_session() {
         let session = Session::new(&[String::from("ls -la")], SessionType::Command);
         session.save("zzzfake_file_name").unwrap();
-        Session::del(&[Session::list_full().len() - 1]).unwrap();
+        let files = Session::list_full();
+        let idx = files
+            .iter()
+            .position(|s| s.ends_with("/zzzfake_file_name"))
+            .expect("zzzfake_file_name not found");
+        Session::del(&[idx]).unwrap();
     }
 }

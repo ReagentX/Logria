@@ -146,18 +146,10 @@ impl ParserHandler {
 
                 match message_parts {
                     Ok(message_parts) => {
-                        // If we got this far, allocate the return value
-                        let mut aggregated_data = vec![];
                         for (idx, part) in message_parts.iter().enumerate() {
                             if let Some(item) = parser.order.get(idx).cloned() {
                                 if let Some(aggregator) = parser.aggregator_map.get_mut(&item) {
                                     aggregator.update(part)?;
-                                    if render {
-                                        // Name of aggregated part
-                                        aggregated_data.push(item);
-                                        // Messages generated for that aggregator
-                                        aggregated_data.extend(aggregator.messages(num_to_get));
-                                    }
                                 } else {
                                     return Err(LogriaError::InvalidParserState(format!(
                                         "aggregator missing for {item}!"
@@ -170,7 +162,19 @@ impl ParserHandler {
                                 ));
                             }
                         }
-                        Ok(aggregated_data)
+                        // Only generate display messages on the final iteration
+                        if render {
+                            let mut aggregated_data = vec![];
+                            for item in &parser.order {
+                                if let Some(aggregator) = parser.aggregator_map.get(item) {
+                                    aggregated_data.push(item.clone());
+                                    aggregated_data.extend(aggregator.messages(num_to_get));
+                                }
+                            }
+                            Ok(aggregated_data)
+                        } else {
+                            Ok(vec![])
+                        }
                     }
                     Err(why) => Err(why),
                 }

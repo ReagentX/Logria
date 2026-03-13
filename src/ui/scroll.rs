@@ -27,11 +27,21 @@ pub fn down(window: &mut MainWindow) {
 }
 
 pub fn pg_up(window: &mut MainWindow) {
-    (0..window.config.last_row).for_each(|_| up(window));
+    window.config.scroll_state = ScrollState::Free;
+    window.config.current_end = window
+        .config
+        .current_end
+        .saturating_sub(window.config.last_row as usize)
+        .max(1);
 }
 
 pub fn pg_down(window: &mut MainWindow) {
-    (0..window.config.last_row).for_each(|_| down(window));
+    window.config.scroll_state = ScrollState::Free;
+    let num_messages = window.number_of_messages();
+    window.config.current_end = min(
+        num_messages,
+        window.config.current_end + window.config.last_row as usize,
+    );
 }
 
 pub fn bottom(window: &mut MainWindow) {

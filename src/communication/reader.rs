@@ -445,7 +445,8 @@ impl MainWindow {
         let clean_message = ANSI_COLOR_REGEX.replace_all(message.as_bytes(), "".as_bytes());
 
         // Store some vectors of char bytes so we don't have to cast to a string every loop
-        let mut new_msg: Vec<u8> = vec![];
+        // Pre-allocate with room for the message plus color escape codes
+        let mut new_msg: Vec<u8> = Vec::with_capacity(clean_message.len() + 64);
         let mut last_end = 0;
 
         // Replace matched patterns with highlighted matched patterns
@@ -477,7 +478,10 @@ impl MainWindow {
         let clean_message = ANSI_COLOR_REGEX.replace_all(message.as_bytes(), "".as_bytes());
 
         // Store some vectors of char bytes so we don't have to cast to a string every loop
-        let mut new_msg: Vec<u8> = vec![];
+        // Pre-allocate with room for the message plus color escape codes
+        let mut new_msg: Vec<u8> = Vec::with_capacity(
+            clean_message.len() + colors::HIGHLIGHT_COLOR.len() + colors::RESET_COLOR.len(),
+        );
         new_msg.extend_from_slice(colors::HIGHLIGHT_COLOR.as_bytes());
         new_msg.extend_from_slice(&clean_message);
         new_msg.extend_from_slice(colors::RESET_COLOR.as_bytes());
@@ -548,6 +552,9 @@ impl MainWindow {
         // Cast to usize so we can reference this instead of casting every time we need
         let width = self.config.width as usize;
 
+        // Reusable padding buffer: grows as needed, sliced to exact size each iteration
+        let mut padding_buf = String::new();
+
         // Render each message from bottom to top
         for index in (start..end).rev() {
             // Get the next message from the message pointer
@@ -568,7 +575,12 @@ impl MainWindow {
 
             // See method docs for note on why we need this padding
             let message_padding_size = (width * message_rows) - message_length;
-            let padding = " ".repeat(message_padding_size);
+            if padding_buf.len() < message_padding_size {
+                padding_buf.extend(std::iter::repeat_n(
+                    ' ',
+                    message_padding_size - padding_buf.len(),
+                ));
+            }
 
             let msg: Cow<str> =
                 if self.config.highlight_match && self.config.regex_pattern.is_some() {
@@ -589,7 +601,7 @@ impl MainWindow {
                 stdout,
                 cursor::MoveTo(0, current_row),
                 style::Print(&msg),
-                style::Print(padding)
+                style::Print(&padding_buf[..message_padding_size])
             )?;
         }
 

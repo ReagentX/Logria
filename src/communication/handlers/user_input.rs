@@ -84,6 +84,12 @@ impl UserInputHandler {
         (self.last_write - 1) as usize
     }
 
+    /// Index of the char at the cursor, `None` when the cursor sits past the end of the content
+    fn index_at_cursor(&self) -> Option<usize> {
+        let index = self.position_as_index();
+        (index < self.content.len()).then_some(index)
+    }
+
     /// Remove char 1 to the left of the cursor
     fn backspace(&mut self, window: &mut MainWindow) -> Result<()> {
         if self.last_write >= 1 && !self.content.is_empty() {
@@ -97,8 +103,8 @@ impl UserInputHandler {
 
     /// Remove char 1 to the right of the cursor
     fn delete(&mut self, window: &mut MainWindow) -> Result<()> {
-        if self.last_write < self.x() && !self.content.is_empty() {
-            self.content.remove(self.position_as_index());
+        if let Some(index) = self.index_at_cursor() {
+            self.content.remove(index);
             self.write(window)?;
         }
         Ok(())
@@ -121,15 +127,17 @@ impl UserInputHandler {
 
     /// Get the next item in the history tape if it exists
     fn tape_forward(&mut self, window: &mut MainWindow) -> Result<()> {
-        let content = self.history.scroll_forward();
-        self.tape_render(window, &content)?;
+        if let Some(content) = self.history.scroll_forward() {
+            self.tape_render(window, &content)?;
+        }
         Ok(())
     }
 
     /// Get the previous item in the history tape if it exists
     fn tape_back(&mut self, window: &mut MainWindow) -> Result<()> {
-        let content = self.history.scroll_back();
-        self.tape_render(window, &content)?;
+        if let Some(content) = self.history.scroll_back() {
+            self.tape_render(window, &content)?;
+        }
         Ok(())
     }
 
@@ -204,5 +212,24 @@ impl Handler for UserInputHandler {
         }
         stdout().flush()?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::communication::handlers::{handler::Handler, user_input::UserInputHandler};
+
+    #[test]
+    fn cursor_index_bounded_by_content() {
+        let mut handler = UserInputHandler::new();
+
+        // "abc" with the cursor past the end: the state that crashed forward-delete
+        handler.content = vec!['a', 'b', 'c'];
+        handler.last_write = 4;
+        assert_eq!(handler.index_at_cursor(), None);
+
+        // Cursor between 'a' and 'b': forward-delete removes 'b'
+        handler.last_write = 2;
+        assert_eq!(handler.index_at_cursor(), Some(1));
     }
 }

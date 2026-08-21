@@ -21,7 +21,7 @@ pub fn update_progress(
     index: usize,
 ) -> Result<bool> {
     // Update the user interface with the current state
-    if end - start > THRESHOLD && (index % STEP == 0 || index == end - 1) {
+    if end - start > THRESHOLD && (index.is_multiple_of(STEP) || index == end - 1) {
         let word = if index == end - 1 {
             "Processed"
         } else {

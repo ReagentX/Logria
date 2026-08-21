@@ -224,51 +224,51 @@ impl ProcessorMethods for ParserHandler {
     /// Parse messages, loading the buffer of parsed messages in the main window
     fn process_matches(&mut self, window: &mut MainWindow) -> Result<()> {
         // Only process if the parser is set up properly
-        if let ParserState::Full = window.config.parser_state {
-            if self.parser.is_some() {
-                let mut wrote_progress = false;
-                // Start from where we left off to the most recent message
-                let start = window.config.last_index_processed;
-                let end = window.previous_messages().len();
+        if let ParserState::Full = window.config.parser_state
+            && self.parser.is_some()
+        {
+            let mut wrote_progress = false;
+            // Start from where we left off to the most recent message
+            let start = window.config.last_index_processed;
+            let end = window.previous_messages().len();
 
-                let last = end.checked_sub(1).unwrap_or(end);
-                for index in start..end {
-                    if window.config.aggregation_enabled {
-                        match self.aggregate_handle(
-                            &window.previous_messages()[index],
-                            &window.config.num_to_aggregate,
-                            index == last,
-                        ) {
-                            Ok(aggregated_messages) => {
-                                if !aggregated_messages.is_empty() {
-                                    window.config.auxiliary_messages.clear();
-                                    window.config.auxiliary_messages.extend(aggregated_messages);
-                                }
-                            }
-                            Err(why) => {
-                                // If the message failed parsing, it might just be a different format, so we ignore it
-                                // If the parser is in an invalid state, alert the user
-                                if let LogriaError::InvalidParserState(error) = why {
-                                    window.write_to_command_line(&error)?;
-                                }
+            let last = end.checked_sub(1).unwrap_or(end);
+            for index in start..end {
+                if window.config.aggregation_enabled {
+                    match self.aggregate_handle(
+                        &window.previous_messages()[index],
+                        &window.config.num_to_aggregate,
+                        index == last,
+                    ) {
+                        Ok(aggregated_messages) => {
+                            if !aggregated_messages.is_empty() {
+                                window.config.auxiliary_messages.clear();
+                                window.config.auxiliary_messages.extend(aggregated_messages);
                             }
                         }
-                    } else if let Ok(Some(message)) = self.parse(
-                        window.config.parser_index,
-                        &window.previous_messages()[index],
-                    ) {
-                        window.config.auxiliary_messages.push(message);
+                        Err(why) => {
+                            // If the message failed parsing, it might just be a different format, so we ignore it
+                            // If the parser is in an invalid state, alert the user
+                            if let LogriaError::InvalidParserState(error) = why {
+                                window.write_to_command_line(&error)?;
+                            }
+                        }
                     }
-
-                    // Update the user interface with the current state
-                    wrote_progress = update_progress(window, start, end, index)?;
-
-                    // Update the last spot so we know where to start next time
-                    window.config.last_index_processed = index + 1;
+                } else if let Ok(Some(message)) = self.parse(
+                    window.config.parser_index,
+                    &window.previous_messages()[index],
+                ) {
+                    window.config.auxiliary_messages.push(message);
                 }
-                if wrote_progress {
-                    window.write_status()?;
-                }
+
+                // Update the user interface with the current state
+                wrote_progress = update_progress(window, start, end, index)?;
+
+                // Update the last spot so we know where to start next time
+                window.config.last_index_processed = index + 1;
+            }
+            if wrote_progress {
+                window.write_status()?;
             }
         }
         Ok(())

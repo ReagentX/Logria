@@ -246,9 +246,9 @@ pub fn build_streams_from_input(
         match determine_stream_type(command) {
             SessionType::Command => {
                 // None indicates default poll rate
-                match CommandInput::build(command.to_owned(), command.to_owned()) {
-                    Ok(stream) => streams.push(stream),
-                    Err(why) => return Err(why),
+                {
+                    let stream = CommandInput::build(command.to_owned(), command.to_owned())?;
+                    streams.push(stream)
                 }
                 stream_types.insert(SessionType::Command);
             }
@@ -256,9 +256,9 @@ pub fn build_streams_from_input(
                 // None indicates default poll rate
                 let path = Path::new(command);
                 let name = path.file_name().unwrap().to_str().unwrap().to_string();
-                match FileInput::build(name, command.to_owned()) {
-                    Ok(stream) => streams.push(stream),
-                    Err(why) => return Err(why),
+                {
+                    let stream = FileInput::build(name, command.to_owned())?;
+                    streams.push(stream)
                 }
                 stream_types.insert(SessionType::File);
             }
@@ -292,9 +292,9 @@ pub fn build_streams_from_session(session: Session) -> Result<Vec<InputStream>, 
         SessionType::Command => {
             let mut streams: Vec<InputStream> = vec![];
             for command in session.commands {
-                match CommandInput::build(command.clone(), command.clone()) {
-                    Ok(stream) => streams.push(stream),
-                    Err(why) => return Err(why),
+                {
+                    let stream = CommandInput::build(command.clone(), command.clone())?;
+                    streams.push(stream)
                 }
             }
             Ok(streams)
@@ -302,9 +302,9 @@ pub fn build_streams_from_session(session: Session) -> Result<Vec<InputStream>, 
         SessionType::File => {
             let mut streams: Vec<InputStream> = vec![];
             for command in session.commands {
-                match FileInput::build(command.clone(), command.clone()) {
-                    Ok(stream) => streams.push(stream),
-                    Err(why) => return Err(why),
+                {
+                    let stream = FileInput::build(command.clone(), command.clone())?;
+                    streams.push(stream)
                 }
             }
             Ok(streams)

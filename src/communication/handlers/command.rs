@@ -85,7 +85,7 @@ impl CommandHandler {
                     (_, _) => {
                         return Err(LogriaError::InvalidCommand(format!(
                             "range invalid: {:?}",
-                            &range
+                            range
                         )));
                     }
                 }

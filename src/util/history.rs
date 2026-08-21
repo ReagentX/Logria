@@ -43,7 +43,7 @@ impl Tape {
         };
         match tape.read_from_disk() {
             Ok(()) => {}
-            Err(why) => panic!("{:?}", &why.to_string()),
+            Err(why) => panic!("{:?}", why.to_string()),
         }
         tape
     }
@@ -67,7 +67,7 @@ impl Tape {
                     }
                 }
 
-                self.current_index = self.history_tape.len().checked_sub(1).unwrap_or_default();
+                self.current_index = self.history_tape.len().saturating_sub(1);
                 Ok(())
             }
         }
@@ -84,7 +84,7 @@ impl Tape {
 
         // Reset tape to end
         self.should_scroll_back = false;
-        self.current_index = self.history_tape.len().checked_sub(1).unwrap_or_default();
+        self.current_index = self.history_tape.len().saturating_sub(1);
 
         // Write to file
         match OpenOptions::new()
@@ -111,10 +111,7 @@ impl Tape {
     fn scroll_back_n(&mut self, num_to_scroll: usize) {
         if !self.history_tape.is_empty() {
             if self.should_scroll_back {
-                self.current_index = self
-                    .current_index
-                    .checked_sub(num_to_scroll)
-                    .unwrap_or_default();
+                self.current_index = self.current_index.saturating_sub(num_to_scroll);
             } else {
                 self.should_scroll_back = true;
             }
@@ -123,32 +120,32 @@ impl Tape {
 
     /// Scroll the tape forward if possible
     fn scroll_forward_n(&mut self, num_to_scroll: usize) {
-        if self.current_index != self.history_tape.len().checked_sub(1).unwrap_or_default()
+        if self.current_index != self.history_tape.len().saturating_sub(1)
             && !self.history_tape.is_empty()
         {
             self.current_index = min(
-                self.history_tape.len().checked_sub(1).unwrap_or_default(),
+                self.history_tape.len().saturating_sub(1),
                 self.current_index
                     .checked_add(num_to_scroll)
-                    .unwrap_or_else(|| self.history_tape.len().checked_sub(1).unwrap_or_default()),
+                    .unwrap_or_else(|| self.history_tape.len().saturating_sub(1)),
             );
         }
     }
 
     /// Common case where we scroll back a single item
-    pub fn scroll_back(&mut self) -> String {
+    pub fn scroll_back(&mut self) -> Option<String> {
         self.scroll_back_n(1);
         self.get_current_item()
     }
 
     /// Common case where we scroll up a single item
-    pub fn scroll_forward(&mut self) -> String {
+    pub fn scroll_forward(&mut self) -> Option<String> {
         self.scroll_forward_n(1);
         self.get_current_item()
     }
 
-    pub fn get_current_item(&self) -> String {
-        self.history_tape[self.current_index].clone()
+    pub fn get_current_item(&self) -> Option<String> {
+        self.history_tape.get(self.current_index).cloned()
     }
 }
 
@@ -165,7 +162,7 @@ mod tests {
     fn can_add_item() {
         let mut tape = Tape::new();
         tape.add_item("test").unwrap();
-        assert_eq!(String::from("test"), tape.get_current_item());
+        assert_eq!(Some(String::from("test")), tape.get_current_item());
     }
 
     #[test]
@@ -174,7 +171,7 @@ mod tests {
 
         // Create some dummy data
         (0..10).for_each(|_| tape.history_tape.push(String::new()));
-        tape.current_index = tape.history_tape.len().checked_sub(1).unwrap_or_default();
+        tape.current_index = tape.history_tape.len().saturating_sub(1);
         tape.should_scroll_back = true;
 
         tape.scroll_back_n(5);
@@ -187,7 +184,7 @@ mod tests {
 
         // Create some dummy data
         (0..5).for_each(|_| tape.history_tape.push(String::new()));
-        tape.current_index = tape.history_tape.len().checked_sub(1).unwrap_or_default();
+        tape.current_index = tape.history_tape.len().saturating_sub(1);
         tape.should_scroll_back = true;
 
         tape.scroll_back_n(tape.history_tape.len() * 2);
@@ -200,10 +197,10 @@ mod tests {
 
         // Create some dummy data
         (0..5).for_each(|_| tape.history_tape.push(String::new()));
-        tape.current_index = tape.history_tape.len().checked_sub(1).unwrap_or_default();
+        tape.current_index = tape.history_tape.len().saturating_sub(1);
         tape.should_scroll_back = true;
 
-        tape.scroll_back();
+        let _ = tape.scroll_back();
         assert_eq!(tape.current_index, tape.history_tape.len() - 1 - 1);
     }
 
@@ -213,7 +210,7 @@ mod tests {
 
         // Create some dummy data
         (0..25).for_each(|_| tape.history_tape.push(String::new()));
-        tape.current_index = tape.history_tape.len().checked_sub(1).unwrap_or_default();
+        tape.current_index = tape.history_tape.len().saturating_sub(1);
         tape.should_scroll_back = true;
 
         tape.scroll_back_n(10);
@@ -227,7 +224,7 @@ mod tests {
 
         // Create some dummy data
         (0..5).for_each(|_| tape.history_tape.push(String::new()));
-        tape.current_index = tape.history_tape.len().checked_sub(1).unwrap_or_default();
+        tape.current_index = tape.history_tape.len().saturating_sub(1);
         tape.should_scroll_back = true;
 
         tape.scroll_back_n(10);
@@ -241,11 +238,23 @@ mod tests {
 
         // Create some dummy data
         (0..5).for_each(|_| tape.history_tape.push(String::new()));
-        tape.current_index = tape.history_tape.len().checked_sub(1).unwrap_or_default();
+        tape.current_index = tape.history_tape.len().saturating_sub(1);
         tape.should_scroll_back = true;
 
-        tape.scroll_back();
-        tape.scroll_forward();
+        let _ = tape.scroll_back();
+        let _ = tape.scroll_forward();
         assert_eq!(tape.current_index, tape.history_tape.len() - 1);
+    }
+
+    #[test]
+    fn scroll_empty_tape_is_noop() {
+        // Fresh installs create an empty tape file; Up/Down must not panic
+        let mut tape = Tape {
+            history_tape: vec![],
+            current_index: 0,
+            should_scroll_back: false,
+        };
+        assert_eq!(tape.scroll_back(), None);
+        assert_eq!(tape.scroll_forward(), None);
     }
 }

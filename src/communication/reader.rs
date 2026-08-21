@@ -802,6 +802,11 @@ impl MainWindow {
     pub fn start(&mut self, commands: Option<Vec<String>>) -> Result<()> {
         self.validate_environment();
 
+        let previous_hook = panic::take_hook();
+        panic::set_hook(Box::new(move |info| {
+            MainWindow::restore_terminal();
+            previous_hook(info);
+        }));
         // Build the app
         if let Some(c) = commands {
             // Build streams from the command used to launch Logria
@@ -838,10 +843,15 @@ impl MainWindow {
         Ok(())
     }
 
+    /// Restore terminal state
+    pub fn restore_terminal() {
+        let _ = execute!(stdout(), cursor::Show, Clear(ClearType::All));
+        let _ = disable_raw_mode();
+    }
+
     /// Immediately exit the program
     pub fn quit(&mut self) -> Result<()> {
-        execute!(stdout(), cursor::Show, Clear(ClearType::All))?;
-        disable_raw_mode()?;
+        Self::restore_terminal();
         for stream in &self.config.streams {
             stream.should_die.store(true, Ordering::Relaxed);
         }

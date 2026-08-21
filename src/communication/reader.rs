@@ -341,10 +341,9 @@ impl MainWindow {
                     // If we have over-scrolled, go back
                     if self.config.current_end > message_pointer_length {
                         self.config.current_end = message_pointer_length;
-                    } else {
-                        // Since current_end can be zero, we have to use the number of messages
-                        end = message_pointer_length;
                     }
+                    // Since current_end can be zero, we have to use the number of messages
+                    end = message_pointer_length;
                 }
             }
             ScrollState::Centered => {

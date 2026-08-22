@@ -272,7 +272,7 @@ impl MainWindow {
 
     /// Determine the start and end indexes we need to render in the window
     pub fn determine_render_position(&mut self) -> (usize, usize) {
-        let mut end: usize = 0;
+        let end: usize;
         let mut rows: usize = 0;
         let message_pointer_length = self.number_of_messages();
 

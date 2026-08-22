@@ -13,7 +13,7 @@ pub mod patterns {
 
     use regex::bytes::Regex;
 
-    pub const ANSI_COLOR_PATTERN: &str = r"(?-u)(\x9b|\x1b\[)[0-?]*[ -/]*[@-~]";
+    pub const ANSI_COLOR_PATTERN: &str = r"(?-u)\x1b\[[0-?]*[ -/]*[@-~]";
 
     pub static ANSI_COLOR_REGEX: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(ANSI_COLOR_PATTERN).unwrap());

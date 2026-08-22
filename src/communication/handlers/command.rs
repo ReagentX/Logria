@@ -64,7 +64,10 @@ impl CommandHandler {
         }
 
         // Remove "r " from the string
-        let parts = command[2..].split(',');
+        let Some(rest) = command.get(2..) else {
+            return Err(LogriaError::InvalidCommand(format!("{command:?}")));
+        };
+        let parts = rest.split(',');
         let mut out_l: Vec<usize> = vec![];
 
         // Not for_each because we may need to bail early
@@ -85,7 +88,7 @@ impl CommandHandler {
                     (_, _) => {
                         return Err(LogriaError::InvalidCommand(format!(
                             "range invalid: {:?}",
-                            &range
+                            range
                         )));
                     }
                 }

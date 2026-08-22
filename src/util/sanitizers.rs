@@ -77,6 +77,15 @@ mod tests {
     }
 
     #[test]
+    fn test_length_multibyte_next_to_ansi() {
+        // 💛 ends in byte 0x9B; the ANSI pattern must not match it together with the
+        // following ASCII char, which produced invalid UTF-8 and panicked highlight rendering
+        let l = LengthFinder::new();
+        assert_eq!(l.get_real_length("\u{1F49B}a"), 2);
+        assert_eq!(l.get_real_length("\x1b[31m\u{1F49B}a\x1b[0m"), 2);
+    }
+
+    #[test]
     fn test_row_length_clean() {
         let l = LengthFinder::new();
         let (rows, length) = l.get_rows_and_length("word", 10);

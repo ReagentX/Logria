@@ -29,7 +29,10 @@ fn main() -> Result<()> {
 
         // Start app
         let mut app = MainWindow::new(history, smart_poll_rate);
-        app.start(exec)?;
+        if let Err(why) = app.start(exec) {
+            MainWindow::restore_terminal();
+            return Err(why);
+        }
     }
     Ok(())
 }

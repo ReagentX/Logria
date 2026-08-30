@@ -5,6 +5,10 @@
 # Build directories
 /target
 /output
+/rpmbuild
+
+# Vendor
+/vendor
 
 # OS Files
 .DS_Store
